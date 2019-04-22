@@ -17,23 +17,16 @@ type Task struct {
 }
 
 // AddTask persists a new task
-func AddTask(db *sql.DB, task *Task) (id TaskID, err error) {
-	stmt, err := db.Prepare("INSERT INTO task (name, description) VALUES ($1, $2)")
+func AddTask(db *sql.DB, task *Task) (TaskID, error) {
+	stmt, err := db.Prepare("INSERT INTO task (name, description) VALUES ($1, $2) RETURNING id;")
 	if err != nil {
 		return 0, fmt.Errorf("error preparing add task insert statement: %v", err)
 	}
-	res, err := stmt.Exec(task.Name, task.Description)
+	var taskID TaskID
+	err = stmt.QueryRow(task.Name, task.Description).Scan(&taskID)
 	if err != nil {
 		return 0, fmt.Errorf("error inserting new task: %v", err)
 	}
-
-	var taskID TaskID
-	lastID, err := res.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("error getting task id: %v", err)
-	}
-	taskID = TaskID(lastID)
-
 	return taskID, nil
 }
 
@@ -52,7 +45,15 @@ func CompleteTask(db *sql.DB, id TaskID) error {
 
 // ClearCompleted clears completed tasks
 func ClearCompleted(db *sql.DB) error {
-	return fmt.Errorf("not implemented")
+	stmt, err := db.Prepare("DELETE FROM task WHERE complete = TRUE")
+	if err != nil {
+		return fmt.Errorf("error preparing task completion statement: %v", err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		return fmt.Errorf("error deleting completed tasks: %v", err)
+	}
+	return nil
 }
 
 // ListTasks returns a slice of all tasks

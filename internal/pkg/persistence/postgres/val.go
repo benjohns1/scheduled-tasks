@@ -4,7 +4,7 @@ package postgres
 func BoolVal(val bool) string {
 	if val {
 		return "1::bit"
-	} else {
-		return "0::bit"
 	}
+
+	return "0::bit"
 }

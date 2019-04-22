@@ -1,8 +1,11 @@
 # Scheduled Tasks
 ## Task app with scheduled recurrences
 
-### Run tests locally
+### Run unit tests locally
 `go test ./...`
+
+### Run integration tests locally
+`go test ./... -tags="integration"`
 
 ### Build & run
 1. Install [Docker](https://www.docker.com/products/docker-desktop)
@@ -14,7 +17,7 @@ Run & build the app locally, run a transient DB in Docker container
 2. Build and run the server:
    1. `cd cmd/server`
    2. `set GOOS=<your-local-OS>`
-   3. `go build && server`
+   3. `go build && ./server`
 3. Server: `localhost:8080`
 4. DB Adminer: `localhost:8081`
 5. Tear it down: `docker-compose down`

@@ -58,13 +58,22 @@ func main() {
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 		task := &taskapp.Task{Name: "asdf", Description: "description"}
 		id, err := taskapp.AddTask(db, task)
-		//err = taskapp.CompleteTask(db, id)
+		err = taskapp.CompleteTask(db, id)
 		if err != nil {
 			log.Printf("error adding task: %v", err)
 			w.Write([]byte("Error adding task"))
 			return
 		}
 		w.Write([]byte(fmt.Sprintf("Added task %v: %v", id, task)))
+	})
+	r.Get("/clear", func(w http.ResponseWriter, r *http.Request) {
+
+		if err = taskapp.ClearCompleted(db); err != nil {
+			log.Printf("error clearing completed tasks: %v", err)
+			w.Write([]byte("Error clearing completed tasks"))
+			return
+		}
+		w.Write([]byte(fmt.Sprintf("Cleared completed tasks")))
 	})
 	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 	log.Printf("server exiting")
