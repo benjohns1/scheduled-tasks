@@ -1,25 +1,11 @@
 package taskapp
 
 import (
-	"database/sql"
 	"fmt"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	_ "github.com/mattn/go-sqlite3"
 )
-
-func setupSQLiteDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./taskapp.db")
-	if err != nil {
-		return nil, err
-	}
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
 
 func TestShouldReturnNewTaskKeys(t *testing.T) {
 	testTasks := []*Task{
@@ -30,7 +16,6 @@ func TestShouldReturnNewTaskKeys(t *testing.T) {
 	for _, task := range testTasks {
 		t.Run(fmt.Sprintf("task:%v", task.Name), func(t *testing.T) {
 
-			//db, err := setupSQLiteDB()
 			db, mock, err := sqlmock.New()
 			if err != nil {
 				t.Errorf("setting up DB: %v", err)
