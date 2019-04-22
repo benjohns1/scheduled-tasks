@@ -15,8 +15,9 @@ Run & build the app locally, run a transient DB in Docker container
    1. `cd cmd/server`
    2. `set GOOS=<your-local-OS>`
    3. `go build && server`
-3. Go to [localhost:8080](localhost:8080) for the server api and [localhost:8081](localhost:8080)
-4. To tear it down: `docker-compose down`
+3. Server: `localhost:8080`
+4. DB Adminer: `localhost:8081`
+5. Tear it down: `docker-compose down`
 
 #### Test environment
 Build the app locally, run it and a transient DB in Docker containers
@@ -27,5 +28,6 @@ Build the app locally, run it and a transient DB in Docker containers
    4. `docker build --no-cache -t scheduled-tasks_api .`
    5. `cd ../..`
 2. `docker-compose -f docker-compose.test.yml up`
-3. Go to [localhost:8080](localhost:8080) for the server api and [localhost:8081](localhost:8080)
-4. To tear it down: `docker-compose -f docker-compose.test.yml down`
+3. Server: `localhost:8080`
+4. DB Adminer: `localhost:8081`
+4. Tear it down: `docker-compose -f docker-compose.test.yml down`
