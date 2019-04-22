@@ -1,4 +1,4 @@
-package persistence
+package postgres
 
 import (
 	"database/sql"
@@ -15,12 +15,11 @@ func Setup(db *sql.DB) (setup bool, err error) {
 
 	setup = true
 	_, err = db.Exec(`CREATE TABLE task (
-		key serial NOT NULL,
+		id SERIAL PRIMARY KEY,
 		name character varying(100) NOT NULL,
 		description character varying(500) NOT NULL,
-		CONSTRAINT task_pkey PRIMARY KEY (key)
-		)
-		WITH (OIDS=FALSE)`)
+		complete BOOLEAN DEFAULT FALSE NOT NULL
+		)`)
 
 	return
 }

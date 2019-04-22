@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/benjohns1/scheduled-tasks/internal/app/taskapp"
-	"github.com/benjohns1/scheduled-tasks/internal/pkg/persistence"
+	persistence "github.com/benjohns1/scheduled-tasks/internal/pkg/persistence/postgres"
 	"github.com/joho/godotenv"
 
 	"github.com/go-chi/chi"
@@ -57,12 +57,14 @@ func main() {
 	})
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 		task := &taskapp.Task{Name: "asdf", Description: "description"}
-		key, err := taskapp.AddTask(db, task)
+		id, err := taskapp.AddTask(db, task)
+		//err = taskapp.CompleteTask(db, id)
 		if err != nil {
 			log.Printf("error adding task: %v", err)
 			w.Write([]byte("Error adding task"))
+			return
 		}
-		w.Write([]byte(fmt.Sprintf("Added task %v: %v", key, task)))
+		w.Write([]byte(fmt.Sprintf("Added task %v: %v", id, task)))
 	})
 	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 	log.Printf("server exiting")

@@ -5,34 +5,49 @@ import (
 	"fmt"
 )
 
-// TaskKey is the unique key of a task
-type TaskKey int
+// TaskID is the unique id of a task
+type TaskID int64
 
 // Task is a single task data struct
 type Task struct {
-	Key         TaskKey
+	ID          TaskID
 	Name        string
 	Description string
+	Complete    bool
 }
 
 // AddTask persists a new task
-func AddTask(db *sql.DB, task *Task) (TaskKey, error) {
-	stmt, err := db.Prepare("INSERT INTO task (name, description) VALUES ($1, $2) RETURNING key;")
+func AddTask(db *sql.DB, task *Task) (id TaskID, err error) {
+	stmt, err := db.Prepare("INSERT INTO task (name, description) VALUES ($1, $2)")
 	if err != nil {
 		return 0, fmt.Errorf("error preparing add task insert statement: %v", err)
 	}
-	var taskKey TaskKey
-	stmt.Exec()
-	err = stmt.QueryRow(task.Name, task.Description).Scan(&taskKey)
+	res, err := stmt.Exec(task.Name, task.Description)
 	if err != nil {
 		return 0, fmt.Errorf("error inserting new task: %v", err)
 	}
-	return taskKey, nil
+
+	var taskID TaskID
+	lastID, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("error getting task id: %v", err)
+	}
+	taskID = TaskID(lastID)
+
+	return taskID, nil
 }
 
 // CompleteTask completes an existing task
-func CompleteTask(db *sql.DB, key TaskKey) error {
-	return fmt.Errorf("not implemented")
+func CompleteTask(db *sql.DB, id TaskID) error {
+	stmt, err := db.Prepare("UPDATE task SET complete = TRUE WHERE id = $1")
+	if err != nil {
+		return fmt.Errorf("error preparing task complete statement: %v", err)
+	}
+	_, err = stmt.Exec(id)
+	if err != nil {
+		return fmt.Errorf("error completing task id %d: %v", id, err)
+	}
+	return nil
 }
 
 // ClearCompleted clears completed tasks
