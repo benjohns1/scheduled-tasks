@@ -1,4 +1,6 @@
 # Scheduled Tasks
+[![Go Report Card](https://goreportcard.com/badge/github.com/benjohns1/scheduled-tasks)](https://goreportcard.com/report/github.com/benjohns1/scheduled-tasks)
+[![License MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](LICENSE)
 ## Task app with scheduled recurrences
 To test and run this you'll first need to:
 1. Install [Docker](https://www.docker.com/products/docker-desktop)
