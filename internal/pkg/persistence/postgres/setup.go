@@ -18,8 +18,27 @@ func Setup(db *sql.DB) (setup bool, err error) {
 		id SERIAL PRIMARY KEY,
 		name character varying(100) NOT NULL,
 		description character varying(500) NOT NULL,
-		complete BOOLEAN DEFAULT FALSE NOT NULL
-		)`)
+		complete TIMESTAMPTZ
+		);
+		SET timezone = 'GMT'`)
+
+	return
+}
+
+// TestSetup tears down DB before setting it up, returns teardown function
+func TestSetup(db *sql.DB) (teardown func() (sql.Result, error), err error) {
+
+	teardown = func() (sql.Result, error) {
+		return db.Exec("DROP TABLE task")
+	}
+
+	_, err = db.Exec("SELECT 1 FROM task LIMIT 1")
+	if err == nil {
+		// Table exists, teardown first
+		teardown()
+	}
+
+	_, err = Setup(db)
 
 	return
 }

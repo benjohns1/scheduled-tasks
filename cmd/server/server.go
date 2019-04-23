@@ -11,7 +11,7 @@ import (
 	persistence "github.com/benjohns1/scheduled-tasks/internal/pkg/persistence/postgres"
 	"github.com/joho/godotenv"
 
-	"github.com/go-chi/chi"
+	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq"
 )
 
@@ -51,14 +51,13 @@ func main() {
 	}
 	log.Printf("starting server on port %d", port)
 
-	r := chi.NewRouter()
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r := httprouter.New()
+	r.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		w.Write([]byte("Hello, world"))
 	})
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		task := &taskapp.Task{Name: "asdf", Description: "description"}
+	r.GET("/add", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		task := &taskapp.Task{Name: "task name", Description: "description"}
 		id, err := taskapp.AddTask(db, task)
-		err = taskapp.CompleteTask(db, id)
 		if err != nil {
 			log.Printf("error adding task: %v", err)
 			w.Write([]byte("Error adding task"))
@@ -66,14 +65,32 @@ func main() {
 		}
 		w.Write([]byte(fmt.Sprintf("Added task %v: %v", id, task)))
 	})
-	r.Get("/clear", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/complete/:taskID", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		taskIDInt, err := strconv.Atoi(ps.ByName("taskID"))
+		if err != nil {
+			log.Printf("valid task id required")
+			w.Write([]byte("Error: valid task ID required"))
+			return
+		}
 
-		if err = taskapp.ClearCompleted(db); err != nil {
+		id := taskapp.TaskID(taskIDInt)
+		err = taskapp.CompleteTask(db, id)
+		if err != nil {
+			log.Printf("error completing task: %v", err)
+			w.Write([]byte("Error completing task"))
+			return
+		}
+		w.Write([]byte(fmt.Sprintf("Completed task %v", id)))
+	})
+	r.GET("/clear", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+
+		count, err := taskapp.ClearCompleted(db)
+		if err != nil {
 			log.Printf("error clearing completed tasks: %v", err)
 			w.Write([]byte("Error clearing completed tasks"))
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("Cleared completed tasks")))
+		w.Write([]byte(fmt.Sprintf("Cleared %d completed tasks", count)))
 	})
 	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 	log.Printf("server exiting")

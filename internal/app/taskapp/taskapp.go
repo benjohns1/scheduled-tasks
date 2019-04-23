@@ -32,28 +32,38 @@ func AddTask(db *sql.DB, task *Task) (TaskID, error) {
 
 // CompleteTask completes an existing task
 func CompleteTask(db *sql.DB, id TaskID) error {
-	stmt, err := db.Prepare("UPDATE task SET complete = TRUE WHERE id = $1")
+	stmt, err := db.Prepare("UPDATE task SET complete = NOW() WHERE id = $1 RETURNING id;")
 	if err != nil {
 		return fmt.Errorf("error preparing task complete statement: %v", err)
 	}
-	_, err = stmt.Exec(id)
+	rows, err := stmt.Query(id)
 	if err != nil {
 		return fmt.Errorf("error completing task id %d: %v", id, err)
+	}
+	if !rows.Next() {
+		return fmt.Errorf("no tasks completed for id = %v", id)
 	}
 	return nil
 }
 
 // ClearCompleted clears completed tasks
-func ClearCompleted(db *sql.DB) error {
-	stmt, err := db.Prepare("DELETE FROM task WHERE complete = TRUE")
+func ClearCompleted(db *sql.DB) (count int, err error) {
+	count = 0
+	stmt, err := db.Prepare("DELETE FROM task WHERE complete IS NOT NULL RETURNING id;")
 	if err != nil {
-		return fmt.Errorf("error preparing task completion statement: %v", err)
+		err = fmt.Errorf("error preparing task completion statement: %v", err)
+		return
 	}
-	_, err = stmt.Exec()
+	rows, err := stmt.Query()
 	if err != nil {
-		return fmt.Errorf("error deleting completed tasks: %v", err)
+		err = fmt.Errorf("error deleting completed tasks: %v", err)
+		return
 	}
-	return nil
+
+	for rows.Next() {
+		count++
+	}
+	return
 }
 
 // ListTasks returns a slice of all tasks
