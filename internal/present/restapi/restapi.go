@@ -1,4 +1,4 @@
-package main
+package restapi
 
 import (
 	"fmt"
@@ -7,42 +7,13 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/benjohns1/scheduled-tasks/internal/app/taskapp"
-	persistence "github.com/benjohns1/scheduled-tasks/internal/pkg/persistence/postgres"
-	"github.com/joho/godotenv"
-
 	"github.com/julienschmidt/httprouter"
-	_ "github.com/lib/pq"
+
+	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
-func main() {
-	// Load environment vars
-	godotenv.Load("../../.env")
-
-	// Load DB connection info
-	connInfo, err := persistence.LoadConnInfo()
-	if err != nil {
-		log.Panicf("error loading db connection details: %v", err)
-	}
-
-	// Connect to DB
-	log.Printf("connecting to db %s as %s...", connInfo.Name, connInfo.User)
-	db, err := persistence.Connect(connInfo)
-	if db != nil {
-		defer db.Close()
-	}
-	if err != nil {
-		log.Panicf("error opening db: %v", err)
-	}
-
-	// Perform DB setup if needed
-	setup, err := persistence.Setup(db)
-	if err != nil {
-		log.Panicf("error setting up db: %v", err)
-	}
-	if setup {
-		log.Print("first-time DB setup complete")
-	}
+// Serve creates and starts the REST API server
+func Serve(taskRepo usecase.TaskRepo) {
 
 	// Start API server
 	port := 8080
@@ -53,17 +24,22 @@ func main() {
 
 	r := httprouter.New()
 	r.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		w.Write([]byte("Hello, world"))
+		ts, err := usecase.ListAllTasks(taskRepo)
+		if err != nil {
+			log.Printf("error retrieving tasks")
+			w.Write([]byte("Error: couldn't retrieve tasks"))
+			return
+		}
+		w.Write([]byte(fmt.Sprintf("Found %d tasks: %v", len(ts), ts)))
 	})
 	r.GET("/add", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		task := &taskapp.Task{Name: "task name", Description: "description"}
-		id, err := taskapp.AddTask(db, task)
+		task, err := usecase.AddTask(taskRepo, "name", "desc")
 		if err != nil {
 			log.Printf("error adding task: %v", err)
 			w.Write([]byte("Error adding task"))
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("Added task %v: %v", id, task)))
+		w.Write([]byte(fmt.Sprintf("Added task %v: %v", task.TaskID, task)))
 	})
 	r.GET("/complete/:taskID", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		taskIDInt, err := strconv.Atoi(ps.ByName("taskID"))
@@ -73,18 +49,22 @@ func main() {
 			return
 		}
 
-		id := taskapp.TaskID(taskIDInt)
-		err = taskapp.CompleteTask(db, id)
+		id := usecase.TaskID(taskIDInt)
+		ok, err := usecase.CompleteTask(taskRepo, id)
 		if err != nil {
 			log.Printf("error completing task: %v", err)
 			w.Write([]byte("Error completing task"))
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("Completed task %v", id)))
+		if ok {
+			w.Write([]byte(fmt.Sprintf("Completed task %v", id)))
+			return
+		}
+		w.Write([]byte(fmt.Sprintf("Task %v already completed", id)))
 	})
 	r.GET("/clear", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
-		count, err := taskapp.ClearCompleted(db)
+		count, err := usecase.ClearCompletedTasks(taskRepo)
 		if err != nil {
 			log.Printf("error clearing completed tasks: %v", err)
 			w.Write([]byte("Error clearing completed tasks"))

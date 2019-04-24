@@ -22,9 +22,9 @@ Connects to a DB container for integration testing
 Run & build the app locally, run a transient DB in Docker container
 1. `docker-compose up`
 2. Build and run the server:
-   1. `cd cmd/server`
+   1. `cd cmd/srv`
    2. `set GOOS=<your-local-OS>`
-   3. `go build && ./server`
+   3. `go build && ./srv`
 3. Server: `localhost:8080`
 4. DB Adminer: `localhost:8081`
 5. Tear it down: `docker-compose down`
@@ -32,7 +32,7 @@ Run & build the app locally, run a transient DB in Docker container
 #### Staging environment
 Build the app locally, run it and a transient DB in Docker containers
 1. Build the server and image:
-   1. `cd cmd/server`
+   1. `cd cmd/srv`
    2. `set GOOS=linux`
    3. `go build`
    4. `docker build --no-cache -t scheduled-tasks_api .`

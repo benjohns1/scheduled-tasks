@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	_ "github.com/lib/pq" // add postgres DB driver
 )
 
 // DBConn contains DB connection data
@@ -18,8 +20,8 @@ type DBConn struct {
 	Name     string
 }
 
-// LoadConnInfo loads default DB connection info, overrides with environment variables
-func LoadConnInfo() (DBConn, error) {
+// NewDBConn loads default DB connection info, overrides with environment variables
+func NewDBConn() DBConn {
 
 	// Defaults
 	conn := DBConn{
@@ -47,11 +49,11 @@ func LoadConnInfo() (DBConn, error) {
 		conn.Port = port
 	}
 
-	return conn, nil
+	return conn
 }
 
 // Connect opens and ping-checks a DB connection
-func Connect(conn DBConn) (db *sql.DB, err error) {
+func connect(conn DBConn) (db *sql.DB, err error) {
 	db, err = sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name))
 	if err != nil {
 		err = fmt.Errorf("error opening db: %v", err)
