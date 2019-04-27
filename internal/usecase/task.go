@@ -21,6 +21,7 @@ type TaskRepo interface {
 	GetAll() (map[TaskID]*core.Task, error)
 	Add(*core.Task) (TaskID, error)
 	Update(TaskID, *core.Task) error
+	WipeAndReset() error
 }
 
 // AddTask creates and adds a new task to the list
@@ -47,6 +48,25 @@ func CompleteTask(r TaskRepo, id TaskID) (bool, error) {
 	}
 	if !ok {
 		return false, nil
+	}
+
+	err = r.Update(id, t)
+	if err != nil {
+		return false, fmt.Errorf("error updating task id %d: %v", id, err)
+	}
+	return true, nil
+}
+
+// ClearTask clears (removes) a single task, regardless of whether it has been completed
+func ClearTask(r TaskRepo, id TaskID) (bool, error) {
+	t, err := r.Get(id)
+	if err != nil {
+		return false, fmt.Errorf("error retrieving task id %d: %v", id, err)
+	}
+
+	err = t.Clear()
+	if err != nil {
+		return false, fmt.Errorf("error clearing task id %d: %v", id, err)
 	}
 
 	err = r.Update(id, t)
@@ -84,8 +104,8 @@ func ClearCompletedTasks(r TaskRepo) (count int, err error) {
 	return
 }
 
-// ListAllTasks returns all tasks that haven't been cleared
-func ListAllTasks(r TaskRepo) (map[TaskID]*core.Task, error) {
+// ListTasks returns all tasks that haven't been cleared
+func ListTasks(r TaskRepo) (map[TaskID]*core.Task, error) {
 
 	all, err := r.GetAll()
 	if err != nil {

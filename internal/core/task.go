@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -58,6 +59,9 @@ func (t *Task) ClearedTime() time.Time {
 
 // CompleteNow completes a task now
 func (t *Task) CompleteNow() (bool, error) {
+	if !t.IsValid() {
+		return false, errors.New("Task is invalid, cannot be completed")
+	}
 	if !t.completedTime.IsZero() {
 		return false, nil
 	}

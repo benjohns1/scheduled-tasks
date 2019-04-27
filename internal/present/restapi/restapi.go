@@ -24,7 +24,7 @@ func Serve(taskRepo usecase.TaskRepo) {
 
 	r := httprouter.New()
 	r.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		ts, err := usecase.ListAllTasks(taskRepo)
+		ts, err := usecase.ListTasks(taskRepo)
 		if err != nil {
 			log.Printf("error retrieving tasks")
 			w.Write([]byte("Error: couldn't retrieve tasks"))

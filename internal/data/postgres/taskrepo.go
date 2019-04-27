@@ -14,17 +14,19 @@ import (
 type TaskRepo struct {
 	db    *sql.DB
 	tasks map[usecase.TaskID]*core.Task
+	Close func()
 }
 
 const dbTimeFormat = time.RFC3339Nano
 
 // NewTaskRepo instantiates a new TaskRepo
-func NewTaskRepo(conn DBConn) (*TaskRepo, func(), error) {
+func NewTaskRepo(conn DBConn) (repo *TaskRepo, err error) {
+
+	close := func() {}
 
 	// Connect to DB
 	log.Printf("connecting to db %s as %s...", conn.Name, conn.User)
 	db, err := connect(conn)
-	var close func()
 	if db != nil {
 		close = func() {
 			db.Close()
@@ -32,20 +34,45 @@ func NewTaskRepo(conn DBConn) (*TaskRepo, func(), error) {
 	}
 	if err != nil {
 		close()
-		return nil, nil, fmt.Errorf("error opening db: %v", err)
+		err = fmt.Errorf("error opening db: %v", err)
+		return
 	}
 
 	// Perform DB setup if needed
-	setup, err := setup(db)
+	didSetup, err := setup(db)
 	if err != nil {
 		close()
-		return nil, nil, fmt.Errorf("error setting up db: %v", err)
+		err = fmt.Errorf("error setting up db: %v", err)
+		return
 	}
-	if setup {
+	if didSetup {
 		log.Print("first-time DB setup complete")
 	}
 
-	return &TaskRepo{db: db, tasks: make(map[usecase.TaskID]*core.Task)}, close, nil
+	repo = &TaskRepo{db: db, tasks: make(map[usecase.TaskID]*core.Task), Close: close}
+
+	return
+}
+
+// WipeAndReset completely destroys all data in persistence and cache
+func (r *TaskRepo) WipeAndReset() error {
+
+	// Drop db table
+	_, err := r.db.Exec("DROP TABLE task")
+	if err != nil {
+		return fmt.Errorf("error dropping task table: %v", err)
+	}
+
+	// Reset db table
+	_, err = setup(r.db)
+	if err != nil {
+		return fmt.Errorf("error resetting task table: %v", err)
+	}
+
+	// Destroy/reset cache
+	r.tasks = make(map[usecase.TaskID]*core.Task)
+
+	return nil
 }
 
 // Get retrieves a task entity, given its persistent ID

@@ -11,6 +11,11 @@ import (
 	_ "github.com/lib/pq" // add postgres DB driver
 )
 
+const (
+	maxAttempts = 20
+	retrySleep  = 2
+)
+
 // DBConn contains DB connection data
 type DBConn struct {
 	Host     string
@@ -61,8 +66,6 @@ func connect(conn DBConn) (db *sql.DB, err error) {
 	}
 
 	// DB connection retry logic
-	maxAttempts := 20
-	retrySleep := 3
 	for attempts := 0; attempts < maxAttempts; attempts++ {
 		err = db.Ping()
 		if err == nil {

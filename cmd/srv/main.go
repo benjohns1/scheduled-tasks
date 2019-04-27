@@ -14,11 +14,11 @@ func main() {
 
 	// Load DB connection info
 	dbconn := data.NewDBConn()
-	taskRepo, close, err := data.NewTaskRepo(dbconn)
+	taskRepo, err := data.NewTaskRepo(dbconn)
 	if err != nil {
 		log.Panic(err)
 	}
-	defer close()
+	defer taskRepo.Close()
 
 	restapi.Serve(taskRepo)
 }
