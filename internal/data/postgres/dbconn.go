@@ -13,7 +13,7 @@ import (
 
 const (
 	maxAttempts = 20
-	retrySleep  = 2
+	retrySleep  = 3
 )
 
 // DBConn contains DB connection data
@@ -66,17 +66,17 @@ func connect(conn DBConn) (db *sql.DB, err error) {
 	}
 
 	// DB connection retry logic
-	for attempts := 0; attempts < maxAttempts; attempts++ {
+	for attempts := 0; attempts < maxAttempts-1; attempts++ {
 		err = db.Ping()
 		if err == nil {
 			break
 		}
-		log.Printf("couldn't ping db: %v", err)
+		log.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, maxAttempts, err)
 		time.Sleep(time.Duration(retrySleep) * time.Second)
 	}
 	err = db.Ping()
 	if err != nil {
-		err = fmt.Errorf("error pinging db: %v", err)
+		err = fmt.Errorf("final attempt %d/%d couldn't ping db: %v", maxAttempts, maxAttempts, err)
 	}
 
 	return

@@ -64,6 +64,10 @@ func ClearTask(r TaskRepo, id TaskID) (bool, error) {
 		return false, fmt.Errorf("error retrieving task id %d: %v", id, err)
 	}
 
+	if !t.IsValid() {
+		return false, fmt.Errorf("task id %d already cleared", id)
+	}
+
 	err = t.Clear()
 	if err != nil {
 		return false, fmt.Errorf("error clearing task id %d: %v", id, err)
