@@ -23,15 +23,18 @@ func Serve(taskRepo usecase.TaskRepo) {
 	log.Printf("starting server on port %d", port)
 
 	r := httprouter.New()
-	r.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	taskPrefix := "/api/v1/task"
+	r.GET(taskPrefix+"/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		ts, err := usecase.ListTasks(taskRepo)
 		if err != nil {
 			log.Printf("error retrieving tasks")
-			w.Write([]byte("Error: couldn't retrieve tasks"))
+			w.Write(errorToJSON(fmt.Errorf("Error: couldn't retrieve tasks")))
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("Found %d tasks: %v", len(ts), ts)))
+		w.Write(taskMapToJSON(ts))
 	})
+
+	// @TODO: build out json api
 	r.GET("/add", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		task, err := usecase.AddTask(taskRepo, "name", "desc")
 		if err != nil {
