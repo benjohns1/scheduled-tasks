@@ -25,13 +25,12 @@ type TaskRepo interface {
 }
 
 // AddTask creates and adds a new task to the list
-func AddTask(r TaskRepo, name string, desc string) (*TaskData, error) {
-	task := core.NewTask(name, desc)
-	id, err := r.Add(task)
+func AddTask(r TaskRepo, t *core.Task) (*TaskData, error) {
+	id, err := r.Add(t)
 	if err != nil {
 		return nil, fmt.Errorf("error adding task: %v", err)
 	}
-	taskData := &TaskData{TaskID: id, Task: task}
+	taskData := &TaskData{TaskID: id, Task: t}
 	return taskData, nil
 }
 
@@ -65,7 +64,7 @@ func ClearTask(r TaskRepo, id TaskID) (bool, error) {
 	}
 
 	if !t.IsValid() {
-		return false, fmt.Errorf("task id %d already cleared", id)
+		return false, nil
 	}
 
 	err = t.Clear()

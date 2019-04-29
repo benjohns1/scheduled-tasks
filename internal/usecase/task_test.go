@@ -17,9 +17,8 @@ func TestAddTask(t *testing.T) {
 	}
 
 	type args struct {
-		r    *data.TaskRepo
-		name string
-		desc string
+		r TaskRepo
+		t *core.Task
 	}
 	tests := []struct {
 		name    string
@@ -29,14 +28,14 @@ func TestAddTask(t *testing.T) {
 	}{
 		{
 			name:    "add empty task",
-			args:    args{r: taskRepo, name: "", desc: ""},
+			args:    args{r: taskRepo, t: core.NewTask("", "")},
 			want:    &TaskData{Task: core.NewTask("", "")},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := AddTask(tt.args.r, tt.args.name, tt.args.desc)
+			got, err := AddTask(tt.args.r, tt.args.t)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AddTask() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -144,10 +143,10 @@ func TestClearTask(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "previously cleared task should return error",
+			name:    "previously cleared task should return false",
 			args:    args{r: taskRepo, id: clearedTaskID},
 			want:    false,
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "clearing a non-existent task ID should return error",

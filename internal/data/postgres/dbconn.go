@@ -63,20 +63,17 @@ func connect(conn DBConn) (db *sql.DB, err error) {
 	if err != nil {
 		err = fmt.Errorf("error opening db: %v", err)
 		log.Println(err)
+		return
 	}
 
 	// DB connection retry logic
-	for attempts := 0; attempts < maxAttempts-1; attempts++ {
+	for attempts := 0; attempts < maxAttempts; attempts++ {
 		err = db.Ping()
 		if err == nil {
 			break
 		}
 		log.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, maxAttempts, err)
 		time.Sleep(time.Duration(retrySleep) * time.Second)
-	}
-	err = db.Ping()
-	if err != nil {
-		err = fmt.Errorf("final attempt %d/%d couldn't ping db: %v", maxAttempts, maxAttempts, err)
 	}
 
 	return
