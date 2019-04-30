@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -11,30 +10,29 @@ import (
 	_ "github.com/lib/pq" // add postgres DB driver
 )
 
-const (
-	maxAttempts = 20
-	retrySleep  = 3
-)
-
 // DBConn contains DB connection data
 type DBConn struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Name     string
+	Host              string
+	Port              int
+	User              string
+	Password          string
+	Name              string
+	MaxRetryAttempts  int
+	RetrySleepSeconds int
 }
 
-// NewDBConn loads default DB connection info, overrides with environment variables
+// NewDBConn creates struct with default DB connection info, and overrides with environment variables if set
 func NewDBConn() DBConn {
 
 	// Defaults
 	conn := DBConn{
-		Host:     "localhost",
-		Name:     "taskapp",
-		Password: "postgresDefault",
-		Port:     5432,
-		User:     "postgresUser",
+		Host:              "localhost",
+		Name:              "taskapp",
+		Password:          "postgresDefault",
+		Port:              5432,
+		User:              "postgresUser",
+		MaxRetryAttempts:  20,
+		RetrySleepSeconds: 3,
 	}
 
 	// Override from env vars
@@ -53,27 +51,33 @@ func NewDBConn() DBConn {
 	if port, err := strconv.Atoi(os.Getenv("POSTGRES_PORT")); err == nil {
 		conn.Port = port
 	}
+	if maxRetryAttempts, err := strconv.Atoi(os.Getenv("DBCONN_MAXRETRYATTEMPTS")); err == nil {
+		conn.MaxRetryAttempts = maxRetryAttempts
+	}
+	if retrySleepSeconds, err := strconv.Atoi(os.Getenv("DBCONN_RETRYSLEEPSECONDS")); err == nil {
+		conn.RetrySleepSeconds = retrySleepSeconds
+	}
 
 	return conn
 }
 
 // Connect opens and ping-checks a DB connection
-func connect(conn DBConn) (db *sql.DB, err error) {
+func connect(l Logger, conn DBConn) (db *sql.DB, err error) {
 	db, err = sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name))
 	if err != nil {
 		err = fmt.Errorf("error opening db: %v", err)
-		log.Println(err)
+		l.Println(err)
 		return
 	}
 
-	// DB connection retry logic
-	for attempts := 0; attempts < maxAttempts; attempts++ {
+	// Ping & retry if needed
+	for attempts := 0; attempts < conn.MaxRetryAttempts; attempts++ {
 		err = db.Ping()
 		if err == nil {
 			break
 		}
-		log.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, maxAttempts, err)
-		time.Sleep(time.Duration(retrySleep) * time.Second)
+		l.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, conn.MaxRetryAttempts, err)
+		time.Sleep(time.Duration(conn.RetrySleepSeconds) * time.Second)
 	}
 
 	return

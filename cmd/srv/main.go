@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	data "github.com/benjohns1/scheduled-tasks/internal/data/postgres"
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi"
@@ -9,16 +10,18 @@ import (
 )
 
 func main() {
+	l := log.New(os.Stderr, "api ", log.LstdFlags)
+
 	// Load environment vars
 	godotenv.Load("../../.env")
 
 	// Load DB connection info
 	dbconn := data.NewDBConn()
-	taskRepo, err := data.NewTaskRepo(dbconn)
+	taskRepo, err := data.NewTaskRepo(l, dbconn)
 	if err != nil {
-		log.Panic(err)
+		l.Panic(err)
 	}
 	defer taskRepo.Close()
 
-	restapi.Serve(taskRepo)
+	restapi.Serve(l, taskRepo)
 }

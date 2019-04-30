@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core"
@@ -12,6 +11,7 @@ import (
 
 // TaskRepo handles persisting task data and maintaining an in-memory cache
 type TaskRepo struct {
+	l     Logger
 	db    *sql.DB
 	tasks map[usecase.TaskID]*core.Task
 	Close func()
@@ -19,14 +19,21 @@ type TaskRepo struct {
 
 const dbTimeFormat = time.RFC3339Nano
 
+// Logger interface needed for log messages
+type Logger interface {
+	Print(v ...interface{})
+	Printf(format string, v ...interface{})
+	Println(v ...interface{})
+}
+
 // NewTaskRepo instantiates a new TaskRepo
-func NewTaskRepo(conn DBConn) (repo *TaskRepo, err error) {
+func NewTaskRepo(l Logger, conn DBConn) (repo *TaskRepo, err error) {
 
 	close := func() {}
 
 	// Connect to DB
-	log.Printf("connecting to db %s as %s...", conn.Name, conn.User)
-	db, err := connect(conn)
+	l.Printf("connecting to db %s as %s...", conn.Name, conn.User)
+	db, err := connect(l, conn)
 	if db != nil {
 		close = func() {
 			db.Close()
@@ -46,10 +53,10 @@ func NewTaskRepo(conn DBConn) (repo *TaskRepo, err error) {
 		return
 	}
 	if didSetup {
-		log.Print("first-time DB setup complete")
+		l.Print("first-time DB setup complete")
 	}
 
-	repo = &TaskRepo{db: db, tasks: make(map[usecase.TaskID]*core.Task), Close: close}
+	repo = &TaskRepo{l: l, db: db, tasks: make(map[usecase.TaskID]*core.Task), Close: close}
 
 	return
 }

@@ -1,4 +1,4 @@
-package restapi
+package json
 
 import (
 	"encoding/json"
@@ -9,6 +9,21 @@ import (
 	"github.com/benjohns1/scheduled-tasks/internal/core"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
+
+// Logger interface needed for log messages
+type Logger interface {
+	Printf(format string, v ...interface{})
+}
+
+// Formatter formats application data into JSON for output
+type Formatter struct {
+	l Logger
+}
+
+// NewFormatter creates a new Formatter instance
+func NewFormatter(l Logger) *Formatter {
+	return &Formatter{l: l}
+}
 
 type outTask struct {
 	ID            usecase.TaskID `json:"id"`
@@ -21,6 +36,15 @@ const outTimeFormat = time.RFC3339Nano
 
 type outTime struct {
 	t time.Time
+}
+
+func (t *outTime) MarshalJSON() ([]byte, error) {
+	var timeStr string
+	if t.t.IsZero() {
+		return []byte("null"), nil
+	}
+	timeStr = t.t.Format(outTimeFormat)
+	return []byte(fmt.Sprintf("\"%s\"", timeStr)), nil
 }
 
 type outID struct {
@@ -36,26 +60,20 @@ type outClearedCompleted struct {
 	Message string `json:"message"`
 }
 
-func (t *outTime) MarshalJSON() ([]byte, error) {
-	var timeStr string
-	if t.t.IsZero() {
-		return []byte("null"), nil
-	}
-	timeStr = t.t.Format(outTimeFormat)
-	return []byte(fmt.Sprintf("\"%s\"", timeStr)), nil
-}
-
-func writeResponse(w http.ResponseWriter, res []byte, statusCode int) {
-	writeEmpty(w, statusCode)
+// WriteResponse writes the complete output response
+func (f *Formatter) WriteResponse(w http.ResponseWriter, res []byte, statusCode int) {
+	f.WriteEmpty(w, statusCode)
 	w.Write(res)
 }
 
-func writeEmpty(w http.ResponseWriter, statusCode int) {
+// WriteEmpty writes a complete empty output response
+func (f *Formatter) WriteEmpty(w http.ResponseWriter, statusCode int) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 }
 
-func clearedCompletedToJSON(count int) ([]byte, error) {
+// ClearedCompleted formats a count of cleared tasks to JSON
+func (f *Formatter) ClearedCompleted(count int) ([]byte, error) {
 	var message string
 	if count > 0 {
 		message = "Cleared all completed tasks"
@@ -69,8 +87,8 @@ func clearedCompletedToJSON(count int) ([]byte, error) {
 	return json.Marshal(o)
 }
 
-func idToJSON(id usecase.TaskID) ([]byte, error) {
-
+// TaskID formats a TaskID to JSON
+func (f *Formatter) TaskID(id usecase.TaskID) ([]byte, error) {
 	o := &outID{
 		ID: id,
 	}
@@ -86,7 +104,8 @@ func taskToOut(id usecase.TaskID, t *core.Task) *outTask {
 	}
 }
 
-func taskMapToJSON(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
+// TaskMap formats a map of Tasks to JSON
+func (f *Formatter) TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
 	o := make(map[usecase.TaskID]*outTask)
 	for id, t := range ts {
 		o[id] = taskToOut(id, t)
@@ -95,19 +114,15 @@ func taskMapToJSON(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
 	return json.Marshal(o)
 }
 
-// Logger interface needed for log messages
-type Logger interface {
-	Printf(format string, v ...interface{})
-}
-
-func errorToJSON(l Logger, err error) []byte {
+// Error formats an error message to JSON
+func (f *Formatter) Error(err error) []byte {
 	outError := &outError{
 		Error: err.Error(),
 	}
 
 	o, mErr := json.Marshal(outError)
 	if mErr != nil {
-		l.Printf("problem marshalling JSON error response: %v (error struct: %v)", mErr, outError)
+		f.l.Printf("problem marshalling JSON error response: %v (error struct: %v)", mErr, outError)
 	}
 	return o
 }
