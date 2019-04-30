@@ -62,18 +62,18 @@ func NewTaskRepo(l Logger, conn DBConn) (repo *TaskRepo, err error) {
 }
 
 // WipeAndReset completely destroys all data in persistence and cache
-func (r *TaskRepo) WipeAndReset() error {
+func (r *TaskRepo) WipeAndReset() usecase.Error {
 
 	// Drop db table
 	_, err := r.db.Exec("DROP TABLE task")
 	if err != nil {
-		return fmt.Errorf("error dropping task table: %v", err)
+		return usecase.NewError(usecase.ErrUnknown, "error dropping task table: %v", err)
 	}
 
 	// Reset db table
 	_, err = setup(r.db)
 	if err != nil {
-		return fmt.Errorf("error resetting task table: %v", err)
+		return usecase.NewError(usecase.ErrUnknown, "error resetting task table: %v", err)
 	}
 
 	// Destroy/reset cache
@@ -83,7 +83,7 @@ func (r *TaskRepo) WipeAndReset() error {
 }
 
 // Get retrieves a task entity, given its persistent ID
-func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, error) {
+func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, usecase.Error) {
 
 	// Try to retrieve from cache
 	t, ok := r.tasks[id]
@@ -95,7 +95,10 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, error) {
 	row := r.db.QueryRow("SELECT id, name, description, completed_time, cleared_time FROM task WHERE id = $1", id)
 	td, err := parseTaskRow(row)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing task id %d: %v", id, err)
+		if err == sql.ErrNoRows {
+			return nil, usecase.NewError(usecase.ErrRecordNotFound, "no task found with id = %v", id)
+		}
+		return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task id %d: %v", id, err)
 	}
 
 	// Add to cache
@@ -105,16 +108,16 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, error) {
 }
 
 // GetAll retrieves all tasks
-func (r *TaskRepo) GetAll() (map[usecase.TaskID]*core.Task, error) {
+func (r *TaskRepo) GetAll() (map[usecase.TaskID]*core.Task, usecase.Error) {
 	// Retrieve from DB
 	rows, err := r.db.Query("SELECT id, name, description, completed_time, cleared_time FROM task")
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving all tasks: %v", err)
+		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
 	}
 	for rows.Next() {
 		td, err := parseTaskRow(rows)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing task row: %v", err)
+			return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task row: %v", err)
 		}
 
 		// Add to cache
@@ -162,12 +165,12 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 }
 
 // Add adds a task to the persisence layer
-func (r *TaskRepo) Add(t *core.Task) (usecase.TaskID, error) {
+func (r *TaskRepo) Add(t *core.Task) (usecase.TaskID, usecase.Error) {
 	q := "INSERT INTO task (name, description, completed_time, cleared_time) VALUES ($1, $2, $3, $4) RETURNING id"
 	var id usecase.TaskID
 	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime()).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("error inserting new task: %v", err)
+		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new task: %v", err)
 	}
 
 	r.tasks[id] = t
@@ -176,14 +179,14 @@ func (r *TaskRepo) Add(t *core.Task) (usecase.TaskID, error) {
 }
 
 // Update updates a task's persistent data to the given entity values
-func (r *TaskRepo) Update(id usecase.TaskID, t *core.Task) error {
+func (r *TaskRepo) Update(id usecase.TaskID, t *core.Task) usecase.Error {
 	q := "UPDATE task SET name = $1, description = $2, completed_time = $3, cleared_time = $4 WHERE id = $5 RETURNING id"
 	rows, err := r.db.Query(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), id)
 	if err != nil {
-		return fmt.Errorf("error updated task id %d: %v", id, err)
+		return usecase.NewError(usecase.ErrUnknown, "error updating task id %d: %v", id, err)
 	}
 	if !rows.Next() {
-		return fmt.Errorf("no task found for id = %v", id)
+		return usecase.NewError(usecase.ErrRecordNotFound, "no task found for id = %v", id)
 	}
 
 	r.tasks[id] = t

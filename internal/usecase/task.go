@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"fmt"
-
 	"github.com/benjohns1/scheduled-tasks/internal/core"
 )
 
@@ -17,102 +15,118 @@ type TaskData struct {
 
 // TaskRepo defines the task repository interface required by use cases
 type TaskRepo interface {
-	Get(TaskID) (*core.Task, error)
-	GetAll() (map[TaskID]*core.Task, error)
-	Add(*core.Task) (TaskID, error)
-	Update(TaskID, *core.Task) error
-	WipeAndReset() error
+	Get(TaskID) (*core.Task, Error)
+	GetAll() (map[TaskID]*core.Task, Error)
+	Add(*core.Task) (TaskID, Error)
+	Update(TaskID, *core.Task) Error
+	WipeAndReset() Error
+}
+
+// GetTask gets a single task
+func GetTask(r TaskRepo, id TaskID) (*TaskData, Error) {
+	t, ucerr := r.Get(id)
+	if ucerr != nil {
+		return nil, ucerr.Prefix("error retrieving task id %d", id)
+	}
+	if !t.IsValid() {
+		return nil, NewError(ErrRecordNotFound, "task id %d not found", id)
+	}
+	return &TaskData{TaskID: id, Task: t}, nil
 }
 
 // AddTask creates and adds a new task to the list
-func AddTask(r TaskRepo, t *core.Task) (*TaskData, error) {
+func AddTask(r TaskRepo, t *core.Task) (*TaskData, Error) {
 	id, err := r.Add(t)
 	if err != nil {
-		return nil, fmt.Errorf("error adding task: %v", err)
+		return nil, NewError(ErrUnknown, "error adding task: %v", err)
 	}
 	taskData := &TaskData{TaskID: id, Task: t}
 	return taskData, nil
 }
 
 // CompleteTask completes an existing task
-func CompleteTask(r TaskRepo, id TaskID) (bool, error) {
-	t, err := r.Get(id)
-	if err != nil {
-		return false, fmt.Errorf("error retrieving task id %d: %v", id, err)
+func CompleteTask(r TaskRepo, id TaskID) (bool, Error) {
+	t, ucerr := r.Get(id)
+	if ucerr != nil {
+		return false, ucerr.Prefix("error retrieving task id %d", id)
+	}
+
+	if !t.IsValid() {
+		return false, NewError(ErrRecordNotFound, "task id %d not found", id)
 	}
 
 	ok, err := t.CompleteNow()
 	if err != nil {
-		return false, fmt.Errorf("error completing task id %d: %v", id, err)
+		return false, NewError(ErrUnknown, "error completing task id %d: %v", id, err)
 	}
 	if !ok {
 		return false, nil
 	}
 
-	err = r.Update(id, t)
-	if err != nil {
-		return false, fmt.Errorf("error updating task id %d: %v", id, err)
+	ucerr = r.Update(id, t)
+	if ucerr != nil {
+		return false, ucerr.Prefix("error updating task id %d", id)
 	}
 	return true, nil
 }
 
 // ClearTask clears (removes) a single task, regardless of whether it has been completed
-func ClearTask(r TaskRepo, id TaskID) (bool, error) {
-	t, err := r.Get(id)
-	if err != nil {
-		return false, fmt.Errorf("error retrieving task id %d: %v", id, err)
+func ClearTask(r TaskRepo, id TaskID) (bool, Error) {
+	t, ucerr := r.Get(id)
+	if ucerr != nil {
+		if ucerr.Code() == ErrRecordNotFound {
+			return false, ucerr.Prefix("task id %d not found", id)
+		}
+		return false, ucerr.Prefix("error retrieving task id %d", id)
 	}
 
 	if !t.IsValid() {
-		return false, nil
+		return false, NewError(ErrRecordNotFound, "task id %d not found", id)
 	}
 
-	err = t.Clear()
+	err := t.Clear()
 	if err != nil {
-		return false, fmt.Errorf("error clearing task id %d: %v", id, err)
+		return false, NewError(ErrUnknown, "error clearing task id %d: %v", id, err)
 	}
 
-	err = r.Update(id, t)
-	if err != nil {
-		return false, fmt.Errorf("error updating task id %d: %v", id, err)
+	ucerr = r.Update(id, t)
+	if ucerr != nil {
+		return false, ucerr.Prefix("error updating task id %d", id)
 	}
 	return true, nil
 }
 
-// ClearCompletedTasks clears all completed tasks
-func ClearCompletedTasks(r TaskRepo) (count int, err error) {
-	count = 0
-
-	ts, err := r.GetAll()
-	if err != nil {
-		err = fmt.Errorf("error retrieving tasks to clear: %v", err)
-		return
+// ClearCompletedTasks clears all completed tasks, returning the number completed and an error
+func ClearCompletedTasks(r TaskRepo) (int, Error) {
+	ts, ucerr := r.GetAll()
+	if ucerr != nil {
+		return 0, ucerr.Prefix("error retrieving tasks to clear")
 	}
 
+	count := 0
 	for id, t := range ts {
 		if t.CompletedTime().IsZero() || !t.ClearedTime().IsZero() {
 			continue
 		}
-		err = t.ClearCompleted()
+		err := t.ClearCompleted()
 		if err != nil {
-			return
+			return count, NewError(ErrUnknown, "error clearing completed tasks: %v", err)
 		}
-		err = r.Update(id, t)
-		if err != nil {
-			return
+		ucerr = r.Update(id, t)
+		if ucerr != nil {
+			return count, ucerr
 		}
 		count++
 	}
 
-	return
+	return count, nil
 }
 
 // ListTasks returns all tasks that haven't been cleared
-func ListTasks(r TaskRepo) (map[TaskID]*core.Task, error) {
-
-	all, err := r.GetAll()
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving tasks: %v", err)
+func ListTasks(r TaskRepo) (map[TaskID]*core.Task, Error) {
+	all, ucerr := r.GetAll()
+	if ucerr != nil {
+		return nil, ucerr.Prefix("error retrieving tasks")
 	}
 
 	list := make(map[TaskID]*core.Task)

@@ -104,6 +104,11 @@ func taskToOut(id usecase.TaskID, t *core.Task) *outTask {
 	}
 }
 
+// Task formats a Task to JSON
+func (f *Formatter) Task(td *usecase.TaskData) ([]byte, error) {
+	return json.Marshal(taskToOut(td.TaskID, td.Task))
+}
+
 // TaskMap formats a map of Tasks to JSON
 func (f *Formatter) TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
 	o := make(map[usecase.TaskID]*outTask)
@@ -114,10 +119,15 @@ func (f *Formatter) TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
 	return json.Marshal(o)
 }
 
+// Errorf formats a format string and args to JSON
+func (f *Formatter) Errorf(format string, a ...interface{}) []byte {
+	return f.Error(fmt.Sprintf(format, a...))
+}
+
 // Error formats an error message to JSON
-func (f *Formatter) Error(err error) []byte {
+func (f *Formatter) Error(a interface{}) []byte {
 	outError := &outError{
-		Error: err.Error(),
+		Error: fmt.Sprint(a),
 	}
 
 	o, mErr := json.Marshal(outError)

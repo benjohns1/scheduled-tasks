@@ -32,36 +32,62 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 	r := httprouter.New()
 	taskPrefix := "/api/v1/task"
 	r.GET(taskPrefix+"/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		ts, err := usecase.ListTasks(taskRepo)
-		if err != nil {
-			l.Printf("error retrieving task list: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error: couldn't retrieve tasks")), 500)
+		ts, ucerr := usecase.ListTasks(taskRepo)
+		if ucerr != nil {
+			l.Printf("error retrieving task list: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error: couldn't retrieve tasks"), 500)
 			return
 		}
 		o, err := f.TaskMap(ts)
 		if err != nil {
 			l.Printf("error encoding task map: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error encoding task data")), 500)
+			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
+		}
+		f.WriteResponse(w, o, 200)
+	})
+	r.GET(taskPrefix+"/:taskID", func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		taskIDInt, err := strconv.Atoi(params.ByName("taskID"))
+		if err != nil {
+			l.Printf("valid task ID required")
+			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
+			return
+		}
+		id := usecase.TaskID(taskIDInt)
+		td, ucerr := usecase.GetTask(taskRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error retrieving task ID %d: %v", id, ucerr)
+			f.WriteResponse(w, f.Errorf("Error: couldn't retrieve task ID %d", id), 500)
+			return
+		}
+
+		o, err := f.Task(td)
+		if err != nil {
+			l.Printf("error encoding task map: %v", err)
+			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
 	})
 	r.POST(taskPrefix+"/add", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		t, err := p.AddTask(r.Body)
+		t, ucerr := p.AddTask(r.Body)
 		defer r.Body.Close()
-		if err != nil {
-			l.Printf("error parsing addTask data: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error: could not parse task data: %v", err)), 400)
+		if ucerr != nil {
+			l.Printf("error parsing addTask data: %v", ucerr)
+			f.WriteResponse(w, f.Errorf("Error: could not parse task data: %v", ucerr), 400)
 			return
 		}
-		td, err := usecase.AddTask(taskRepo, t)
-		if err != nil {
-			l.Printf("error adding task: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error: could not add task data")), 500)
+		td, ucerr := usecase.AddTask(taskRepo, t)
+		if ucerr != nil {
+			l.Printf("error adding task: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error: could not add task data"), 500)
 			return
 		}
 		o, err := f.TaskID(td.TaskID)
 		if err != nil {
-			f.WriteResponse(w, f.Error(fmt.Errorf("Task created, but there was an error formatting the response Task ID")), 201)
+			f.WriteResponse(w, f.Error("Task created, but there was an error formatting the response Task ID"), 201)
 			return
 		}
 		f.WriteResponse(w, o, 201)
@@ -70,53 +96,61 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 		taskIDInt, err := strconv.Atoi(ps.ByName("taskID"))
 		if err != nil {
 			l.Printf("valid task ID required")
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error: valid task ID required")), 404)
+			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
 			return
 		}
 		id := usecase.TaskID(taskIDInt)
-		ok, err := usecase.CompleteTask(taskRepo, id)
-		if err != nil {
-			l.Printf("error completing task: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error completing task")), 500)
+		ok, ucerr := usecase.CompleteTask(taskRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error completing task: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error completing task"), 500)
 			return
 		}
 		if !ok {
-			f.WriteResponse(w, f.Error(fmt.Errorf("Task %v already completed", id)), 400)
+			f.WriteResponse(w, f.Errorf("Task %v already completed", id), 400)
 			return
 		}
 		f.WriteEmpty(w, 204)
 	})
-	r.DELETE(taskPrefix+"/:taskID", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		taskIDInt, err := strconv.Atoi(ps.ByName("taskID"))
+	r.DELETE(taskPrefix+"/:taskID", func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		taskIDInt, err := strconv.Atoi(params.ByName("taskID"))
 		if err != nil {
 			l.Printf("valid task ID required")
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error: valid task ID required")), 404)
+			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
 			return
 		}
 		id := usecase.TaskID(taskIDInt)
-		ok, err := usecase.ClearTask(taskRepo, id)
-		if err != nil {
-			l.Printf("error clearing task: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error clearing task")), 500)
+		ok, ucerr := usecase.ClearTask(taskRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error clearing task: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error clearing task"), 500)
 			return
 		}
 		if !ok {
-			f.WriteResponse(w, f.Error(fmt.Errorf("Task %v already cleared", id)), 404)
+			f.WriteResponse(w, f.Errorf("Task %v already cleared", id), 404)
 			return
 		}
 		f.WriteEmpty(w, 204)
 	})
 	r.POST(taskPrefix+"/clear", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
-		count, err := usecase.ClearCompletedTasks(taskRepo)
-		if err != nil {
-			l.Printf("error clearing completed tasks: %v", err)
-			f.WriteResponse(w, f.Error(fmt.Errorf("Error clearing completed taskS")), 500)
+		count, ucerr := usecase.ClearCompletedTasks(taskRepo)
+		if ucerr != nil {
+			l.Printf("error clearing completed tasks: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error clearing completed tasks"), 500)
 			return
 		}
 		o, err := f.ClearedCompleted(count)
 		if err != nil {
-			f.WriteResponse(w, f.Error(fmt.Errorf("Completed tasks cleared, but there was an error formatting the response")), 200)
+			f.WriteResponse(w, f.Error("Completed tasks cleared, but there was an error formatting the response"), 200)
 			return
 		}
 		f.WriteResponse(w, o, 200)

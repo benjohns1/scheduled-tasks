@@ -10,11 +10,77 @@ import (
 	. "github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
+func TestGetTask(t *testing.T) {
+	taskRepo, err := data.NewTaskRepo()
+	if err != nil {
+		t.Errorf("error creating task repo: %v", err)
+	}
+	task1 := core.NewTask("task1", "")
+	taskID, err1 := taskRepo.Add(task1)
+	task2 := core.NewTaskFull("task2", "", time.Now(), time.Time{})
+	completedTaskID, err2 := taskRepo.Add(task2)
+	clearedTaskID, err3 := taskRepo.Add(core.NewTaskFull("task3", "", time.Now(), time.Now()))
+	if err1 != nil || err2 != nil || err3 != nil {
+		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
+	}
+
+	type args struct {
+		r  TaskRepo
+		id TaskID
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *TaskData
+		wantErr ErrorCode
+	}{
+		{
+			name:    "task should be retrieved",
+			args:    args{r: taskRepo, id: taskID},
+			want:    &TaskData{TaskID: taskID, Task: task1},
+			wantErr: ErrNone,
+		},
+		{
+			name:    "completed task should be retrieved",
+			args:    args{r: taskRepo, id: completedTaskID},
+			want:    &TaskData{TaskID: completedTaskID, Task: task2},
+			wantErr: ErrNone,
+		},
+		{
+			name:    "cleared task should return an ErrRecordNotFound",
+			args:    args{r: taskRepo, id: clearedTaskID},
+			want:    nil,
+			wantErr: ErrRecordNotFound,
+		},
+		{
+			name:    "non-existent task ID should return an ErrRecordNotFound",
+			args:    args{r: taskRepo, id: 99999},
+			want:    nil,
+			wantErr: ErrRecordNotFound,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetTask(tt.args.r, tt.args.id)
+			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
+				t.Errorf("CompleteTask() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetTask() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestAddTask(t *testing.T) {
 	taskRepo, err := data.NewTaskRepo()
 	if err != nil {
 		t.Errorf("error creating task repo: %v", err)
 	}
+
+	emptyTask := core.NewTask("", "")
+	basicTask := core.NewTask("task with data", "task description")
 
 	type args struct {
 		r TaskRepo
@@ -23,13 +89,19 @@ func TestAddTask(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *TaskData
+		want    *core.Task
 		wantErr bool
 	}{
 		{
-			name:    "add empty task",
-			args:    args{r: taskRepo, t: core.NewTask("", "")},
-			want:    &TaskData{Task: core.NewTask("", "")},
+			name:    "add empty task should be valid",
+			args:    args{r: taskRepo, t: emptyTask},
+			want:    emptyTask,
+			wantErr: false,
+		},
+		{
+			name:    "add task with basic info should be valid",
+			args:    args{r: taskRepo, t: basicTask},
+			want:    basicTask,
 			wantErr: false,
 		},
 	}
@@ -40,8 +112,8 @@ func TestAddTask(t *testing.T) {
 				t.Errorf("AddTask() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AddTask() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got.Task, tt.want) {
+				t.Errorf("AddTask() = %v, want %v", got.Task, tt.want)
 			}
 		})
 	}
@@ -67,37 +139,37 @@ func TestCompleteTask(t *testing.T) {
 		name    string
 		args    args
 		want    bool
-		wantErr bool
+		wantErr ErrorCode
 	}{
 		{
 			name:    "task should be completed",
 			args:    args{r: taskRepo, id: taskID},
 			want:    true,
-			wantErr: false,
+			wantErr: ErrNone,
 		},
 		{
 			name:    "completed task should not be completed again",
 			args:    args{r: taskRepo, id: completedTaskID},
 			want:    false,
-			wantErr: false,
+			wantErr: ErrNone,
 		},
 		{
-			name:    "completing a cleared task should return error",
+			name:    "completing a cleared task should return an ErrRecordNotFound",
 			args:    args{r: taskRepo, id: clearedTaskID},
 			want:    false,
-			wantErr: true,
+			wantErr: ErrRecordNotFound,
 		},
 		{
-			name:    "completing an invalid task ID should return error",
+			name:    "completing a non-existent task ID should return an ErrRecordNotFound",
 			args:    args{r: taskRepo, id: 99999},
 			want:    false,
-			wantErr: true,
+			wantErr: ErrRecordNotFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := CompleteTask(tt.args.r, tt.args.id)
-			if (err != nil) != tt.wantErr {
+			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("CompleteTask() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -128,37 +200,37 @@ func TestClearTask(t *testing.T) {
 		name    string
 		args    args
 		want    bool
-		wantErr bool
+		wantErr ErrorCode
 	}{
 		{
 			name:    "task should be cleared",
 			args:    args{r: taskRepo, id: taskID},
 			want:    true,
-			wantErr: false,
+			wantErr: ErrNone,
 		},
 		{
 			name:    "completed task should be cleared",
 			args:    args{r: taskRepo, id: completedTaskID},
 			want:    true,
-			wantErr: false,
+			wantErr: ErrNone,
 		},
 		{
-			name:    "previously cleared task should return false",
+			name:    "previously cleared task should return ErrRecordNotFound",
 			args:    args{r: taskRepo, id: clearedTaskID},
 			want:    false,
-			wantErr: false,
+			wantErr: ErrRecordNotFound,
 		},
 		{
-			name:    "clearing a non-existent task ID should return error",
+			name:    "clearing a non-existent task ID should return ErrRecordNotFound",
 			args:    args{r: taskRepo, id: 9999},
 			want:    false,
-			wantErr: true,
+			wantErr: ErrRecordNotFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ClearTask(tt.args.r, tt.args.id)
-			if (err != nil) != tt.wantErr {
+			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("ClearTask() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
