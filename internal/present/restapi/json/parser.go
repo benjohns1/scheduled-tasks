@@ -3,6 +3,7 @@ package json
 import (
 	"encoding/json"
 	"github.com/benjohns1/scheduled-tasks/internal/core"
+	"io"
 )
 
 // Parser handles JSON parsing
@@ -15,7 +16,7 @@ func NewParser() *Parser {
 }
 
 // AddTask parses addTask request JSON data into a core Task struct
-func (p *Parser) AddTask(b Reader) (*core.Task, error) {
+func (p *Parser) AddTask(b io.Reader) (*core.Task, error) {
 	var addTask addTask
 	err := json.NewDecoder(b).Decode(&addTask)
 	if err != nil {
@@ -31,9 +32,4 @@ type addTask struct {
 
 func addTaskToTask(at *addTask) *core.Task {
 	return core.NewTask(at.Name, at.Description)
-}
-
-// Reader defines io.Reader interface needed to parse from JSON
-type Reader interface {
-	Read(p []byte) (n int, err error)
 }

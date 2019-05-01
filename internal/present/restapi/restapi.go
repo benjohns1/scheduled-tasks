@@ -2,12 +2,14 @@ package restapi
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core"
 	mapper "github.com/benjohns1/scheduled-tasks/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
@@ -15,6 +17,23 @@ import (
 // Logger interface needed for log messages
 type Logger interface {
 	Printf(format string, v ...interface{})
+}
+
+// Formatter defines the formatter interface for output responses
+type Formatter interface {
+	WriteResponse(w http.ResponseWriter, res []byte, statusCode int)
+	WriteEmpty(w http.ResponseWriter, statusCode int)
+	ClearedCompleted(count int) ([]byte, error)
+	TaskID(id usecase.TaskID) ([]byte, error)
+	Task(td *usecase.TaskData) ([]byte, error)
+	TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error)
+	Errorf(format string, a ...interface{}) []byte
+	Error(a interface{}) []byte
+}
+
+// Parser defines the parser interface for parsing input requests
+type Parser interface {
+	AddTask(b io.Reader) (*core.Task, error)
 }
 
 // Serve creates and starts the REST API server
@@ -31,7 +50,18 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 	f := mapper.NewFormatter(l)
 	r := httprouter.New()
 	taskPrefix := "/api/v1/task"
-	r.GET(taskPrefix+"/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.GET(taskPrefix+"/", listTasks(l, f, taskRepo))
+	r.GET(taskPrefix+"/:taskID", getTask(l, f, taskRepo))
+	r.POST(taskPrefix+"/add", addTask(l, f, p, taskRepo))
+	r.PUT(taskPrefix+"/:taskID/complete", completeTask(l, f, taskRepo))
+	r.DELETE(taskPrefix+"/:taskID", clearTask(l, f, taskRepo))
+	r.POST(taskPrefix+"/clear", clearCompletedTasks(l, f, taskRepo))
+	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
+	l.Printf("server exiting")
+}
+
+func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		ts, ucerr := usecase.ListTasks(taskRepo)
 		if ucerr != nil {
 			l.Printf("error retrieving task list: %v", ucerr)
@@ -44,8 +74,11 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
-	})
-	r.GET(taskPrefix+"/:taskID", func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	}
+}
+
+func getTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 		taskIDInt, err := strconv.Atoi(params.ByName("taskID"))
 		if err != nil {
 			l.Printf("valid task ID required")
@@ -70,8 +103,11 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
-	})
-	r.POST(taskPrefix+"/add", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	}
+}
+
+func addTask(l Logger, f Formatter, p Parser, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		t, ucerr := p.AddTask(r.Body)
 		defer r.Body.Close()
 		if ucerr != nil {
@@ -91,8 +127,11 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			return
 		}
 		f.WriteResponse(w, o, 201)
-	})
-	r.PUT(taskPrefix+"/:taskID/complete", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	}
+}
+
+func completeTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		taskIDInt, err := strconv.Atoi(ps.ByName("taskID"))
 		if err != nil {
 			l.Printf("valid task ID required")
@@ -115,8 +154,11 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			return
 		}
 		f.WriteEmpty(w, 204)
-	})
-	r.DELETE(taskPrefix+"/:taskID", func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	}
+}
+
+func clearTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 		taskIDInt, err := strconv.Atoi(params.ByName("taskID"))
 		if err != nil {
 			l.Printf("valid task ID required")
@@ -139,9 +181,11 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			return
 		}
 		f.WriteEmpty(w, 204)
-	})
-	r.POST(taskPrefix+"/clear", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	}
+}
 
+func clearCompletedTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		count, ucerr := usecase.ClearCompletedTasks(taskRepo)
 		if ucerr != nil {
 			l.Printf("error clearing completed tasks: %v", ucerr)
@@ -154,7 +198,5 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 			return
 		}
 		f.WriteResponse(w, o, 200)
-	})
-	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
-	l.Printf("server exiting")
+	}
 }

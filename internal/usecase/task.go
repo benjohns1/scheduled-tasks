@@ -7,7 +7,7 @@ import (
 // TaskID is the persistent ID of the task
 type TaskID int64
 
-// TaskData contains appication-level task info
+// TaskData contains application-level task info
 type TaskData struct {
 	TaskID TaskID
 	Task   *core.Task
