@@ -37,13 +37,14 @@ func (e *errorData) Error() string {
 }
 
 // ErrorCode use case error type
-type ErrorCode int
+type ErrorCode uint8
 
 // Use case error types
 const (
-	ErrNone           ErrorCode = 0
-	ErrUnknown        ErrorCode = 1 << iota
-	ErrRecordNotFound ErrorCode = 1 << iota
+	ErrNone    ErrorCode = 0
+	ErrUnknown ErrorCode = 1 << iota
+	ErrRecordNotFound
+	ErrNewError
 )
 
 func (ec ErrorCode) String() string {
