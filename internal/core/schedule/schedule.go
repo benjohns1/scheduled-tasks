@@ -12,14 +12,8 @@ type Schedule struct {
 }
 
 // New instantiates a new schedule entity
-func New() *Schedule {
-	return &Schedule{frequency: &Frequency{}, paused: false, tasks: []RecurringTask{}}
-}
-
-// WithFrequency returns the schedule with the frequency added to it
-func (s *Schedule) WithFrequency(f *Frequency) *Schedule {
-	s.frequency = f
-	return s
+func New(f *Frequency) *Schedule {
+	return &Schedule{frequency: f, paused: false, tasks: []RecurringTask{}}
 }
 
 // Pause pauses a schedule

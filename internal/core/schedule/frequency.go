@@ -7,6 +7,7 @@ import (
 
 // Frequency defines how often an event occurs
 type Frequency struct {
+	offset        int
 	interval      int
 	timePeriod    TimePeriod
 	atMinutes     []int
@@ -16,20 +17,20 @@ type Frequency struct {
 }
 
 // NewHourFrequency creates a new struct that represents an hour frequency
-func NewHourFrequency(interval int, atMinutes []int) (*Frequency, error) {
+func NewHourFrequency(atMinutes []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
 
 	return &Frequency{
-		interval:   interval,
+		interval:   1,
 		timePeriod: TimePeriodHour,
 		atMinutes:  atMinutes,
 	}, nil
 }
 
 // NewDayFrequency creates a new struct that represents a day frequency
-func NewDayFrequency(interval int, atMinutes []int, atHours []int) (*Frequency, error) {
+func NewDayFrequency(atMinutes []int, atHours []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func NewDayFrequency(interval int, atMinutes []int, atHours []int) (*Frequency, 
 	}
 
 	return &Frequency{
-		interval:   interval,
+		interval:   1,
 		timePeriod: TimePeriodDay,
 		atMinutes:  atMinutes,
 		atHours:    atHours,
@@ -46,7 +47,7 @@ func NewDayFrequency(interval int, atMinutes []int, atHours []int) (*Frequency, 
 }
 
 // NewWeekFrequency creates a new struct that represents a week frequency
-func NewWeekFrequency(interval int, atMinutes []int, atHours []int, onDays []Day) (*Frequency, error) {
+func NewWeekFrequency(atMinutes []int, atHours []int, onDays []Day) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func NewWeekFrequency(interval int, atMinutes []int, atHours []int, onDays []Day
 	}
 
 	return &Frequency{
-		interval:     interval,
+		interval:     1,
 		timePeriod:   TimePeriodWeek,
 		atMinutes:    atMinutes,
 		atHours:      atHours,
@@ -64,7 +65,7 @@ func NewWeekFrequency(interval int, atMinutes []int, atHours []int, onDays []Day
 }
 
 // NewMonthFrequency creates a new struct that represents a month frequency
-func NewMonthFrequency(interval int, atMinutes []int, atHours []int, onDays []int) (*Frequency, error) {
+func NewMonthFrequency(atMinutes []int, atHours []int, onDays []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -76,12 +77,35 @@ func NewMonthFrequency(interval int, atMinutes []int, atHours []int, onDays []in
 	}
 
 	return &Frequency{
-		interval:      interval,
+		interval:      1,
 		timePeriod:    TimePeriodMonth,
 		atMinutes:     atMinutes,
 		atHours:       atHours,
 		onDaysOfMonth: onDays,
 	}, nil
+}
+
+// SetOffset sets an offset from the base of each starting time
+// Base starting times for each time period:
+//  - Hourly:  Midnight
+//  - Daily:   1st day of the year
+//  - Weekly:  1st week of the year
+//  - Monthly: January
+func (f *Frequency) SetOffset(offset int) error {
+	if offset < 0 {
+		return fmt.Errorf("offset %v must be 0 or greater", offset)
+	}
+	f.offset = offset
+	return nil
+}
+
+// SetInterval sets an interval between each time period
+func (f *Frequency) SetInterval(interval int) error {
+	if interval < 1 {
+		return fmt.Errorf("interval %v must be greater than 0", interval)
+	}
+	f.interval = interval
+	return nil
 }
 
 func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
