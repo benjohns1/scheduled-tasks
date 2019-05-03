@@ -7,8 +7,8 @@ import (
 
 func TestNewHourFrequency(t *testing.T) {
 	type args struct {
-		interval  uint8
-		atMinutes []uint8
+		interval  int
+		atMinutes []int
 	}
 	tests := []struct {
 		name    string
@@ -18,13 +18,13 @@ func TestNewHourFrequency(t *testing.T) {
 	}{
 		{
 			name:    "should return a valid struct",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}},
-			want:    &Frequency{interval: 0, timePeriod: TimePeriodHour, atMinutes: []uint8{0, 1, 59}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}},
+			want:    &Frequency{interval: 0, timePeriod: TimePeriodHour, atMinutes: []int{0, 1, 59}},
 			wantErr: false,
 		},
 		{
 			name:    "should return error with minutes >= 60",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 60}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 60}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -45,9 +45,9 @@ func TestNewHourFrequency(t *testing.T) {
 
 func TestNewDayFrequency(t *testing.T) {
 	type args struct {
-		interval  uint8
-		atMinutes []uint8
-		atHours   []uint8
+		interval  int
+		atMinutes []int
+		atHours   []int
 	}
 	tests := []struct {
 		name    string
@@ -57,19 +57,19 @@ func TestNewDayFrequency(t *testing.T) {
 	}{
 		{
 			name:    "should return a valid struct",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}},
-			want:    &Frequency{interval: 0, timePeriod: TimePeriodDay, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}},
+			want:    &Frequency{interval: 0, timePeriod: TimePeriodDay, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}},
 			wantErr: false,
 		},
 		{
 			name:    "should return error with minutes >= 60",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 60}, atHours: []uint8{0, 1, 10, 22, 23}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 60}, atHours: []int{0, 1, 10, 22, 23}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with hours >= 24",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 23, 24}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -90,9 +90,9 @@ func TestNewDayFrequency(t *testing.T) {
 
 func TestNewWeekFrequency(t *testing.T) {
 	type args struct {
-		interval  uint8
-		atMinutes []uint8
-		atHours   []uint8
+		interval  int
+		atMinutes []int
+		atHours   []int
 		onDays    []Day
 	}
 	tests := []struct {
@@ -103,19 +103,19 @@ func TestNewWeekFrequency(t *testing.T) {
 	}{
 		{
 			name:    "should return a valid struct",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
-			want:    &Frequency{interval: 0, timePeriod: TimePeriodWeek, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}, onDaysOfWeek: []Day{Sunday, Monday, Saturday}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
+			want:    &Frequency{interval: 0, timePeriod: TimePeriodWeek, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDaysOfWeek: []Day{Sunday, Monday, Saturday}},
 			wantErr: false,
 		},
 		{
 			name:    "should return error with minutes >= 60",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 60}, atHours: []uint8{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 60}, atHours: []int{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with hours >= 24",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 23, 24}, onDays: []Day{Sunday, Monday, Saturday}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []Day{Sunday, Monday, Saturday}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -136,10 +136,10 @@ func TestNewWeekFrequency(t *testing.T) {
 
 func TestNewMonthFrequency(t *testing.T) {
 	type args struct {
-		interval  uint8
-		atMinutes []uint8
-		atHours   []uint8
-		onDays    []uint8
+		interval  int
+		atMinutes []int
+		atHours   []int
+		onDays    []int
 	}
 	tests := []struct {
 		name    string
@@ -149,31 +149,31 @@ func TestNewMonthFrequency(t *testing.T) {
 	}{
 		{
 			name:    "should return a valid struct",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}, onDays: []uint8{1, 2, 30, 31}},
-			want:    &Frequency{interval: 0, timePeriod: TimePeriodMonth, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 22, 23}, onDaysOfMonth: []uint8{1, 2, 30, 31}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDays: []int{1, 2, 30, 31}},
+			want:    &Frequency{interval: 0, timePeriod: TimePeriodMonth, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDaysOfMonth: []int{1, 2, 30, 31}},
 			wantErr: false,
 		},
 		{
 			name:    "should return error with minutes >= 60",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 60}, atHours: []uint8{0, 1, 10, 22, 23}, onDays: []uint8{1, 2, 30, 31}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 60}, atHours: []int{0, 1, 10, 22, 23}, onDays: []int{1, 2, 30, 31}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with hours >= 24",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 23, 24}, onDays: []uint8{1, 2, 30, 31}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []int{1, 2, 30, 31}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with days < 1",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 23, 24}, onDays: []uint8{0, 1, 2, 30, 31}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []int{0, 1, 2, 30, 31}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with days > 31",
-			args:    args{interval: 0, atMinutes: []uint8{0, 1, 59}, atHours: []uint8{0, 1, 10, 23, 24}, onDays: []uint8{1, 2, 30, 31, 32}},
+			args:    args{interval: 0, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []int{1, 2, 30, 31, 32}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -194,7 +194,7 @@ func TestNewMonthFrequency(t *testing.T) {
 
 func Test_validateMinutes(t *testing.T) {
 	type args struct {
-		mins []uint8
+		mins []int
 	}
 	tests := []struct {
 		name    string
@@ -214,7 +214,7 @@ func Test_validateMinutes(t *testing.T) {
 
 func Test_validateHours(t *testing.T) {
 	type args struct {
-		hrs []uint8
+		hrs []int
 	}
 	tests := []struct {
 		name    string
@@ -234,7 +234,7 @@ func Test_validateHours(t *testing.T) {
 
 func Test_validateDaysOfMonth(t *testing.T) {
 	type args struct {
-		days []uint8
+		days []int
 	}
 	tests := []struct {
 		name    string

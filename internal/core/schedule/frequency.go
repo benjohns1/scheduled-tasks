@@ -2,20 +2,21 @@ package schedule
 
 import (
 	"fmt"
+	"time"
 )
 
 // Frequency defines how often an event occurs
 type Frequency struct {
-	interval      uint8
+	interval      int
 	timePeriod    TimePeriod
-	atMinutes     []uint8
-	atHours       []uint8
+	atMinutes     []int
+	atHours       []int
 	onDaysOfWeek  []Day
-	onDaysOfMonth []uint8
+	onDaysOfMonth []int
 }
 
 // NewHourFrequency creates a new struct that represents an hour frequency
-func NewHourFrequency(interval uint8, atMinutes []uint8) (*Frequency, error) {
+func NewHourFrequency(interval int, atMinutes []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -28,7 +29,7 @@ func NewHourFrequency(interval uint8, atMinutes []uint8) (*Frequency, error) {
 }
 
 // NewDayFrequency creates a new struct that represents a day frequency
-func NewDayFrequency(interval uint8, atMinutes []uint8, atHours []uint8) (*Frequency, error) {
+func NewDayFrequency(interval int, atMinutes []int, atHours []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func NewDayFrequency(interval uint8, atMinutes []uint8, atHours []uint8) (*Frequ
 }
 
 // NewWeekFrequency creates a new struct that represents a week frequency
-func NewWeekFrequency(interval uint8, atMinutes []uint8, atHours []uint8, onDays []Day) (*Frequency, error) {
+func NewWeekFrequency(interval int, atMinutes []int, atHours []int, onDays []Day) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func NewWeekFrequency(interval uint8, atMinutes []uint8, atHours []uint8, onDays
 }
 
 // NewMonthFrequency creates a new struct that represents a month frequency
-func NewMonthFrequency(interval uint8, atMinutes []uint8, atHours []uint8, onDays []uint8) (*Frequency, error) {
+func NewMonthFrequency(interval int, atMinutes []int, atHours []int, onDays []int) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -83,25 +84,63 @@ func NewMonthFrequency(interval uint8, atMinutes []uint8, atHours []uint8, onDay
 	}, nil
 }
 
-func validateMinutes(mins []uint8) error {
+func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
+	if end.Before(start) {
+		return nil, fmt.Errorf("end time %v is before start time %v", end, start)
+	}
+
+	switch f.timePeriod {
+	case TimePeriodNone:
+		return []time.Time{}, nil
+	case TimePeriodHour:
+		return f.calcHourTimes(start, end)
+	}
+	return nil, nil
+}
+
+func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, error) {
+	maxHour := (int(end.Sub(start).Hours()) / f.interval) + 1
+	times := []time.Time{}
+
+	// Calculate first hour
+	hour := start.Hour() + (start.Hour() % f.interval)
+
+	// Add times to the array
+	for hri := 0; hri <= maxHour; hri++ {
+		for _, min := range f.atMinutes {
+			time := time.Date(start.Year(), start.Month(), start.Day(), hour, min, 0, 0, start.Location())
+			if time.Before(start) {
+				continue
+			}
+			if time.After(end) {
+				return times, nil
+			}
+			times = append(times, time)
+		}
+		hour += f.interval
+	}
+	return times, nil
+}
+
+func validateMinutes(mins []int) error {
 	for _, min := range mins {
-		if min >= 60 {
+		if min < 0 || min > 59 {
 			return fmt.Errorf("Minutes must be between 0 and 59, inclusive")
 		}
 	}
 	return nil
 }
 
-func validateHours(hrs []uint8) error {
+func validateHours(hrs []int) error {
 	for _, hr := range hrs {
-		if hr >= 24 {
+		if hr < 0 || hr > 23 {
 			return fmt.Errorf("Hours must be between 0 and 23, inclusive")
 		}
 	}
 	return nil
 }
 
-func validateDaysOfMonth(days []uint8) error {
+func validateDaysOfMonth(days []int) error {
 	for _, day := range days {
 		if day < 1 || day > 31 {
 			return fmt.Errorf("Days of month must be between 1 and 31, inclusive")
