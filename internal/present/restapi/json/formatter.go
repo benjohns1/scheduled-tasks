@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/benjohns1/scheduled-tasks/internal/core"
+	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
@@ -95,7 +95,7 @@ func (f *Formatter) TaskID(id usecase.TaskID) ([]byte, error) {
 	return json.Marshal(o)
 }
 
-func taskToOut(id usecase.TaskID, t *core.Task) *outTask {
+func taskToOut(id usecase.TaskID, t *task.Task) *outTask {
 	return &outTask{
 		ID:            id,
 		Name:          t.Name(),
@@ -110,7 +110,7 @@ func (f *Formatter) Task(td *usecase.TaskData) ([]byte, error) {
 }
 
 // TaskMap formats a map of Tasks to JSON
-func (f *Formatter) TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error) {
+func (f *Formatter) TaskMap(ts map[usecase.TaskID]*task.Task) ([]byte, error) {
 	o := make(map[usecase.TaskID]*outTask)
 	for id, t := range ts {
 		o[id] = taskToOut(id, t)

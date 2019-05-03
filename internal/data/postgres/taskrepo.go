@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/benjohns1/scheduled-tasks/internal/core"
+	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
@@ -13,7 +13,7 @@ import (
 type TaskRepo struct {
 	l     Logger
 	db    *sql.DB
-	tasks map[usecase.TaskID]*core.Task
+	tasks map[usecase.TaskID]*task.Task
 	Close func()
 }
 
@@ -56,7 +56,7 @@ func NewTaskRepo(l Logger, conn DBConn) (repo *TaskRepo, err error) {
 		l.Print("first-time DB setup complete")
 	}
 
-	repo = &TaskRepo{l: l, db: db, tasks: make(map[usecase.TaskID]*core.Task), Close: close}
+	repo = &TaskRepo{l: l, db: db, tasks: make(map[usecase.TaskID]*task.Task), Close: close}
 
 	return
 }
@@ -77,13 +77,13 @@ func (r *TaskRepo) WipeAndReset() usecase.Error {
 	}
 
 	// Destroy/reset cache
-	r.tasks = make(map[usecase.TaskID]*core.Task)
+	r.tasks = make(map[usecase.TaskID]*task.Task)
 
 	return nil
 }
 
 // Get retrieves a task entity, given its persistent ID
-func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, usecase.Error) {
+func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 
 	// Try to retrieve from cache
 	t, ok := r.tasks[id]
@@ -108,7 +108,7 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*core.Task, usecase.Error) {
 }
 
 // GetAll retrieves all tasks
-func (r *TaskRepo) GetAll() (map[usecase.TaskID]*core.Task, usecase.Error) {
+func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	// Retrieve from DB
 	rows, err := r.db.Query("SELECT id, name, description, completed_time, cleared_time FROM task")
 	if err != nil {
@@ -158,14 +158,14 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 		clearedTime = time.Time{}
 	}
 
-	td.Task = core.NewTaskFull(row.name, row.description, completedTime, clearedTime)
+	td.Task = task.NewFull(row.name, row.description, completedTime, clearedTime)
 	td.TaskID = usecase.TaskID(row.id)
 
 	return
 }
 
 // Add adds a task to the persisence layer
-func (r *TaskRepo) Add(t *core.Task) (usecase.TaskID, usecase.Error) {
+func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
 	q := "INSERT INTO task (name, description, completed_time, cleared_time) VALUES ($1, $2, $3, $4) RETURNING id"
 	var id usecase.TaskID
 	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime()).Scan(&id)
@@ -179,7 +179,7 @@ func (r *TaskRepo) Add(t *core.Task) (usecase.TaskID, usecase.Error) {
 }
 
 // Update updates a task's persistent data to the given entity values
-func (r *TaskRepo) Update(id usecase.TaskID, t *core.Task) usecase.Error {
+func (r *TaskRepo) Update(id usecase.TaskID, t *task.Task) usecase.Error {
 	q := "UPDATE task SET name = $1, description = $2, completed_time = $3, cleared_time = $4 WHERE id = $5 RETURNING id"
 	rows, err := r.db.Query(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), id)
 	if err != nil {

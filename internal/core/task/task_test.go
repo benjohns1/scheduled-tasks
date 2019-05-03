@@ -1,4 +1,4 @@
-package core
+package task
 
 import (
 	"reflect"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestNewTask(t *testing.T) {
+func TestNew(t *testing.T) {
 	type args struct {
 		name        string
 		description string
@@ -29,14 +29,14 @@ func TestNewTask(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTask(tt.args.name, tt.args.description); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTask() = %v, want %v", got, tt.want)
+			if got := New(tt.args.name, tt.args.description); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewTaskFull(t *testing.T) {
+func TestNewFull(t *testing.T) {
 	type args struct {
 		name        string
 		description string
@@ -62,8 +62,8 @@ func TestNewTaskFull(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTaskFull(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTaskFull() = %v, want %v", got, tt.want)
+			if got := NewFull(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewFull() = %v, want %v", got, tt.want)
 			}
 		})
 	}

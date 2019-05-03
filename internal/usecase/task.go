@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"github.com/benjohns1/scheduled-tasks/internal/core"
+	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 )
 
 // TaskID is the persistent ID of the task
@@ -10,15 +10,15 @@ type TaskID int64
 // TaskData contains application-level task info
 type TaskData struct {
 	TaskID TaskID
-	Task   *core.Task
+	Task   *task.Task
 }
 
 // TaskRepo defines the task repository interface required by use cases
 type TaskRepo interface {
-	Get(TaskID) (*core.Task, Error)
-	GetAll() (map[TaskID]*core.Task, Error)
-	Add(*core.Task) (TaskID, Error)
-	Update(TaskID, *core.Task) Error
+	Get(TaskID) (*task.Task, Error)
+	GetAll() (map[TaskID]*task.Task, Error)
+	Add(*task.Task) (TaskID, Error)
+	Update(TaskID, *task.Task) Error
 	WipeAndReset() Error
 }
 
@@ -35,7 +35,7 @@ func GetTask(r TaskRepo, id TaskID) (*TaskData, Error) {
 }
 
 // AddTask creates and adds a new task to the list
-func AddTask(r TaskRepo, t *core.Task) (*TaskData, Error) {
+func AddTask(r TaskRepo, t *task.Task) (*TaskData, Error) {
 	id, err := r.Add(t)
 	if err != nil {
 		return nil, NewError(ErrUnknown, "error adding task: %v", err)
@@ -123,13 +123,13 @@ func ClearCompletedTasks(r TaskRepo) (int, Error) {
 }
 
 // ListTasks returns all tasks that haven't been cleared
-func ListTasks(r TaskRepo) (map[TaskID]*core.Task, Error) {
+func ListTasks(r TaskRepo) (map[TaskID]*task.Task, Error) {
 	all, ucerr := r.GetAll()
 	if ucerr != nil {
 		return nil, ucerr.Prefix("error retrieving tasks")
 	}
 
-	list := make(map[TaskID]*core.Task)
+	list := make(map[TaskID]*task.Task)
 	for id, t := range all {
 		if !t.ClearedTime().IsZero() {
 			continue

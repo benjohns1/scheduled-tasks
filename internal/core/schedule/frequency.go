@@ -1,6 +1,8 @@
 package schedule
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Frequency defines how often an event occurs
 type Frequency struct {
@@ -10,11 +12,6 @@ type Frequency struct {
 	atHours       []uint8
 	onDaysOfWeek  []Day
 	onDaysOfMonth []uint8
-}
-
-// NewFrequency creates a new empty Frequency struct
-func NewFrequency() *Frequency {
-	return &Frequency{}
 }
 
 // NewHourFrequency creates a new struct that represents an hour frequency

@@ -1,4 +1,4 @@
-package core
+package task
 
 import (
 	"errors"
@@ -14,16 +14,16 @@ type Task struct {
 	clearedTime   time.Time
 }
 
-// NewTask instantiates a new task
-func NewTask(name string, description string) *Task {
+// New instantiates a new task entity
+func New(name string, description string) *Task {
 	return &Task{
 		name:        name,
 		description: description,
 	}
 }
 
-// NewTaskFull instantiates a new task with all available fields
-func NewTaskFull(name string, description string, complete time.Time, cleared time.Time) *Task {
+// NewTaskFull instantiates a new task entity with all available fields
+func NewFull(name string, description string, complete time.Time, cleared time.Time) *Task {
 	return &Task{
 		name:          name,
 		description:   description,

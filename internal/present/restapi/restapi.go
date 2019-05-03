@@ -9,7 +9,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/benjohns1/scheduled-tasks/internal/core"
+	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	mapper "github.com/benjohns1/scheduled-tasks/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
@@ -26,14 +26,14 @@ type Formatter interface {
 	ClearedCompleted(count int) ([]byte, error)
 	TaskID(id usecase.TaskID) ([]byte, error)
 	Task(td *usecase.TaskData) ([]byte, error)
-	TaskMap(ts map[usecase.TaskID]*core.Task) ([]byte, error)
+	TaskMap(ts map[usecase.TaskID]*task.Task) ([]byte, error)
 	Errorf(format string, a ...interface{}) []byte
 	Error(a interface{}) []byte
 }
 
 // Parser defines the parser interface for parsing input requests
 type Parser interface {
-	AddTask(b io.Reader) (*core.Task, error)
+	AddTask(b io.Reader) (*task.Task, error)
 }
 
 // Serve creates and starts the REST API server
