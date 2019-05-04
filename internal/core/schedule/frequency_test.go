@@ -3,6 +3,7 @@ package schedule
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestNewHourFrequency(t *testing.T) {
@@ -90,7 +91,7 @@ func TestNewWeekFrequency(t *testing.T) {
 	type args struct {
 		atMinutes []int
 		atHours   []int
-		onDays    []Day
+		onDays    []time.Weekday
 	}
 	tests := []struct {
 		name    string
@@ -100,19 +101,19 @@ func TestNewWeekFrequency(t *testing.T) {
 	}{
 		{
 			name:    "should return a valid struct",
-			args:    args{atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
-			want:    &Frequency{interval: 1, timePeriod: TimePeriodWeek, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDaysOfWeek: []Day{Sunday, Monday, Saturday}},
+			args:    args{atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDays: []time.Weekday{time.Sunday, time.Monday, time.Saturday}},
+			want:    &Frequency{interval: 1, timePeriod: TimePeriodWeek, atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 22, 23}, onDaysOfWeek: []time.Weekday{time.Sunday, time.Monday, time.Saturday}},
 			wantErr: false,
 		},
 		{
 			name:    "should return error with minutes >= 60",
-			args:    args{atMinutes: []int{0, 1, 60}, atHours: []int{0, 1, 10, 22, 23}, onDays: []Day{Sunday, Monday, Saturday}},
+			args:    args{atMinutes: []int{0, 1, 60}, atHours: []int{0, 1, 10, 22, 23}, onDays: []time.Weekday{time.Sunday, time.Monday, time.Saturday}},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "should return error with hours >= 24",
-			args:    args{atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []Day{Sunday, Monday, Saturday}},
+			args:    args{atMinutes: []int{0, 1, 59}, atHours: []int{0, 1, 10, 23, 24}, onDays: []time.Weekday{time.Sunday, time.Monday, time.Saturday}},
 			want:    nil,
 			wantErr: true,
 		},

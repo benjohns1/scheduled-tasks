@@ -12,7 +12,7 @@ type Frequency struct {
 	timePeriod    TimePeriod
 	atMinutes     []int
 	atHours       []int
-	onDaysOfWeek  []Day
+	onDaysOfWeek  []time.Weekday
 	onDaysOfMonth []int
 }
 
@@ -47,7 +47,7 @@ func NewDayFrequency(atMinutes []int, atHours []int) (*Frequency, error) {
 }
 
 // NewWeekFrequency creates a new struct that represents a week frequency
-func NewWeekFrequency(atMinutes []int, atHours []int, onDays []Day) (*Frequency, error) {
+func NewWeekFrequency(atMinutes []int, atHours []int, onDays []time.Weekday) (*Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
 		return nil, err
 	}
@@ -108,6 +108,7 @@ func (f *Frequency) SetInterval(interval int) error {
 	return nil
 }
 
+// times returns all times between the specified start and end time (inclusive) that occur for this frequency
 func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 	if end.Before(start) {
 		return nil, fmt.Errorf("end time %v is before start time %v", end, start)
@@ -119,7 +120,7 @@ func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 	case TimePeriodHour:
 		return f.calcHourTimes(start, end)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("not implemented, yet")
 }
 
 func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, error) {
