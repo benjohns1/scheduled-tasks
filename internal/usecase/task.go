@@ -19,7 +19,6 @@ type TaskRepo interface {
 	GetAll() (map[TaskID]*task.Task, Error)
 	Add(*task.Task) (TaskID, Error)
 	Update(TaskID, *task.Task) Error
-	WipeAndReset() Error
 }
 
 // GetTask gets a single task

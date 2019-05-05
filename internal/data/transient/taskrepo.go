@@ -12,21 +12,8 @@ type TaskRepo struct {
 }
 
 // NewTaskRepo instantiates a new TaskRepo
-func NewTaskRepo() (repo *TaskRepo, err error) {
-
-	err = nil
-	repo = &TaskRepo{tasks: make(map[usecase.TaskID]*task.Task)}
-
-	return
-}
-
-// WipeAndReset completely destroys all data in persistence and cache
-func (r *TaskRepo) WipeAndReset() usecase.Error {
-
-	// Destroy/reset cache
-	r.tasks = make(map[usecase.TaskID]*task.Task)
-
-	return nil
+func NewTaskRepo() *TaskRepo {
+	return &TaskRepo{tasks: make(map[usecase.TaskID]*task.Task)}
 }
 
 // Get retrieves a task entity, given its persistent ID
@@ -48,9 +35,8 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 
 // Add adds a task to the persisence layer
 func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
-	id := usecase.TaskID(r.lastID)
 	r.lastID++
-
+	id := usecase.TaskID(r.lastID)
 	r.tasks[id] = t
 
 	return id, nil

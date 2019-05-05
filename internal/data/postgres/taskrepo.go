@@ -61,27 +61,6 @@ func NewTaskRepo(l Logger, conn DBConn) (repo *TaskRepo, err error) {
 	return
 }
 
-// WipeAndReset completely destroys all data in persistence and cache
-func (r *TaskRepo) WipeAndReset() usecase.Error {
-
-	// Drop db table
-	_, err := r.db.Exec("DROP TABLE task")
-	if err != nil {
-		return usecase.NewError(usecase.ErrUnknown, "error dropping task table: %v", err)
-	}
-
-	// Reset db table
-	_, err = setup(r.db)
-	if err != nil {
-		return usecase.NewError(usecase.ErrUnknown, "error resetting task table: %v", err)
-	}
-
-	// Destroy/reset cache
-	r.tasks = make(map[usecase.TaskID]*task.Task)
-
-	return nil
-}
-
 // Get retrieves a task entity, given its persistent ID
 func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 

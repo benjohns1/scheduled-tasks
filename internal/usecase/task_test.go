@@ -11,18 +11,12 @@ import (
 )
 
 func TestGetTask(t *testing.T) {
-	taskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
+	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
-	taskID, err1 := taskRepo.Add(task1)
+	taskID, _ := taskRepo.Add(task1)
 	task2 := task.NewFull("task2", "", time.Now(), time.Time{})
-	completedTaskID, err2 := taskRepo.Add(task2)
-	clearedTaskID, err3 := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
-	if err1 != nil || err2 != nil || err3 != nil {
-		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
-	}
+	completedTaskID, _ := taskRepo.Add(task2)
+	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -63,7 +57,7 @@ func TestGetTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetTask(tt.args.r, tt.args.id)
 			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
-				t.Errorf("CompleteTask() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetTask() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -74,11 +68,7 @@ func TestGetTask(t *testing.T) {
 }
 
 func TestAddTask(t *testing.T) {
-	taskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
-
+	taskRepo := data.NewTaskRepo()
 	emptyTask := task.New("", "")
 	basicTask := task.New("task with data", "task description")
 
@@ -120,16 +110,10 @@ func TestAddTask(t *testing.T) {
 }
 
 func TestCompleteTask(t *testing.T) {
-	taskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
-	taskID, err1 := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, err2 := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, err3 := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
-	if err1 != nil || err2 != nil || err3 != nil {
-		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
-	}
+	taskRepo := data.NewTaskRepo()
+	taskID, _ := taskRepo.Add(task.New("task1", ""))
+	completedTaskID, _ := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -181,16 +165,10 @@ func TestCompleteTask(t *testing.T) {
 }
 
 func TestClearTask(t *testing.T) {
-	taskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
-	taskID, err1 := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, err2 := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, err3 := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
-	if err1 != nil || err2 != nil || err3 != nil {
-		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
-	}
+	taskRepo := data.NewTaskRepo()
+	taskID, _ := taskRepo.Add(task.New("task1", ""))
+	completedTaskID, _ := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -242,26 +220,14 @@ func TestClearTask(t *testing.T) {
 }
 
 func TestClearCompletedTasks(t *testing.T) {
-	emptyRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
+	emptyRepo := data.NewTaskRepo()
 
-	singleCompletedTaskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
-	_, err1 := singleCompletedTaskRepo.Add(task.New("task1", ""))
-	_, err2 := singleCompletedTaskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	_, err3 := singleCompletedTaskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
-	if err1 != nil || err2 != nil || err3 != nil {
-		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
-	}
+	singleCompletedTaskRepo := data.NewTaskRepo()
+	singleCompletedTaskRepo.Add(task.New("task1", ""))
+	singleCompletedTaskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
+	singleCompletedTaskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
 
-	thousandCompletedTasksRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
+	thousandCompletedTasksRepo := data.NewTaskRepo()
 	for i := 0; i < 1000; i++ {
 		_, err := thousandCompletedTasksRepo.Add(task.NewFull("", "", time.Now(), time.Time{}))
 		if err != nil {
@@ -312,18 +278,12 @@ func TestClearCompletedTasks(t *testing.T) {
 }
 
 func TestListTasks(t *testing.T) {
-	taskRepo, err := data.NewTaskRepo()
-	if err != nil {
-		t.Errorf("error creating task repo: %v", err)
-	}
+	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
-	id1, err1 := taskRepo.Add(task1)
+	id1, _ := taskRepo.Add(task1)
 	task2 := task.NewFull("task2", "", time.Now(), time.Time{})
-	id2, err2 := taskRepo.Add(task2)
-	_, err3 := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
-	if err1 != nil || err2 != nil || err3 != nil {
-		t.Errorf("error setting up task repo: %v, %v, %v", err1, err2, err3)
-	}
+	id2, _ := taskRepo.Add(task2)
+	taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r TaskRepo

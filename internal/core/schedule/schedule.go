@@ -26,6 +26,11 @@ func (s *Schedule) Unpause() {
 	s.paused = false
 }
 
+// Paused returns whether schedule is currently paused
+func (s *Schedule) Paused() bool {
+	return s.paused
+}
+
 // Tasks returns the slice of recurring tasks associated with a schedule
 func (s *Schedule) Tasks() []RecurringTask {
 	return s.tasks
