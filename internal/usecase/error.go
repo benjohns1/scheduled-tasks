@@ -44,7 +44,7 @@ const (
 	ErrNone    ErrorCode = 0
 	ErrUnknown ErrorCode = 1 << iota
 	ErrRecordNotFound
-	ErrNewError
+	ErrDuplicateRecord
 )
 
 func (ec ErrorCode) String() string {

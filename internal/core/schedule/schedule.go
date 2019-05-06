@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -34,6 +35,34 @@ func (s *Schedule) Paused() bool {
 // Tasks returns the slice of recurring tasks associated with a schedule
 func (s *Schedule) Tasks() []RecurringTask {
 	return s.tasks
+}
+
+// AddTask adds a new recurring task if it doesn't already exist
+func (s *Schedule) AddTask(rt RecurringTask) error {
+	for _, t := range s.tasks {
+		if t.Equal(rt) {
+			return fmt.Errorf("error adding recurring task: identical task already exists for this schedule")
+		}
+	}
+	s.tasks = append(s.tasks, rt)
+	return nil
+}
+
+// RemoveTask removes an existing recurring task from the schedule
+func (s *Schedule) RemoveTask(rt RecurringTask) error {
+	index := -1
+	for i, t := range s.tasks {
+		if t.Equal(rt) {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return fmt.Errorf("error removing task: no matching task found")
+	}
+
+	s.tasks = append(s.tasks[:index], s.tasks[index+1:]...)
+	return nil
 }
 
 // Times gets a list of scheduled times between the start and end times

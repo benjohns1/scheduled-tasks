@@ -17,41 +17,96 @@ type ScheduleData struct {
 type ScheduleRepo interface {
 	Get(ScheduleID) (*schedule.Schedule, Error)
 	GetAll() (map[ScheduleID]*schedule.Schedule, Error)
-	Add(*schedule.Schedule) (TaskID, Error)
+	Add(*schedule.Schedule) (ScheduleID, Error)
 	Update(ScheduleID, *schedule.Schedule) Error
 }
 
 // GetSchedule returns a single schedule
 func GetSchedule(r ScheduleRepo, id ScheduleID) (*ScheduleData, Error) {
-	return nil, NewError(ErrUnknown, "not implemented")
+	s, err := r.Get(id)
+	if err != nil {
+		return nil, err.Prefix("error getting schedule id %v", id)
+	}
+	return &ScheduleData{ScheduleID: id, Schedule: s}, nil
 }
 
 // ListSchedules returns all schedules
 func ListSchedules(r ScheduleRepo) (map[ScheduleID]*schedule.Schedule, Error) {
-	return map[ScheduleID]*schedule.Schedule{}, NewError(ErrUnknown, "not implemented")
+	ss, err := r.GetAll()
+	if err != nil {
+		return nil, err.Prefix("error listing all schedules")
+	}
+	return ss, nil
 }
 
 // AddSchedule adds a new schedule
 func AddSchedule(r ScheduleRepo, s *schedule.Schedule) (ScheduleID, Error) {
-	return 0, NewError(ErrUnknown, "not implemented")
+	id, err := r.Add(s)
+	if err != nil {
+		return id, err.Prefix("error adding schedule")
+	}
+	return id, nil
 }
 
 // PauseSchedule pauses the schedule
 func PauseSchedule(r ScheduleRepo, id ScheduleID) Error {
-	return NewError(ErrUnknown, "not implemented")
+
+	s, err := r.Get(id)
+	if err != nil {
+		return err.Prefix("error retrieving schedule id %d to pause", id)
+	}
+
+	s.Pause()
+
+	err = r.Update(id, s)
+	if err != nil {
+		return err.Prefix("error updating schedule id %d attempting to pause", id)
+	}
+	return nil
 }
 
 // UnpauseSchedule unpauses the schedule
 func UnpauseSchedule(r ScheduleRepo, id ScheduleID) Error {
-	return NewError(ErrUnknown, "not implemented")
+
+	s, err := r.Get(id)
+	if err != nil {
+		return err.Prefix("error retrieving schedule id %d to unpause", id)
+	}
+
+	s.Unpause()
+
+	err = r.Update(id, s)
+	if err != nil {
+		return err.Prefix("error updating schedule id %d attempting to unpause", id)
+	}
+	return nil
 }
 
 // AddRecurringTask adds a new recurring task to the schedule
-func AddRecurringTask(r ScheduleRepo, id ScheduleID, rt *schedule.RecurringTask) Error {
-	return NewError(ErrUnknown, "not implemented")
+func AddRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) Error {
+
+	s, err := r.Get(id)
+	if err != nil {
+		return err.Prefix("error retrieving schedule id %v to add recurring task", id)
+	}
+
+	if e := s.AddTask(rt); e != nil {
+		return NewError(ErrDuplicateRecord, "can't add recurring task: duplicate found for schedule id %v", id)
+	}
+
+	return nil
 }
 
 // RemoveRecurringTask removes the recurring task at the specified index from the schedule
-func RemoveRecurringTask(r ScheduleRepo, id ScheduleID, taskIndex int) Error {
-	return NewError(ErrUnknown, "not implemented")
+func RemoveRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) Error {
+	s, err := r.Get(id)
+	if err != nil {
+		return err.Prefix("error retrieving schedule id %v to remove recurring task", id)
+	}
+
+	if e := s.RemoveTask(rt); e != nil {
+		return NewError(ErrRecordNotFound, "can't remove recurring task from schedule id %v", id)
+	}
+
+	return nil
 }

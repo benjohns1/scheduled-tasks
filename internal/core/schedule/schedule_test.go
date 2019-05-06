@@ -269,3 +269,123 @@ func TestSchedule_Times_HourlyFrequencyEvenHour(t *testing.T) {
 		})
 	}
 }
+
+func TestSchedule_AddTask(t *testing.T) {
+
+	f, _ := NewHourFrequency([]int{0})
+	s := New(f)
+	rt1 := NewRecurringTask("task 1", "")
+	rt2 := NewRecurringTask("task 2", "")
+
+	type args struct {
+		rt RecurringTask
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "should add 1st recurring task",
+			s:       s,
+			args:    args{rt: rt1},
+			wantErr: false,
+		},
+		{
+			name:    "should add 2nd recurring task",
+			s:       s,
+			args:    args{rt: rt2},
+			wantErr: false,
+		},
+		{
+			name:    "should fail trying to add identical task",
+			s:       s,
+			args:    args{rt: rt2},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.s.AddTask(tt.args.rt)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.AddTask() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestSchedule_RemoveTask(t *testing.T) {
+	f, _ := NewHourFrequency([]int{0})
+	s := New(f)
+	rt1 := NewRecurringTask("task 1", "")
+	rt2 := NewRecurringTask("task 2", "")
+	rt2remove := NewRecurringTask("task 2", "")
+	rt3unknown := NewRecurringTask("unknown task", "")
+	s.AddTask(rt1)
+	s.AddTask(rt2)
+
+	type args struct {
+		rt RecurringTask
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "should remove recurring task 1",
+			s:       s,
+			args:    args{rt: rt1},
+			wantErr: false,
+		},
+		{
+			name:    "should remove recurring task 2",
+			s:       s,
+			args:    args{rt: rt2remove},
+			wantErr: false,
+		},
+		{
+			name:    "should error attempting to remove recurring task 2 again",
+			s:       s,
+			args:    args{rt: rt2},
+			wantErr: true,
+		},
+		{
+			name:    "should error attempting to remove unknown task",
+			s:       s,
+			args:    args{rt: rt3unknown},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.s.RemoveTask(tt.args.rt); (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.RemoveTask() = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSchedule_TaskListUpdates(t *testing.T) {
+	f, _ := NewHourFrequency([]int{0})
+	s := New(f)
+	rt1 := NewRecurringTask("task 1", "")
+	rt2 := NewRecurringTask("task 2", "")
+	rt2remove := NewRecurringTask("task 2", "")
+	rt3unknown := NewRecurringTask("unknown task", "")
+	s.AddTask(rt1)
+	s.AddTask(rt2)
+	s.RemoveTask(rt2remove)
+	s.RemoveTask(rt3unknown)
+
+	t.Run("should list 1st task", func(t *testing.T) {
+		want := []RecurringTask{rt1}
+		got := s.Tasks()
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Schedule.List() = %v, want %v", got, want)
+		}
+	})
+}
