@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 )
 
@@ -16,6 +17,34 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+// AddSchedule parses addSchedule request JSON data into a core Schedule struct
+func (p *Parser) AddSchedule(b io.Reader) (*schedule.Schedule, error) {
+	var addSchedule addSchedule
+	err := json.NewDecoder(b).Decode(&addSchedule)
+	if err != nil {
+		return nil, err
+	}
+	return parseAddSchedule(&addSchedule)
+}
+
+type addSchedule struct {
+	Paused bool `json:"paused"`
+}
+
+func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
+
+	// @TODO: parse actual schedule data
+	f, err := schedule.NewHourFrequency([]int{0})
+	if err != nil {
+		return nil, err
+	}
+	s := schedule.New(f)
+	if as.Paused {
+		s.Pause()
+	}
+	return s, nil
+}
+
 // AddTask parses addTask request JSON data into a core Task struct
 func (p *Parser) AddTask(b io.Reader) (*task.Task, error) {
 	var addTask addTask
@@ -23,7 +52,7 @@ func (p *Parser) AddTask(b io.Reader) (*task.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	return addTaskToTask(&addTask), nil
+	return parseAddTask(&addTask), nil
 }
 
 type addTask struct {
@@ -31,6 +60,6 @@ type addTask struct {
 	Description string `json:"description"`
 }
 
-func addTaskToTask(at *addTask) *task.Task {
+func parseAddTask(at *addTask) *task.Task {
 	return task.New(at.Name, at.Description)
 }

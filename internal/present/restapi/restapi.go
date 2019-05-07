@@ -9,6 +9,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	mapper "github.com/benjohns1/scheduled-tasks/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
@@ -27,6 +28,9 @@ type Formatter interface {
 	TaskID(id usecase.TaskID) ([]byte, error)
 	Task(td *usecase.TaskData) ([]byte, error)
 	TaskMap(ts map[usecase.TaskID]*task.Task) ([]byte, error)
+	Schedule(sd *usecase.ScheduleData) ([]byte, error)
+	ScheduleID(id usecase.ScheduleID) ([]byte, error)
+	ScheduleMap(ss map[usecase.ScheduleID]*schedule.Schedule) ([]byte, error)
 	Errorf(format string, a ...interface{}) []byte
 	Error(a interface{}) []byte
 }
@@ -34,10 +38,11 @@ type Formatter interface {
 // Parser defines the parser interface for parsing input requests
 type Parser interface {
 	AddTask(b io.Reader) (*task.Task, error)
+	AddSchedule(b io.Reader) (*schedule.Schedule, error)
 }
 
 // Serve creates and starts the REST API server
-func Serve(l Logger, taskRepo usecase.TaskRepo) {
+func Serve(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) {
 
 	// Start API server
 	port := 8080
@@ -49,15 +54,94 @@ func Serve(l Logger, taskRepo usecase.TaskRepo) {
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(l)
 	r := httprouter.New()
-	taskPrefix := "/api/v1/task"
-	r.GET(taskPrefix+"/", listTasks(l, f, taskRepo))
-	r.GET(taskPrefix+"/:taskID", getTask(l, f, taskRepo))
-	r.POST(taskPrefix+"/add", addTask(l, f, p, taskRepo))
-	r.PUT(taskPrefix+"/:taskID/complete", completeTask(l, f, taskRepo))
-	r.DELETE(taskPrefix+"/:taskID", clearTask(l, f, taskRepo))
-	r.POST(taskPrefix+"/clear", clearCompletedTasks(l, f, taskRepo))
+
+	tPre := "/api/v1/task"
+	r.GET(tPre+"/", listTasks(l, f, taskRepo))
+	r.GET(tPre+"/:taskID", getTask(l, f, taskRepo))
+	r.POST(tPre+"/", addTask(l, f, p, taskRepo))
+	r.PUT(tPre+"/:taskID/complete", completeTask(l, f, taskRepo))
+	r.DELETE(tPre+"/:taskID", clearTask(l, f, taskRepo))
+	r.POST(tPre+"/clear", clearCompletedTasks(l, f, taskRepo))
+
+	sPre := "/api/v1/schedule"
+	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
+	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
+	r.POST(sPre+"/", addSchedule(l, f, p, scheduleRepo))
+
 	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 	l.Printf("server exiting")
+}
+
+func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		ss, err := usecase.ListSchedules(scheduleRepo)
+		if err != nil {
+			l.Printf("error retrieving schedule list: %v", err)
+			f.WriteResponse(w, f.Error("Error: couldn't retrieve schedules"), 500)
+			return
+		}
+
+		o, e := f.ScheduleMap(ss)
+
+		if e != nil {
+			l.Printf("error encoding schedule map: %v", e)
+			f.WriteResponse(w, f.Error("Error encoding schedule data"), 500)
+		}
+		f.WriteResponse(w, o, 200)
+	}
+}
+
+func addSchedule(l Logger, f Formatter, p Parser, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		s, ucerr := p.AddSchedule(r.Body)
+		defer r.Body.Close()
+		if ucerr != nil {
+			l.Printf("error parsing addSchedule data: %v", ucerr)
+			f.WriteResponse(w, f.Errorf("Error: could not parse schedule data: %v", ucerr), 400)
+			return
+		}
+		sID, ucerr := usecase.AddSchedule(scheduleRepo, s)
+		if ucerr != nil {
+			l.Printf("error adding schedule: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error: could not add schedule data"), 500)
+			return
+		}
+		o, err := f.ScheduleID(sID)
+		if err != nil {
+			f.WriteResponse(w, f.Error("Schedule created, but there was an error formatting the response Schedule ID"), 201)
+			return
+		}
+		f.WriteResponse(w, o, 201)
+	}
+}
+
+func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		scheduleIDInt, err := strconv.Atoi(params.ByName("scheduleID"))
+		if err != nil {
+			l.Printf("valid schedule ID required")
+			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
+			return
+		}
+		id := usecase.ScheduleID(scheduleIDInt)
+		sd, ucerr := usecase.GetSchedule(scheduleRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error retrieving schedule ID %d: %v", id, ucerr)
+			f.WriteResponse(w, f.Errorf("Error: couldn't retrieve schedule ID %d", id), 500)
+			return
+		}
+
+		o, err := f.Schedule(sd)
+		if err != nil {
+			l.Printf("error encoding schedule map: %v", err)
+			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
+		}
+		f.WriteResponse(w, o, 200)
+	}
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {

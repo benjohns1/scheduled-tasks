@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
@@ -32,6 +33,11 @@ type outTask struct {
 	CompletedTime outTime        `json:"completedTime"`
 }
 
+type outSchedule struct {
+	ID     usecase.ScheduleID `json:"id"`
+	Paused bool               `json:"paused"`
+}
+
 const outTimeFormat = time.RFC3339Nano
 
 type outTime struct {
@@ -47,8 +53,12 @@ func (t *outTime) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("\"%s\"", timeStr)), nil
 }
 
-type outID struct {
+type outTaskID struct {
 	ID usecase.TaskID `json:"id"`
+}
+
+type outScheduleID struct {
+	ID usecase.ScheduleID `json:"id"`
 }
 
 type outError struct {
@@ -89,7 +99,15 @@ func (f *Formatter) ClearedCompleted(count int) ([]byte, error) {
 
 // TaskID formats a TaskID to JSON
 func (f *Formatter) TaskID(id usecase.TaskID) ([]byte, error) {
-	o := &outID{
+	o := &outTaskID{
+		ID: id,
+	}
+	return json.Marshal(o)
+}
+
+// ScheduleID formats a ScheduleID to JSON
+func (f *Formatter) ScheduleID(id usecase.ScheduleID) ([]byte, error) {
+	o := &outScheduleID{
 		ID: id,
 	}
 	return json.Marshal(o)
@@ -114,6 +132,27 @@ func (f *Formatter) TaskMap(ts map[usecase.TaskID]*task.Task) ([]byte, error) {
 	o := make(map[usecase.TaskID]*outTask)
 	for id, t := range ts {
 		o[id] = taskToOut(id, t)
+	}
+
+	return json.Marshal(o)
+}
+func scheduleToOut(id usecase.ScheduleID, s *schedule.Schedule) *outSchedule {
+	return &outSchedule{
+		ID:     id,
+		Paused: s.Paused(),
+	}
+}
+
+// Schedule formats a Schedule to JSON
+func (f *Formatter) Schedule(sd *usecase.ScheduleData) ([]byte, error) {
+	return json.Marshal(scheduleToOut(sd.ScheduleID, sd.Schedule))
+}
+
+// ScheduleMap formats a map of Schedules to JSON
+func (f *Formatter) ScheduleMap(ss map[usecase.ScheduleID]*schedule.Schedule) ([]byte, error) {
+	o := make(map[usecase.ScheduleID]*outSchedule)
+	for id, s := range ss {
+		o[id] = scheduleToOut(id, s)
 	}
 
 	return json.Marshal(o)
