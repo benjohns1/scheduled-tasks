@@ -17,6 +17,18 @@ func New(f *Frequency) *Schedule {
 	return &Schedule{frequency: f, paused: false, tasks: []RecurringTask{}}
 }
 
+// NewRaw tries to instantiate a new schedule entity from raw data
+func NewRaw(paused bool) (*Schedule, error) {
+	f, err := NewHourFrequency([]int{0})
+	if err != nil {
+		return nil, err
+	}
+
+	s := New(f)
+	s.paused = paused
+	return s, nil
+}
+
 // Pause pauses a schedule
 func (s *Schedule) Pause() {
 	s.paused = true

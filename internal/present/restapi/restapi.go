@@ -67,6 +67,8 @@ func Serve(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRep
 	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
 	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
 	r.POST(sPre+"/", addSchedule(l, f, p, scheduleRepo))
+	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, scheduleRepo))
+	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, scheduleRepo))
 
 	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 	l.Printf("server exiting")
@@ -141,6 +143,52 @@ func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httpr
 			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
+	}
+}
+
+func pauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
+		if err != nil {
+			l.Printf("valid schedule ID required")
+			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
+			return
+		}
+		id := usecase.ScheduleID(scheduleIDInt)
+		ucerr := usecase.PauseSchedule(scheduleRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error pausing schedule: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error pausing schedule"), 500)
+			return
+		}
+		f.WriteEmpty(w, 204)
+	}
+}
+
+func unpauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
+		if err != nil {
+			l.Printf("valid schedule ID required")
+			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
+			return
+		}
+		id := usecase.ScheduleID(scheduleIDInt)
+		ucerr := usecase.UnpauseSchedule(scheduleRepo, id)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error unpausing schedule: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error unpausing schedule"), 500)
+			return
+		}
+		f.WriteEmpty(w, 204)
 	}
 }
 

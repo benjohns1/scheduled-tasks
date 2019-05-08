@@ -10,6 +10,19 @@ import (
 	_ "github.com/lib/pq" // add postgres DB driver
 )
 
+// Logger interface needed for postgres log messages
+type Logger interface {
+	Print(v ...interface{})
+	Printf(format string, v ...interface{})
+	Println(v ...interface{})
+}
+
+type scannable interface {
+	Scan(dest ...interface{}) error
+}
+
+const dbTimeFormat = time.RFC3339Nano
+
 // DBConn contains DB connection data
 type DBConn struct {
 	Host              string
@@ -19,10 +32,12 @@ type DBConn struct {
 	Name              string
 	MaxRetryAttempts  int
 	RetrySleepSeconds int
+	DB                *sql.DB
+	l                 Logger
 }
 
 // NewDBConn creates struct with default DB connection info, and overrides with environment variables if set
-func NewDBConn() DBConn {
+func NewDBConn(l Logger) DBConn {
 
 	// Defaults
 	conn := DBConn{
@@ -33,6 +48,7 @@ func NewDBConn() DBConn {
 		User:              "postgresUser",
 		MaxRetryAttempts:  20,
 		RetrySleepSeconds: 3,
+		l:                 l,
 	}
 
 	// Override from env vars
@@ -62,13 +78,14 @@ func NewDBConn() DBConn {
 }
 
 // Connect opens and ping-checks a DB connection
-func connect(l Logger, conn DBConn) (db *sql.DB, err error) {
-	db, err = sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name))
+func (conn *DBConn) Connect() error {
+	conn.l.Printf("connecting to db %s as %s...", conn.Name, conn.User)
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name))
 	if err != nil {
 		err = fmt.Errorf("error opening db: %v", err)
-		l.Println(err)
-		return
+		return err
 	}
+	conn.DB = db
 
 	// Ping & retry if needed
 	for attempts := 0; attempts < conn.MaxRetryAttempts; attempts++ {
@@ -76,9 +93,40 @@ func connect(l Logger, conn DBConn) (db *sql.DB, err error) {
 		if err == nil {
 			break
 		}
-		l.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, conn.MaxRetryAttempts, err)
+		conn.l.Printf("attempt %d/%d couldn't ping db: %v", attempts+1, conn.MaxRetryAttempts, err)
 		time.Sleep(time.Duration(conn.RetrySleepSeconds) * time.Second)
 	}
 
+	return err
+}
+
+// Setup sets up initial DB schema
+func (conn *DBConn) Setup() (setup bool, err error) {
+
+	_, err = conn.DB.Exec(`SELECT 1 FROM task LIMIT 1; SELECT 1 FROM schedule LIMIT 1;`)
+	if err == nil {
+		setup = false
+		return // no error, table was already setup
+	}
+
+	setup = true
+	_, err = conn.DB.Exec(`CREATE TABLE task (
+			id SERIAL PRIMARY KEY,
+			name character varying(100) NOT NULL,
+			description character varying(500) NOT NULL,
+			completed_time TIMESTAMPTZ,
+			cleared_time TIMESTAMPTZ
+			);
+		CREATE TABLE schedule (
+			id SERIAL PRIMARY KEY,
+			paused boolean NOT NULL
+			);
+		SET timezone = 'GMT'`)
+
 	return
+}
+
+// Close closes the wrapped DB connection
+func (conn *DBConn) Close() error {
+	return conn.DB.Close()
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	data "github.com/benjohns1/scheduled-tasks/internal/data/postgres"
-	"github.com/benjohns1/scheduled-tasks/internal/data/transient"
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi"
 	"github.com/joho/godotenv"
 )
@@ -17,13 +16,29 @@ func main() {
 	godotenv.Load("../../.env")
 
 	// Load DB connection info
-	dbconn := data.NewDBConn()
-	taskRepo, err := data.NewTaskRepo(l, dbconn)
-	scheduleRepo := transient.NewScheduleRepo()
+	dbconn := data.NewDBConn(l)
+	if err := dbconn.Connect(); err != nil {
+		l.Panic(err)
+	}
+	defer dbconn.Close()
+	didSetup, err := dbconn.Setup()
 	if err != nil {
 		l.Panic(err)
 	}
-	defer taskRepo.Close()
+	if didSetup {
+		l.Print("first-time DB setup complete")
+	}
 
+	// Instantiate repositories
+	taskRepo, err := data.NewTaskRepo(dbconn)
+	if err != nil {
+		l.Panic(err)
+	}
+	scheduleRepo, err := data.NewScheduleRepo(dbconn)
+	if err != nil {
+		l.Panic(err)
+	}
+
+	// Serve REST API
 	restapi.Serve(l, taskRepo, scheduleRepo)
 }

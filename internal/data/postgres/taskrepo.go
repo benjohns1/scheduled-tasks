@@ -11,54 +11,18 @@ import (
 
 // TaskRepo handles persisting task data and maintaining an in-memory cache
 type TaskRepo struct {
-	l     Logger
 	db    *sql.DB
 	tasks map[usecase.TaskID]*task.Task
-	Close func()
-}
-
-const dbTimeFormat = time.RFC3339Nano
-
-// Logger interface needed for log messages
-type Logger interface {
-	Print(v ...interface{})
-	Printf(format string, v ...interface{})
-	Println(v ...interface{})
 }
 
 // NewTaskRepo instantiates a new TaskRepo
-func NewTaskRepo(l Logger, conn DBConn) (repo *TaskRepo, err error) {
+func NewTaskRepo(conn DBConn) (repo *TaskRepo, err error) {
 
-	close := func() {}
-
-	// Connect to DB
-	l.Printf("connecting to db %s as %s...", conn.Name, conn.User)
-	db, err := connect(l, conn)
-	if db != nil {
-		close = func() {
-			db.Close()
-		}
-	}
-	if err != nil {
-		close()
-		err = fmt.Errorf("error opening db: %v", err)
-		return
+	if conn.DB == nil {
+		return nil, fmt.Errorf("DB connection is nil")
 	}
 
-	// Perform DB setup if needed
-	didSetup, err := setup(db)
-	if err != nil {
-		close()
-		err = fmt.Errorf("error setting up db: %v", err)
-		return
-	}
-	if didSetup {
-		l.Print("first-time DB setup complete")
-	}
-
-	repo = &TaskRepo{l: l, db: db, tasks: make(map[usecase.TaskID]*task.Task), Close: close}
-
-	return
+	return &TaskRepo{db: conn.DB, tasks: make(map[usecase.TaskID]*task.Task)}, nil
 }
 
 // Get retrieves a task entity, given its persistent ID
@@ -71,7 +35,8 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 	}
 
 	// Retrieve from DB
-	row := r.db.QueryRow("SELECT id, name, description, completed_time, cleared_time FROM task WHERE id = $1", id)
+	query := fmt.Sprintf("%s WHERE id = $1", taskSelectClause())
+	row := r.db.QueryRow(query, id)
 	td, err := parseTaskRow(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -89,7 +54,7 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 // GetAll retrieves all tasks
 func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	// Retrieve from DB
-	rows, err := r.db.Query("SELECT id, name, description, completed_time, cleared_time FROM task")
+	rows, err := r.db.Query(taskSelectClause())
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
 	}
@@ -106,8 +71,8 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	return r.tasks, nil
 }
 
-type scannable interface {
-	Scan(dest ...interface{}) error
+func taskSelectClause() (selectClause string) {
+	return "SELECT id, name, description, completed_time, cleared_time FROM task"
 }
 
 func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
