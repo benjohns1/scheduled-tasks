@@ -40,5 +40,6 @@ func main() {
 	}
 
 	// Serve REST API
-	restapi.Serve(l, taskRepo, scheduleRepo)
+	api := restapi.New(l, taskRepo, scheduleRepo)
+	restapi.Serve(l, api)
 }

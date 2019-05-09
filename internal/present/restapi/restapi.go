@@ -41,21 +41,16 @@ type Parser interface {
 	AddSchedule(b io.Reader) (*schedule.Schedule, error)
 }
 
-// Serve creates and starts the REST API server
-func Serve(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) {
-
-	// Start API server
-	port := 8080
-	if val, err := strconv.Atoi(os.Getenv("APPLICATION_PORT")); err == nil {
-		port = val
-	}
-	l.Printf("starting server on port %d", port)
+// New creates a REST API server
+func New(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
 
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(l)
 	r := httprouter.New()
 
-	tPre := "/api/v1/task"
+	prefix := "/api/v1"
+
+	tPre := prefix + "/task"
 	r.GET(tPre+"/", listTasks(l, f, taskRepo))
 	r.GET(tPre+"/:taskID", getTask(l, f, taskRepo))
 	r.POST(tPre+"/", addTask(l, f, p, taskRepo))
@@ -63,14 +58,27 @@ func Serve(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRep
 	r.DELETE(tPre+"/:taskID", clearTask(l, f, taskRepo))
 	r.POST(tPre+"/clear", clearCompletedTasks(l, f, taskRepo))
 
-	sPre := "/api/v1/schedule"
+	sPre := prefix + "/schedule"
 	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
 	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
 	r.POST(sPre+"/", addSchedule(l, f, p, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, scheduleRepo))
 
-	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
+	return r
+}
+
+// Serve starts an API server
+func Serve(l Logger, api http.Handler) {
+
+	// Start API server
+	port := 8080
+	if val, err := strconv.Atoi(os.Getenv("APPLICATION_PORT")); err == nil {
+		port = val
+	}
+
+	l.Printf("starting server on port %d", port)
+	http.ListenAndServe(fmt.Sprintf(":%d", port), api)
 	l.Printf("server exiting")
 }
 
