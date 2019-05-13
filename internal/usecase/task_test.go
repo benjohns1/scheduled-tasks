@@ -14,9 +14,9 @@ func TestGetTask(t *testing.T) {
 	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
 	taskID, _ := taskRepo.Add(task1)
-	task2 := task.NewFull("task2", "", time.Now(), time.Time{})
+	task2 := task.NewRaw("task2", "", time.Now(), time.Time{})
 	completedTaskID, _ := taskRepo.Add(task2)
-	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -112,8 +112,8 @@ func TestAddTask(t *testing.T) {
 func TestCompleteTask(t *testing.T) {
 	taskRepo := data.NewTaskRepo()
 	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -167,8 +167,8 @@ func TestCompleteTask(t *testing.T) {
 func TestClearTask(t *testing.T) {
 	taskRepo := data.NewTaskRepo()
 	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, _ := taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r  TaskRepo
@@ -224,12 +224,12 @@ func TestClearCompletedTasks(t *testing.T) {
 
 	singleCompletedTaskRepo := data.NewTaskRepo()
 	singleCompletedTaskRepo.Add(task.New("task1", ""))
-	singleCompletedTaskRepo.Add(task.NewFull("task2", "", time.Now(), time.Time{}))
-	singleCompletedTaskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
+	singleCompletedTaskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
+	singleCompletedTaskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
 
 	thousandCompletedTasksRepo := data.NewTaskRepo()
 	for i := 0; i < 1000; i++ {
-		_, err := thousandCompletedTasksRepo.Add(task.NewFull("", "", time.Now(), time.Time{}))
+		_, err := thousandCompletedTasksRepo.Add(task.NewRaw("", "", time.Now(), time.Time{}))
 		if err != nil {
 			t.Errorf("error setting up task repo: %v", err)
 		}
@@ -281,9 +281,9 @@ func TestListTasks(t *testing.T) {
 	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
 	id1, _ := taskRepo.Add(task1)
-	task2 := task.NewFull("task2", "", time.Now(), time.Time{})
+	task2 := task.NewRaw("task2", "", time.Now(), time.Time{})
 	id2, _ := taskRepo.Add(task2)
-	taskRepo.Add(task.NewFull("task3", "", time.Now(), time.Now()))
+	taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
 
 	type args struct {
 		r TaskRepo

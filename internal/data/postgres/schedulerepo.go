@@ -71,7 +71,7 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 }
 
 func scheduleSelectClause() (selectClause string) {
-	return "SELECT id, paused FROM schedule"
+	return "SELECT id, paused, frequency_offset, frequency_interval, frequency_time_period FROM schedule"
 }
 
 func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
@@ -80,16 +80,25 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 
 	// Scan into row data structure
 	var row struct {
-		id     int64
-		paused bool
+		id          int64
+		fOffset     int
+		fInterval   int
+		fTimePeriod schedule.TimePeriod
+		paused      bool
 	}
-	err = r.Scan(&row.id, &row.paused)
+	err = r.Scan(&row.id, &row.paused, &row.fOffset, &row.fInterval, &row.fTimePeriod)
+	if err != nil {
+		return
+	}
+
+	// Construct frequency value
+	f, err := schedule.NewRawFrequency(row.fOffset, row.fInterval, row.fTimePeriod, nil, nil, nil, nil)
 	if err != nil {
 		return
 	}
 
 	// Construct schedule entity
-	sd.Schedule, err = schedule.NewRaw(row.paused)
+	sd.Schedule = schedule.NewRaw(f, row.paused, []schedule.RecurringTask{})
 	sd.ScheduleID = usecase.ScheduleID(row.id)
 
 	return
@@ -97,9 +106,10 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 
 // Add adds a schedule to the persisence layer
 func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Error) {
-	q := "INSERT INTO schedule (paused) VALUES ($1) RETURNING id"
+	q := "INSERT INTO schedule (paused, frequency_offset, frequency_interval, frequency_time_period) VALUES ($1, $2, $3, $4) RETURNING id"
 	var id usecase.ScheduleID
-	err := r.db.QueryRow(q, s.Paused()).Scan(&id)
+	f := s.Frequency()
+	err := r.db.QueryRow(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod()).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}

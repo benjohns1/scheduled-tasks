@@ -7,26 +7,19 @@ import (
 
 // Schedule represents a collection of tasks that recur at some frequency
 type Schedule struct {
-	frequency *Frequency
+	frequency Frequency
 	paused    bool
 	tasks     []RecurringTask
 }
 
 // New instantiates a new schedule entity
-func New(f *Frequency) *Schedule {
+func New(f Frequency) *Schedule {
 	return &Schedule{frequency: f, paused: false, tasks: []RecurringTask{}}
 }
 
-// NewRaw tries to instantiate a new schedule entity from raw data
-func NewRaw(paused bool) (*Schedule, error) {
-	f, err := NewHourFrequency([]int{0})
-	if err != nil {
-		return nil, err
-	}
-
-	s := New(f)
-	s.paused = paused
-	return s, nil
+// NewRaw creates a new schedule entity from raw data
+func NewRaw(frequency Frequency, paused bool, tasks []RecurringTask) *Schedule {
+	return &Schedule{frequency, paused, tasks}
 }
 
 // Pause pauses a schedule
@@ -47,6 +40,11 @@ func (s *Schedule) Paused() bool {
 // Tasks returns the slice of recurring tasks associated with a schedule
 func (s *Schedule) Tasks() []RecurringTask {
 	return s.tasks
+}
+
+// Frequency returns the frequency of this schedule
+func (s *Schedule) Frequency() Frequency {
+	return s.frequency
 }
 
 // AddTask adds a new recurring task if it doesn't already exist

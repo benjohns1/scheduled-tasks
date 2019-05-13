@@ -25,14 +25,14 @@ func TestSchedule_Times(t *testing.T) {
 	}{
 		{
 			name:    "should return an error if end time is before start time",
-			s:       New(&Frequency{}),
+			s:       New(Frequency{}),
 			args:    args{jan1st9999Midnight, jan1st2000Midnight},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name:    "empty schedule should return an empty slice",
-			s:       New(&Frequency{}),
+			s:       New(Frequency{}),
 			args:    args{jan1st1999Midnight, jan1st2000Midnight},
 			want:    []time.Time{},
 			wantErr: false,

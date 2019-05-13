@@ -16,13 +16,63 @@ type Frequency struct {
 	onDaysOfMonth []int
 }
 
-// NewHourFrequency creates a new struct that represents an hour frequency
-func NewHourFrequency(atMinutes []int) (*Frequency, error) {
+// Offset returns the frequency's offset value
+func (f *Frequency) Offset() int {
+	return f.offset
+}
+
+// Interval returns the frequency's interval value
+func (f *Frequency) Interval() int {
+	return f.interval
+}
+
+// TimePeriod returns the frequency's timePeriod value
+func (f *Frequency) TimePeriod() TimePeriod {
+	return f.timePeriod
+}
+
+// AtMinutes returns the frequency's atMinutes value
+func (f *Frequency) AtMinutes() []int {
+	return f.atMinutes
+}
+
+// AtHours returns the frequency's atHours value
+func (f *Frequency) AtHours() []int {
+	return f.atHours
+}
+
+// OnDaysOfWeek returns the frequency's onDaysOfWeek value
+func (f *Frequency) OnDaysOfWeek() []time.Weekday {
+	return f.onDaysOfWeek
+}
+
+// OnDaysOfMonth returns the frequency's onDaysOfMonth value
+func (f *Frequency) OnDaysOfMonth() []int {
+	return f.onDaysOfMonth
+}
+
+// NewRawFrequency creates a new frequency struct from raw data
+func NewRawFrequency(offset int, interval int, timePeriod TimePeriod, atMinutes []int, atHours []int, onDaysOfWeek []time.Weekday, onDaysOfMonth []int) (Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
-		return nil, err
+		return Frequency{}, err
+	}
+	if err := validateHours(atHours); err != nil {
+		return Frequency{}, err
+	}
+	if err := validateDaysOfMonth(onDaysOfMonth); err != nil {
+		return Frequency{}, err
 	}
 
-	return &Frequency{
+	return Frequency{offset, interval, timePeriod, atMinutes, atHours, onDaysOfWeek, onDaysOfMonth}, nil
+}
+
+// NewHourFrequency creates a new struct that represents an hour frequency
+func NewHourFrequency(atMinutes []int) (Frequency, error) {
+	if err := validateMinutes(atMinutes); err != nil {
+		return Frequency{}, err
+	}
+
+	return Frequency{
 		interval:   1,
 		timePeriod: TimePeriodHour,
 		atMinutes:  atMinutes,
@@ -30,15 +80,15 @@ func NewHourFrequency(atMinutes []int) (*Frequency, error) {
 }
 
 // NewDayFrequency creates a new struct that represents a day frequency
-func NewDayFrequency(atMinutes []int, atHours []int) (*Frequency, error) {
+func NewDayFrequency(atMinutes []int, atHours []int) (Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 	if err := validateHours(atHours); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 
-	return &Frequency{
+	return Frequency{
 		interval:   1,
 		timePeriod: TimePeriodDay,
 		atMinutes:  atMinutes,
@@ -47,15 +97,15 @@ func NewDayFrequency(atMinutes []int, atHours []int) (*Frequency, error) {
 }
 
 // NewWeekFrequency creates a new struct that represents a week frequency
-func NewWeekFrequency(atMinutes []int, atHours []int, onDays []time.Weekday) (*Frequency, error) {
+func NewWeekFrequency(atMinutes []int, atHours []int, onDays []time.Weekday) (Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 	if err := validateHours(atHours); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 
-	return &Frequency{
+	return Frequency{
 		interval:     1,
 		timePeriod:   TimePeriodWeek,
 		atMinutes:    atMinutes,
@@ -65,18 +115,18 @@ func NewWeekFrequency(atMinutes []int, atHours []int, onDays []time.Weekday) (*F
 }
 
 // NewMonthFrequency creates a new struct that represents a month frequency
-func NewMonthFrequency(atMinutes []int, atHours []int, onDays []int) (*Frequency, error) {
+func NewMonthFrequency(atMinutes []int, atHours []int, onDays []int) (Frequency, error) {
 	if err := validateMinutes(atMinutes); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 	if err := validateHours(atHours); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 	if err := validateDaysOfMonth(onDays); err != nil {
-		return nil, err
+		return Frequency{}, err
 	}
 
-	return &Frequency{
+	return Frequency{
 		interval:      1,
 		timePeriod:    TimePeriodMonth,
 		atMinutes:     atMinutes,

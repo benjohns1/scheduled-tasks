@@ -100,6 +100,12 @@ func Test_addTask(t *testing.T) {
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: strp(`{"id":1}`)},
 		},
 		{
+			name:    "task with name and description should return 201 and ID",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task1", "description": "task1 description"}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: strp(`{"id":2}`)},
+		},
+		{
 			name:    "invalid JSON should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{{{`},

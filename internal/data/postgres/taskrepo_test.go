@@ -1,34 +1,90 @@
-package transient
+// +build integration
+
+package postgres
 
 import (
+	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
+	"github.com/joho/godotenv"
 )
 
+type LoggerMock struct{}
+
+func (l *LoggerMock) Print(v ...interface{})                 {}
+func (l *LoggerMock) Printf(format string, v ...interface{}) {}
+func (l *LoggerMock) Println(v ...interface{})               {}
+
+func mockDBConn(t *testing.T) DBConn {
+	l := &LoggerMock{}
+
+	// Load environment vars
+	if err := godotenv.Load("../../../.env"); err != nil {
+		t.Fatalf("could not load .env file: %v", err)
+	}
+
+	// Load DB connection info
+	dbconn := NewDBConn(l)
+	testPort, err := strconv.Atoi(os.Getenv("POSTGRES_TEST_PORT"))
+	if err != nil || testPort == 0 {
+		t.Fatalf("POSTGRES_TEST_PORT must be set to run postgres DB integreation tests %v", err)
+	}
+	dbconn.Port = testPort
+
+	// Connect to DB, destroy any existing tables, setup tables again
+	if err := dbconn.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	dbconn.destroy()
+	if _, err := dbconn.Setup(); err != nil {
+		t.Fatal(err)
+	}
+	return dbconn
+}
+
 func TestNewTaskRepo(t *testing.T) {
+	conn := mockDBConn(t)
+	defer conn.Close()
+
+	type args struct {
+		conn DBConn
+	}
 	tests := []struct {
-		name string
-		want *TaskRepo
+		name      string
+		args      args
+		wantTasks map[usecase.TaskID]*task.Task
+		wantErr   bool
 	}{
 		{
-			name: "should return new empty repo",
-			want: &TaskRepo{lastID: 0, tasks: make(map[usecase.TaskID]*task.Task)},
+			name:      "should return new empty repo",
+			args:      args{conn},
+			wantTasks: map[usecase.TaskID]*task.Task{},
+			wantErr:   false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTaskRepo(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTaskRepo() = %v, want %v", got, tt.want)
+			gotRepo, err := NewTaskRepo(tt.args.conn)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewTaskRepo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRepo.tasks, tt.wantTasks) {
+				t.Errorf("NewTaskRepo() tasks = %v, want %v", gotRepo.tasks, tt.wantTasks)
 			}
 		})
 	}
 }
 
 func TestTaskRepo_Get(t *testing.T) {
-	r := NewTaskRepo()
+	conn := mockDBConn(t)
+	defer conn.Close()
+	r, _ := NewTaskRepo(conn)
+
 	newTask := task.New("", "")
 	id, _ := r.Add(newTask)
 
@@ -65,7 +121,10 @@ func TestTaskRepo_Get(t *testing.T) {
 }
 
 func TestTaskRepo_GetAll(t *testing.T) {
-	r := NewTaskRepo()
+	conn := mockDBConn(t)
+	defer conn.Close()
+	r, _ := NewTaskRepo(conn)
+
 	newTask1 := task.New("", "")
 	newTask2 := task.New("", "")
 	id1, _ := r.Add(newTask1)
@@ -99,7 +158,10 @@ func TestTaskRepo_GetAll(t *testing.T) {
 }
 
 func TestTaskRepo_Add(t *testing.T) {
-	r := NewTaskRepo()
+	conn := mockDBConn(t)
+	defer conn.Close()
+	r, _ := NewTaskRepo(conn)
+
 	newTask := task.New("", "")
 
 	type args struct {
@@ -135,7 +197,10 @@ func TestTaskRepo_Add(t *testing.T) {
 }
 
 func TestTaskRepo_Update(t *testing.T) {
-	r := NewTaskRepo()
+	conn := mockDBConn(t)
+	defer conn.Close()
+	r, _ := NewTaskRepo(conn)
+
 	newTask := task.New("", "")
 	id1, _ := r.Add(newTask)
 	newTask.CompleteNow()

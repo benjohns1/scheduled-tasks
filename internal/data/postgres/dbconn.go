@@ -100,6 +100,11 @@ func (conn *DBConn) Connect() error {
 	return err
 }
 
+// destroy !!!WARNING!!! completely destroys all data in the DB
+func (conn *DBConn) destroy() (sql.Result, error) {
+	return conn.DB.Exec("DROP TABLE task; DROP TABLE schedule;")
+}
+
 // Setup sets up initial DB schema
 func (conn *DBConn) Setup() (setup bool, err error) {
 
@@ -119,7 +124,10 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			);
 		CREATE TABLE schedule (
 			id SERIAL PRIMARY KEY,
-			paused boolean NOT NULL
+			paused boolean NOT NULL,
+			frequency_offset integer NOT NULL,
+			frequency_interval integer NOT NULL,
+			frequency_time_period smallint NOT NULL
 			);
 		SET timezone = 'GMT'`)
 

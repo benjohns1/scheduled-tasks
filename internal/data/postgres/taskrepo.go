@@ -102,7 +102,7 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 		clearedTime = time.Time{}
 	}
 
-	td.Task = task.NewFull(row.name, row.description, completedTime, clearedTime)
+	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime)
 	td.TaskID = usecase.TaskID(row.id)
 
 	return

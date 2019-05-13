@@ -36,7 +36,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewFull(t *testing.T) {
+func TestNewRaw(t *testing.T) {
 	type args struct {
 		name        string
 		description string
@@ -62,8 +62,8 @@ func TestNewFull(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewFull(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewFull() = %v, want %v", got, tt.want)
+			if got := NewRaw(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewRaw() = %v, want %v", got, tt.want)
 			}
 		})
 	}

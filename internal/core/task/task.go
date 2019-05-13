@@ -22,8 +22,8 @@ func New(name string, description string) *Task {
 	}
 }
 
-// NewTaskFull instantiates a new task entity with all available fields
-func NewFull(name string, description string, complete time.Time, cleared time.Time) *Task {
+// NewRaw instantiates a new task entity with all available fields
+func NewRaw(name string, description string, complete time.Time, cleared time.Time) *Task {
 	return &Task{
 		name:          name,
 		description:   description,
