@@ -4,6 +4,7 @@ package postgres
 
 import (
 	"os"
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -19,35 +20,48 @@ func (l *LoggerMock) Print(v ...interface{})                 {}
 func (l *LoggerMock) Printf(format string, v ...interface{}) {}
 func (l *LoggerMock) Println(v ...interface{})               {}
 
-func mockDBConn(t *testing.T) DBConn {
+func mockDBConn() (DBConn, error) {
 	l := &LoggerMock{}
 
 	// Load environment vars
 	if err := godotenv.Load("../../../.env"); err != nil {
-		t.Fatalf("could not load .env file: %v", err)
+		return DBConn{}, fmt.Errorf("could not load .env file: %v", err)
 	}
 
 	// Load DB connection info
 	dbconn := NewDBConn(l)
 	testPort, err := strconv.Atoi(os.Getenv("POSTGRES_TEST_PORT"))
 	if err != nil || testPort == 0 {
-		t.Fatalf("POSTGRES_TEST_PORT must be set to run postgres DB integreation tests %v", err)
+		dbconn.Close()
+		return dbconn, fmt.Errorf("POSTGRES_TEST_PORT must be set to run postgres DB integreation tests %v", err)
 	}
 	dbconn.Port = testPort
+	dbconn.MaxRetryAttempts = 1
+	dbconn.RetrySleepSeconds = 0
 
 	// Connect to DB, destroy any existing tables, setup tables again
 	if err := dbconn.Connect(); err != nil {
-		t.Fatal(err)
+		dbconn.Close()
+		return dbconn, fmt.Errorf("could not connect to test DB: %v", err)
 	}
-	dbconn.destroy()
-	if _, err := dbconn.Setup(); err != nil {
-		t.Fatal(err)
+	_, detroyErr := dbconn.destroy()
+	didSetup, err := dbconn.Setup()
+	if err != nil {
+		dbconn.Close()
+		return dbconn, err
 	}
-	return dbconn
+	if !didSetup {
+		dbconn.Close()
+		return dbconn, fmt.Errorf("could not setup fresh DB tables, test tables may not have been not properly destroyed: %v", detroyErr)
+	}
+	return dbconn, nil
 }
 
 func TestNewTaskRepo(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 
 	type args struct {
@@ -81,7 +95,10 @@ func TestNewTaskRepo(t *testing.T) {
 }
 
 func TestTaskRepo_Get(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
@@ -121,7 +138,10 @@ func TestTaskRepo_Get(t *testing.T) {
 }
 
 func TestTaskRepo_GetAll(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
@@ -158,7 +178,10 @@ func TestTaskRepo_GetAll(t *testing.T) {
 }
 
 func TestTaskRepo_Add(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
@@ -197,7 +220,10 @@ func TestTaskRepo_Add(t *testing.T) {
 }
 
 func TestTaskRepo_Update(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 

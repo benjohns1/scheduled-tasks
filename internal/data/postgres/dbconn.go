@@ -36,6 +36,14 @@ type DBConn struct {
 	l                 Logger
 }
 
+// Close closes the wrapped DB connection
+func (conn *DBConn) Close() error {
+	if conn.DB == nil {
+		return nil
+	}
+	return conn.DB.Close()
+}
+
 // NewDBConn creates struct with default DB connection info, and overrides with environment variables if set
 func NewDBConn(l Logger) DBConn {
 
@@ -132,9 +140,4 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 		SET timezone = 'GMT'`)
 
 	return
-}
-
-// Close closes the wrapped DB connection
-func (conn *DBConn) Close() error {
-	return conn.DB.Close()
 }

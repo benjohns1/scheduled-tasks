@@ -11,7 +11,10 @@ import (
 )
 
 func TestNewScheduleRepo(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 
 	type args struct {
@@ -45,7 +48,10 @@ func TestNewScheduleRepo(t *testing.T) {
 }
 
 func TestScheduleRepo_Get(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, err := NewScheduleRepo(conn)
 	if err != nil {
@@ -95,7 +101,10 @@ func TestScheduleRepo_Get(t *testing.T) {
 }
 
 func TestScheduleRepo_GetAll(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, err := NewScheduleRepo(conn)
 	if err != nil {
@@ -154,7 +163,10 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 }
 
 func TestScheduleRepo_Add(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, err := NewScheduleRepo(conn)
 	if err != nil {
@@ -200,7 +212,10 @@ func TestScheduleRepo_Add(t *testing.T) {
 }
 
 func TestScheduleRepo_Update(t *testing.T) {
-	conn := mockDBConn(t)
+	conn, err := mockDBConn()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Close()
 	r, err := NewScheduleRepo(conn)
 	if err != nil {
