@@ -6,6 +6,8 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
+
+	"github.com/lib/pq"
 )
 
 // ScheduleRepo handles persisting task data and maintaining an in-memory cache
@@ -71,7 +73,7 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 }
 
 func scheduleSelectClause() (selectClause string) {
-	return "SELECT id, paused, frequency_offset, frequency_interval, frequency_time_period FROM schedule"
+	return "SELECT id, paused, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes FROM schedule"
 }
 
 func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
@@ -84,15 +86,16 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 		fOffset     int
 		fInterval   int
 		fTimePeriod schedule.TimePeriod
+		fAtMinutes  []sql.NullInt64
 		paused      bool
 	}
-	err = r.Scan(&row.id, &row.paused, &row.fOffset, &row.fInterval, &row.fTimePeriod)
+	err = r.Scan(&row.id, &row.paused, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes))
 	if err != nil {
 		return
 	}
 
 	// Construct frequency value
-	f, err := schedule.NewRawFrequency(row.fOffset, row.fInterval, row.fTimePeriod, nil, nil, nil, nil)
+	f, err := schedule.NewRawFrequency(row.fOffset, row.fInterval, row.fTimePeriod, toIntSlice(row.fAtMinutes), nil, nil, nil)
 	if err != nil {
 		return
 	}
@@ -104,12 +107,27 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 	return
 }
 
+func toIntSlice(sqlSlice []sql.NullInt64) []int {
+	size := len(sqlSlice)
+	if size <= 0 {
+		return nil
+	}
+	intSlice := make([]int, size)
+	for i, item := range sqlSlice {
+		if !item.Valid {
+			continue
+		}
+		intSlice[i] = int(item.Int64)
+	}
+	return intSlice
+}
+
 // Add adds a schedule to the persisence layer
 func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Error) {
-	q := "INSERT INTO schedule (paused, frequency_offset, frequency_interval, frequency_time_period) VALUES ($1, $2, $3, $4) RETURNING id"
+	q := "INSERT INTO schedule (paused, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING id"
 	var id usecase.ScheduleID
 	f := s.Frequency()
-	err := r.db.QueryRow(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod()).Scan(&id)
+	err := r.db.QueryRow(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes())).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}

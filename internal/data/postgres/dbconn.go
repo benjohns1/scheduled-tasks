@@ -135,7 +135,8 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			paused boolean NOT NULL,
 			frequency_offset integer NOT NULL,
 			frequency_interval integer NOT NULL,
-			frequency_time_period smallint NOT NULL
+			frequency_time_period smallint NOT NULL,
+			frequency_at_minutes int[]
 			);
 		SET timezone = 'GMT'`)
 

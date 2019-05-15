@@ -39,6 +39,7 @@ type Formatter interface {
 type Parser interface {
 	AddTask(b io.Reader) (*task.Task, error)
 	AddSchedule(b io.Reader) (*schedule.Schedule, error)
+	AddRecurringTask(b io.Reader) (schedule.RecurringTask, error)
 }
 
 // New creates a REST API server
@@ -64,6 +65,9 @@ func New(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo)
 	r.POST(sPre+"/", addSchedule(l, f, p, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, scheduleRepo))
+
+	rtPre := sPre + "/:scheduleID/task"
+	r.POST(rtPre+"/", addRecurringTask(l, f, p, scheduleRepo))
 
 	return r
 }
@@ -103,11 +107,11 @@ func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) htt
 
 func addSchedule(l Logger, f Formatter, p Parser, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		s, ucerr := p.AddSchedule(r.Body)
+		s, err := p.AddSchedule(r.Body)
 		defer r.Body.Close()
-		if ucerr != nil {
-			l.Printf("error parsing addSchedule data: %v", ucerr)
-			f.WriteResponse(w, f.Errorf("Error: could not parse schedule data: %v", ucerr), 400)
+		if err != nil {
+			l.Printf("error parsing addSchedule data: %v", err)
+			f.WriteResponse(w, f.Errorf("Error: could not parse schedule data: %v", err), 400)
 			return
 		}
 		sID, ucerr := usecase.AddSchedule(scheduleRepo, s)
@@ -197,6 +201,42 @@ func unpauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) h
 			return
 		}
 		f.WriteEmpty(w, 204)
+	}
+}
+
+func addRecurringTask(l Logger, f Formatter, p Parser, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+		// Get schedule ID
+		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
+		if err != nil {
+			l.Printf("valid schedule ID required")
+			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
+			return
+		}
+		id := usecase.ScheduleID(scheduleIDInt)
+
+		// Parse recurring task data
+		rt, err := p.AddRecurringTask(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			l.Printf("error parsing addRecurringTask data: %v", err)
+			f.WriteResponse(w, f.Errorf("Error: could not parse recurring task data: %v", err), 400)
+			return
+		}
+
+		// Add recurring task
+		ucerr := usecase.AddRecurringTask(scheduleRepo, id, rt)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error adding task to schedule: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error adding task to schedule"), 500)
+			return
+		}
+		f.WriteEmpty(w, 201)
 	}
 }
 

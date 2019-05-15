@@ -34,8 +34,16 @@ type outTask struct {
 }
 
 type outSchedule struct {
-	ID     usecase.ScheduleID `json:"id"`
-	Paused bool               `json:"paused"`
+	ID        usecase.ScheduleID `json:"id"`
+	Frequency string             `json:"frequency"`
+	AtMinutes []int              `json:"atMinutes"`
+	Paused    bool               `json:"paused"`
+	Tasks     []outRecurringTask `json:"tasks"`
+}
+
+type outRecurringTask struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 const outTimeFormat = time.RFC3339Nano
@@ -137,10 +145,23 @@ func (f *Formatter) TaskMap(ts map[usecase.TaskID]*task.Task) ([]byte, error) {
 	return json.Marshal(o)
 }
 func scheduleToOut(id usecase.ScheduleID, s *schedule.Schedule) *outSchedule {
-	return &outSchedule{
+	outS := outSchedule{
 		ID:     id,
 		Paused: s.Paused(),
+		Tasks:  []outRecurringTask{},
 	}
+	f := s.Frequency()
+	switch f.TimePeriod() {
+	case schedule.TimePeriodHour:
+		outS.Frequency = "hourly"
+		outS.AtMinutes = f.AtMinutes()
+		break
+	}
+	for _, rt := range s.Tasks() {
+		oRt := outRecurringTask{Name: rt.Name(), Description: rt.Description()}
+		outS.Tasks = append(outS.Tasks, oRt)
+	}
+	return &outS
 }
 
 // Schedule formats a Schedule to JSON
