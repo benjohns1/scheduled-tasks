@@ -1,3 +1,3 @@
 FROM scratch
-COPY server /server
-ENTRYPOINT ["/server"]
+COPY srv /srv
+ENTRYPOINT ["/srv"]
