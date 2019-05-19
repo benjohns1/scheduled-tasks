@@ -1,64 +1,19 @@
 // +build integration
 
-package postgres
+package postgres_test
 
 import (
-	"os"
-	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
+	. "github.com/benjohns1/scheduled-tasks/internal/data/postgres"
+	. "github.com/benjohns1/scheduled-tasks/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
-	"github.com/joho/godotenv"
 )
 
-type LoggerMock struct{}
-
-func (l *LoggerMock) Print(v ...interface{})                 {}
-func (l *LoggerMock) Printf(format string, v ...interface{}) {}
-func (l *LoggerMock) Println(v ...interface{})               {}
-
-func mockDBConn() (DBConn, error) {
-	l := &LoggerMock{}
-
-	// Load environment vars
-	if err := godotenv.Load("../../../.env"); err != nil {
-		return DBConn{}, fmt.Errorf("could not load .env file: %v", err)
-	}
-
-	// Load DB connection info
-	dbconn := NewDBConn(l)
-	testPort, err := strconv.Atoi(os.Getenv("POSTGRES_TEST_PORT"))
-	if err != nil || testPort == 0 {
-		dbconn.Close()
-		return dbconn, fmt.Errorf("POSTGRES_TEST_PORT must be set to run postgres DB integreation tests %v", err)
-	}
-	dbconn.Port = testPort
-	dbconn.MaxRetryAttempts = 1
-	dbconn.RetrySleepSeconds = 0
-
-	// Connect to DB, destroy any existing tables, setup tables again
-	if err := dbconn.Connect(); err != nil {
-		dbconn.Close()
-		return dbconn, fmt.Errorf("could not connect to test DB: %v", err)
-	}
-	_, detroyErr := dbconn.destroy()
-	didSetup, err := dbconn.Setup()
-	if err != nil {
-		dbconn.Close()
-		return dbconn, err
-	}
-	if !didSetup {
-		dbconn.Close()
-		return dbconn, fmt.Errorf("could not setup fresh DB tables, test tables may not have been not properly destroyed: %v", detroyErr)
-	}
-	return dbconn, nil
-}
-
 func TestNewTaskRepo(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,15 +42,16 @@ func TestNewTaskRepo(t *testing.T) {
 				t.Errorf("NewTaskRepo() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotRepo.tasks, tt.wantTasks) {
-				t.Errorf("NewTaskRepo() tasks = %v, want %v", gotRepo.tasks, tt.wantTasks)
+			gotTasks, err := gotRepo.GetAll()
+			if !reflect.DeepEqual(gotTasks, tt.wantTasks) {
+				t.Errorf("NewTaskRepo() tasks = %v, want %v", gotTasks, tt.wantTasks)
 			}
 		})
 	}
 }
 
 func TestTaskRepo_Get(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +94,7 @@ func TestTaskRepo_Get(t *testing.T) {
 }
 
 func TestTaskRepo_GetAll(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +134,7 @@ func TestTaskRepo_GetAll(t *testing.T) {
 }
 
 func TestTaskRepo_Add(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +176,7 @@ func TestTaskRepo_Add(t *testing.T) {
 }
 
 func TestTaskRepo_Update(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}

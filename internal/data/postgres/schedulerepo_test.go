@@ -1,17 +1,19 @@
 // +build integration
 
-package postgres
+package postgres_test
 
 import (
 	"reflect"
 	"testing"
 
+	. "github.com/benjohns1/scheduled-tasks/internal/data/postgres"
+	. "github.com/benjohns1/scheduled-tasks/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
 func TestNewScheduleRepo(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,15 +42,19 @@ func TestNewScheduleRepo(t *testing.T) {
 				t.Errorf("NewScheduleRepo() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotRepo.schedules, tt.wantSchedules) {
-				t.Errorf("NewScheduleRepo() schedules = %v, want %v", gotRepo.schedules, tt.wantSchedules)
+			gotSchedules, err := gotRepo.GetAll()
+			if err != nil {
+				t.Errorf("NewScheduleRepo() error retrieving schedules: %v", err)
+			}
+			if !reflect.DeepEqual(gotSchedules, tt.wantSchedules) {
+				t.Errorf("NewScheduleRepo() schedules = %v, want %v", gotSchedules, tt.wantSchedules)
 			}
 		})
 	}
 }
 
 func TestScheduleRepo_Get(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +107,7 @@ func TestScheduleRepo_Get(t *testing.T) {
 }
 
 func TestScheduleRepo_GetAll(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +169,7 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 }
 
 func TestScheduleRepo_Add(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +218,7 @@ func TestScheduleRepo_Add(t *testing.T) {
 }
 
 func TestScheduleRepo_Update(t *testing.T) {
-	conn, err := mockDBConn()
+	conn, err := NewMockDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}

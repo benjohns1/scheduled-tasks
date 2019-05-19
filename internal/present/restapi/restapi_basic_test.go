@@ -1,6 +1,6 @@
 // +build integration
 
-package restapi
+package restapi_test
 
 import (
 	"net/http"
@@ -8,27 +8,37 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/benjohns1/scheduled-tasks/internal/data/transient"
+	"github.com/benjohns1/scheduled-tasks/internal/present/restapi/test"
 )
 
-type LoggerMock struct{}
-
-func (l *LoggerMock) Printf(format string, v ...interface{}) {}
-
-func strp(str string) *string {
-	return &str
+func TestTransientRestAPIBasic(t *testing.T) {
+	m := test.NewMockTransientAPI()
+	defer m.Close()
+	suiteBasic(t, m)
 }
 
-func mockAPI() http.Handler {
-	taskRepo := transient.NewTaskRepo()
-	scheduleRepo := transient.NewScheduleRepo()
-	l := &LoggerMock{}
-	return New(l, taskRepo, scheduleRepo)
+func TestPostgresRestAPIBasic(t *testing.T) {
+	m := test.NewMockPostgresAPI()
+	defer m.Close()
+	suiteBasic(t, m)
 }
 
-func Test_listTasks(t *testing.T) {
+func suiteBasic(t *testing.T, m test.Mock) {
+	listTasks(t, m.NewAPI())
+	addTask(t, m.NewAPI())
+	getTask(t, m.NewAPI())
+	completeTask(t, m.NewAPI())
+	clearTask(t, m.NewAPI())
+	clearCompletedTasks(t, m.NewAPI())
+	listSchedules(t, m.NewAPI())
+	addRecurringTask(t, m.NewAPI())
+	addSchedule(t, m.NewAPI())
+	getSchedule(t, m.NewAPI())
+	pauseSchedule(t, m.NewAPI())
+	unpauseSchedule(t, m.NewAPI())
+}
 
-	api := mockAPI()
+func listTasks(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -50,7 +60,7 @@ func Test_listTasks(t *testing.T) {
 			name:    "should return 200 empty list",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: strp(`{}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -73,9 +83,7 @@ func Test_listTasks(t *testing.T) {
 		})
 	}
 }
-func Test_addTask(t *testing.T) {
-
-	api := mockAPI()
+func addTask(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -97,25 +105,25 @@ func Test_addTask(t *testing.T) {
 			name:    "empty task should return 201 and ID",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{}`},
-			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: strp(`{"id":1}`)},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "task with name and description should return 201 and ID",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task1", "description": "task1 description"}`},
-			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: strp(`{"id":2}`)},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
 		},
 		{
 			name:    "invalid JSON should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{{{`},
-			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: strp(`Error: could not parse task data`)},
+			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse task data`)},
 		},
 		{
 			name:    "empty body should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: ``},
-			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: strp(`Error: could not parse task data`)},
+			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse task data`)},
 		},
 	}
 	for _, tt := range tests {
@@ -138,9 +146,7 @@ func Test_addTask(t *testing.T) {
 		})
 	}
 }
-func Test_getTask(t *testing.T) {
-
-	api := mockAPI()
+func getTask(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -162,7 +168,7 @@ func Test_getTask(t *testing.T) {
 			name:    "unknown task ID should return 404",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -186,9 +192,7 @@ func Test_getTask(t *testing.T) {
 	}
 }
 
-func Test_completeTask(t *testing.T) {
-
-	api := mockAPI()
+func completeTask(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -210,7 +214,7 @@ func Test_completeTask(t *testing.T) {
 			name:    "unknown task ID should return 404",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/task/1/complete"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -234,9 +238,7 @@ func Test_completeTask(t *testing.T) {
 	}
 }
 
-func Test_clearTask(t *testing.T) {
-
-	api := mockAPI()
+func clearTask(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -258,7 +260,7 @@ func Test_clearTask(t *testing.T) {
 			name:    "unknown task ID should return 404",
 			h:       api,
 			args:    args{method: "DELETE", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -282,9 +284,7 @@ func Test_clearTask(t *testing.T) {
 	}
 }
 
-func Test_clearCompletedTasks(t *testing.T) {
-
-	api := mockAPI()
+func clearCompletedTasks(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -306,7 +306,7 @@ func Test_clearCompletedTasks(t *testing.T) {
 			name:    "clearing empty task list should return 200 with 0 count",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/task/clear"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: strp(`{"count":0,"message":"No completed tasks to clear"}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"count":0,"message":"No completed tasks to clear"}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -330,9 +330,7 @@ func Test_clearCompletedTasks(t *testing.T) {
 	}
 }
 
-func Test_listSchedules(t *testing.T) {
-
-	api := mockAPI()
+func listSchedules(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -354,7 +352,7 @@ func Test_listSchedules(t *testing.T) {
 			name:    "should return 200 empty list",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: strp(`{}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -378,9 +376,7 @@ func Test_listSchedules(t *testing.T) {
 	}
 }
 
-func Test_addSchedule(t *testing.T) {
-
-	api := mockAPI()
+func addSchedule(t *testing.T, api http.Handler) {
 
 	type args struct {
 		method string
@@ -402,25 +398,25 @@ func Test_addSchedule(t *testing.T) {
 			name:    "empty hourly schedule should return 201 and ID",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "hourly"}`},
-			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: strp(`{"id":1}`)},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "empty/invalid schedule should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{}`},
-			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: strp(`Error: could not parse schedule data: invalid frequency`)},
+			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data: invalid frequency`)},
 		},
 		{
 			name:    "invalid JSON should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{{{`},
-			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: strp(`Error: could not parse schedule data`)},
+			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data`)},
 		},
 		{
 			name:    "empty body should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: ``},
-			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: strp(`Error: could not parse schedule data`)},
+			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data`)},
 		},
 	}
 	for _, tt := range tests {
@@ -444,10 +440,7 @@ func Test_addSchedule(t *testing.T) {
 	}
 }
 
-func Test_getSchedule(t *testing.T) {
-
-	api := mockAPI()
-
+func getSchedule(t *testing.T, api http.Handler) {
 	type args struct {
 		method string
 		url    string
@@ -468,7 +461,7 @@ func Test_getSchedule(t *testing.T) {
 			name:    "unknown ID should return 404",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -492,10 +485,7 @@ func Test_getSchedule(t *testing.T) {
 	}
 }
 
-func Test_pauseSchedule(t *testing.T) {
-
-	api := mockAPI()
-
+func pauseSchedule(t *testing.T, api http.Handler) {
 	type args struct {
 		method string
 		url    string
@@ -516,7 +506,7 @@ func Test_pauseSchedule(t *testing.T) {
 			name:    "unknown ID should return 404",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/schedule/1/pause"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -539,10 +529,7 @@ func Test_pauseSchedule(t *testing.T) {
 		})
 	}
 }
-func Test_unpauseSchedule(t *testing.T) {
-
-	api := mockAPI()
-
+func unpauseSchedule(t *testing.T, api http.Handler) {
 	type args struct {
 		method string
 		url    string
@@ -563,7 +550,7 @@ func Test_unpauseSchedule(t *testing.T) {
 			name:    "unknown ID should return 404",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/schedule/1/unpause"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -587,10 +574,7 @@ func Test_unpauseSchedule(t *testing.T) {
 	}
 }
 
-func Test_addRecurringTask(t *testing.T) {
-
-	api := mockAPI()
-
+func addRecurringTask(t *testing.T, api http.Handler) {
 	type args struct {
 		method string
 		url    string
@@ -611,7 +595,7 @@ func Test_addRecurringTask(t *testing.T) {
 			name:    "unknown ID should return 404",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: `{"name": "task1", "description": "task1 description"}`},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
 		},
 	}
 	for _, tt := range tests {

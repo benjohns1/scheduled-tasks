@@ -3,6 +3,8 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
@@ -46,6 +48,15 @@ func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.E
 		return nil, usecase.NewError(usecase.ErrUnknown, "error parsing schedule id %d: %v", id, err)
 	}
 
+	// Get recurring tasks from DB
+	rts, err := r.getRecurringTasks([]usecase.ScheduleID{id})
+	if err != nil {
+		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving recurring tasks for schedule id %v", id)
+	}
+	for _, rt := range rts[id] {
+		sd.Schedule.AddTask(rt)
+	}
+
 	// Add to cache
 	r.schedules[sd.ScheduleID] = sd.Schedule
 
@@ -59,15 +70,32 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all schedules: %v", err)
 	}
+
+	scheds := map[usecase.ScheduleID]*schedule.Schedule{}
+	sids := []usecase.ScheduleID{}
 	for rows.Next() {
 		sd, err := parseScheduleRow(rows)
 		if err != nil {
 			return nil, usecase.NewError(usecase.ErrUnknown, "error parsing schedule row: %v", err)
 		}
 
-		// Add to cache
-		r.schedules[sd.ScheduleID] = sd.Schedule
+		scheds[sd.ScheduleID] = sd.Schedule
+		sids = append(sids, sd.ScheduleID)
 	}
+
+	// Get recurring tasks from DB
+	allTasks, err := r.getRecurringTasks(sids)
+	if err != nil {
+		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving recurring tasks for all schedules: %v", err)
+	}
+	for sid, rts := range allTasks {
+		for _, rt := range rts {
+			scheds[sid].AddTask(rt)
+		}
+	}
+
+	// Replace cache
+	r.schedules = scheds
 
 	return r.schedules, nil
 }
@@ -108,11 +136,10 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 }
 
 func toIntSlice(sqlSlice []sql.NullInt64) []int {
-	size := len(sqlSlice)
-	if size <= 0 {
+	if sqlSlice == nil {
 		return nil
 	}
-	intSlice := make([]int, size)
+	intSlice := make([]int, len(sqlSlice))
 	for i, item := range sqlSlice {
 		if !item.Valid {
 			continue
@@ -131,16 +158,83 @@ func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Er
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}
+	rts := s.Tasks()
+	if len(rts) > 0 {
+		err := r.insertTasks(id, rts)
+		if err != nil {
+			return 0, usecase.NewError(usecase.ErrUnknown, "error inserting recurring tasks to schedule: %v", err)
+		}
+	}
 
 	r.schedules[id] = s
 
 	return id, nil
 }
 
+func parseRecurringTaskRow(r scannable) (id int64, sid usecase.ScheduleID, rt schedule.RecurringTask, err error) {
+
+	rt = schedule.RecurringTask{}
+
+	// Scan into row data structure
+	var row struct {
+		name        string
+		description string
+	}
+	err = r.Scan(&id, &sid, &row.name, &row.description)
+	if err != nil {
+		return
+	}
+
+	// Construct recurring task value object
+	rt = schedule.NewRecurringTask(row.name, row.description)
+	return
+}
+
+func (r *ScheduleRepo) getRecurringTasks(sids []usecase.ScheduleID) (map[usecase.ScheduleID]map[int64]schedule.RecurringTask, error) {
+	ts := map[usecase.ScheduleID]map[int64]schedule.RecurringTask{}
+	if len(sids) <= 0 {
+		return ts, nil
+	}
+
+	sidsString := make([]string, len(sids))
+	for i, sid := range sids {
+		sidsString[i] = strconv.Itoa(int(sid))
+	}
+	q := fmt.Sprintf("SELECT id, schedule_id, name, description FROM recurring_task WHERE schedule_id IN (%s)", strings.Join(sidsString, ","))
+	rows, err := r.db.Query(q)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving tasks: %v", err)
+	}
+	for rows.Next() {
+		id, sid, t, err := parseRecurringTaskRow(rows)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing task row: %v", err)
+		}
+		if _, ok := ts[sid]; !ok {
+			ts[sid] = map[int64]schedule.RecurringTask{}
+		}
+		ts[sid][id] = t
+	}
+	return ts, nil
+}
+
+func (r *ScheduleRepo) insertTasks(sid usecase.ScheduleID, rts []schedule.RecurringTask) error {
+	q := "INSERT INTO recurring_task (schedule_id, name, description) VALUES ($1, $2, $3) RETURNING id"
+	var rtid int64
+	for _, rt := range rts {
+		err := r.db.QueryRow(q, sid, rt.Name(), rt.Description()).Scan(&rtid)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Update updates a schedule's persistent data to the given aggregate values
 func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) usecase.Error {
-	q := "UPDATE schedule SET paused = $1 WHERE id = $2 RETURNING id"
-	rows, err := r.db.Query(q, s.Paused(), id)
+	q := "UPDATE schedule SET paused = $1, frequency_offset = $2, frequency_interval = $3, frequency_time_period = $4, frequency_at_minutes = $5 WHERE id = $6 RETURNING id"
+	f := s.Frequency()
+	rows, err := r.db.Query(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating schedule id %d: %v", id, err)
 	}

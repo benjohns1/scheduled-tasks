@@ -108,15 +108,10 @@ func (conn *DBConn) Connect() error {
 	return err
 }
 
-// destroy !!!WARNING!!! completely destroys all data in the DB
-func (conn *DBConn) destroy() (sql.Result, error) {
-	return conn.DB.Exec("DROP TABLE task; DROP TABLE schedule;")
-}
-
 // Setup sets up initial DB schema
 func (conn *DBConn) Setup() (setup bool, err error) {
 
-	_, err = conn.DB.Exec(`SELECT 1 FROM task LIMIT 1; SELECT 1 FROM schedule LIMIT 1;`)
+	_, err = conn.DB.Exec(`SELECT 1 FROM task LIMIT 1; SELECT 1 FROM schedule LIMIT 1; SELECT 1 FROM recurring_task;`)
 	if err == nil {
 		setup = false
 		return // no error, table was already setup
@@ -137,6 +132,12 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			frequency_interval integer NOT NULL,
 			frequency_time_period smallint NOT NULL,
 			frequency_at_minutes int[]
+			);
+		CREATE TABLE recurring_task (
+			id SERIAL PRIMARY KEY,
+			schedule_id integer REFERENCES schedule(id) ON DELETE CASCADE ON UPDATE CASCADE,
+			name character varying(100) NOT NULL,
+			description character varying(500) NOT NULL
 			);
 		SET timezone = 'GMT'`)
 
