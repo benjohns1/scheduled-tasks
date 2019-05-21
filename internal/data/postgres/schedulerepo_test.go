@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewScheduleRepo(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestNewScheduleRepo(t *testing.T) {
 }
 
 func TestScheduleRepo_Get(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestScheduleRepo_Get(t *testing.T) {
 }
 
 func TestScheduleRepo_GetAll(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 }
 
 func TestScheduleRepo_Add(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestScheduleRepo_Add(t *testing.T) {
 }
 
 func TestScheduleRepo_Update(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +259,84 @@ func TestScheduleRepo_Update(t *testing.T) {
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("ScheduleRepo.Update() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+		})
+	}
+}
+
+
+func TestScheduleRepo_AnyTasksModified(t *testing.T) {
+	type args struct {
+		as map[int64]schedule.RecurringTask
+		bs []schedule.RecurringTask
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want 	bool
+	}{
+		{
+			name:    "two empty lists should return false",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{},
+				bs: []schedule.RecurringTask{},
+			},
+			want:    false,
+		},
+		{
+			name:    "two equal lists with 1 task should return false",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{1: schedule.NewRecurringTask("1", "1 desc")},
+				bs: []schedule.RecurringTask{schedule.NewRecurringTask("1", "1 desc")},
+			},
+			want:    false,
+		},
+		{
+			name:    "two equal lists with 2 tasks should return false",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{1: schedule.NewRecurringTask("1", "1 desc"),999: schedule.NewRecurringTask("999", "999 desc")},
+				bs: []schedule.RecurringTask{schedule.NewRecurringTask("1", "1 desc"),schedule.NewRecurringTask("999", "999 desc")},
+			},
+			want:    false,
+		},
+		{
+			name:    "empty map and slice with 1 task should return true",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{},
+				bs: []schedule.RecurringTask{schedule.NewRecurringTask("1", "1 desc")},
+			},
+			want:    true,
+		},
+		{
+			name:    "map with 1 task and empty slice should return true",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{1: schedule.NewRecurringTask("1", "1 desc")},
+				bs: []schedule.RecurringTask{},
+			},
+			want:    true,
+		},
+		{
+			name:    "two lists with different number of tasks should return true",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{1: schedule.NewRecurringTask("1", "1 desc")},
+				bs: []schedule.RecurringTask{schedule.NewRecurringTask("1", "1 desc"),schedule.NewRecurringTask("999", "999 desc")},
+			},
+			want:    true,
+		},
+		{
+			name:    "two lists with differring tasks should return true",
+			args:    args{
+				as: map[int64]schedule.RecurringTask{1: schedule.NewRecurringTask("1", "1 desc"), 2: schedule.NewRecurringTask("2", "2 desc")},
+				bs: []schedule.RecurringTask{schedule.NewRecurringTask("1", "1 desc"),schedule.NewRecurringTask("999", "999 desc")},
+			},
+			want:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := AnyTasksModified(tt.args.as, tt.args.bs)
+			if got != tt.want {
+				t.Errorf("schedule.AnyTasksModified() = %v, want %v", got, tt.want)
 			}
 		})
 	}

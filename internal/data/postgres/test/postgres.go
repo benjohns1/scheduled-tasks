@@ -10,12 +10,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
-//
-type loggerMock struct{}
+type loggerStub struct{}
 
-func (l *loggerMock) Print(v ...interface{})                 {}
-func (l *loggerMock) Printf(format string, v ...interface{}) {}
-func (l *loggerMock) Println(v ...interface{})               {}
+func (l *loggerStub) Print(v ...interface{})                 {}
+func (l *loggerStub) Printf(format string, v ...interface{}) {}
+func (l *loggerStub) Println(v ...interface{})               {}
 
 type testType uint8
 
@@ -25,9 +24,9 @@ const (
 	IntegrationTest
 )
 
-// NewMockDBConn creates a mock Postgres DB connection
-func NewMockDBConn(test testType) (postgres.DBConn, error) {
-	l := &loggerMock{}
+// NewTestDBConn creates a fake Postgres DB connection
+func NewTestDBConn(test testType) (postgres.DBConn, error) {
+	l := &loggerStub{}
 
 	// Load environment vars
 	if err := godotenv.Load("../../../.env"); err != nil {

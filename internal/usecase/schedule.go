@@ -94,6 +94,11 @@ func AddRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) 
 		return NewError(ErrDuplicateRecord, "can't add recurring task: duplicate found for schedule id %v", id)
 	}
 
+	err = r.Update(id, s)
+	if err != nil {
+		return err.Prefix("error updating schedule id %d attempting to add recurring task", id)
+	}
+
 	return nil
 }
 
@@ -106,6 +111,11 @@ func RemoveRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTas
 
 	if e := s.RemoveTask(rt); e != nil {
 		return NewError(ErrRecordNotFound, "can't remove recurring task from schedule id %v", id)
+	}
+
+	err = r.Update(id, s)
+	if err != nil {
+		return err.Prefix("error updating schedule id %d attempting to remove recurring task", id)
 	}
 
 	return nil

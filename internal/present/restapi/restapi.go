@@ -232,6 +232,10 @@ func addRecurringTask(l Logger, f Formatter, p Parser, scheduleRepo usecase.Sche
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
 				return
 			}
+			if ucerr.Code() == usecase.ErrDuplicateRecord {
+				f.WriteResponse(w, f.Errorf("Recurring task already exists for this schedule, can't add duplicate tasks with the same data"), 400)
+				return
+			}
 			l.Printf("error adding task to schedule: %v", ucerr)
 			f.WriteResponse(w, f.Error("Error adding task to schedule"), 500)
 			return

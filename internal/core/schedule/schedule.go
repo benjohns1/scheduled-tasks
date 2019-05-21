@@ -79,3 +79,8 @@ func (s *Schedule) RemoveTask(rt RecurringTask) error {
 func (s *Schedule) Times(start time.Time, end time.Time) ([]time.Time, error) {
 	return s.frequency.times(start, end)
 }
+
+// NextTime gets the next scheduled time after the given time
+func (s *Schedule) NextTime(after time.Time) (time.Time, error) {
+	return s.frequency.next(after)
+}

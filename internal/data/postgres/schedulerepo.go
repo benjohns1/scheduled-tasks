@@ -230,8 +230,19 @@ func (r *ScheduleRepo) insertTasks(sid usecase.ScheduleID, rts []schedule.Recurr
 	return nil
 }
 
+func (r *ScheduleRepo) clearTasks(sid usecase.ScheduleID) error {
+	q := "DELETE FROM recurring_task WHERE schedule_id = $1"
+	_, err := r.db.Exec(q, sid)
+	if err != nil {
+		return fmt.Errorf("error clearing all tasks from recurring_task table: %v", err)
+	}
+	return nil
+}
+
 // Update updates a schedule's persistent data to the given aggregate values
 func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) usecase.Error {
+
+	// Update schedule row
 	q := "UPDATE schedule SET paused = $1, frequency_offset = $2, frequency_interval = $3, frequency_time_period = $4, frequency_at_minutes = $5 WHERE id = $6 RETURNING id"
 	f := s.Frequency()
 	rows, err := r.db.Query(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
@@ -242,7 +253,61 @@ func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) useca
 		return usecase.NewError(usecase.ErrRecordNotFound, "no schedule found for id = %v", id)
 	}
 
+	// Check if any tasks need to be modified
+	rts, err := r.getRecurringTasks([]usecase.ScheduleID{id})
+	if err != nil {
+		return usecase.NewError(usecase.ErrUnknown, "error retrieving recurring tasks for schedule id %v: %v", id, err)
+	}
+	newRts := s.Tasks()
+	if AnyTasksModified(rts[id], newRts) {
+		err := r.replaceTasks(id, newRts)
+		if err != nil {
+			return usecase.NewError(usecase.ErrUnknown, "error updating recurring tasks for schedule id %v: %v", id, err)
+		}
+	}
+
 	r.schedules[id] = s
 
+	return nil
+}
+
+// AnyTasksModified returns whether the map of recurring tasks contains all entries in the slice of recurring tasks
+func AnyTasksModified(as map[int64]schedule.RecurringTask, bs []schedule.RecurringTask) bool {
+	if len(as) != len(bs) {
+		return true
+	}
+	usedIndices := make(map[int]bool)
+	for _, at := range as {
+		match := false
+		for i, bt := range bs {
+			if _, used := usedIndices[i]; used {
+				continue
+			}
+			if at.Equal(bt) {
+				match = true
+				usedIndices[i] = true
+				break
+			}
+		}
+		if !match {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *ScheduleRepo) replaceTasks(id usecase.ScheduleID, rts []schedule.RecurringTask) error {
+	// Modify tasks by clearing and reinserting all
+	// @TODO: determine which specific tasks need updating and only update those
+	err := r.clearTasks(id)
+	if err != nil {
+		return fmt.Errorf("error clearing recurring tasks: %v", err)
+	}
+	if len(rts) > 0 {
+		err := r.insertTasks(id, rts)
+		if err != nil {
+			return fmt.Errorf("error inserting recurring tasks: %v", err)
+		}
+	}
 	return nil
 }

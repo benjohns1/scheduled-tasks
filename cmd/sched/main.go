@@ -39,6 +39,13 @@ func main() {
 		l.Panic(err)
 	}
 
+	// Instantiate time clock
+	c := &scheduler.Clock{}
+
 	// Start scheduler process
-	scheduler.Run(l, taskRepo, scheduleRepo)
+	_, closed, _ := scheduler.Run(l, c, taskRepo, scheduleRepo)
+	select {
+	case <-closed:
+		return
+	}
 }

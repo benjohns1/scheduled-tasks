@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewTaskRepo(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestNewTaskRepo(t *testing.T) {
 }
 
 func TestTaskRepo_Get(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestTaskRepo_Get(t *testing.T) {
 }
 
 func TestTaskRepo_GetAll(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestTaskRepo_GetAll(t *testing.T) {
 }
 
 func TestTaskRepo_Add(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestTaskRepo_Add(t *testing.T) {
 }
 
 func TestTaskRepo_Update(t *testing.T) {
-	conn, err := NewMockDBConn(DBTest)
+	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}

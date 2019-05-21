@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// maximum number of hours to search when trying to find next hourly time
+const maxHrInt = 365 * 24 // (search up to an entire year)
+
 // Frequency defines how often an event occurs
 type Frequency struct {
 	offset        int
@@ -170,7 +173,17 @@ func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 	case TimePeriodHour:
 		return f.calcHourTimes(start, end)
 	}
-	return nil, fmt.Errorf("not implemented, yet")
+	return nil, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
+}
+
+func (f *Frequency) next(after time.Time) (time.Time, error) {
+	switch f.timePeriod {
+	case TimePeriodNone:
+		return time.Time{}, nil
+	case TimePeriodHour:
+		return f.calcNextHourTime(after)
+	}
+	return time.Time{}, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
 
 func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, error) {
@@ -183,18 +196,36 @@ func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, 
 	// Add times to the array
 	for hri := 0; hri <= maxHour; hri++ {
 		for _, min := range f.atMinutes {
-			time := time.Date(start.Year(), start.Month(), start.Day(), hour, min, 0, 0, start.Location())
-			if time.Before(start) {
+			t := time.Date(start.Year(), start.Month(), start.Day(), hour, min, 0, 0, start.Location())
+			if t.Before(start) {
 				continue
 			}
-			if time.After(end) {
+			if t.After(end) {
 				return times, nil
 			}
-			times = append(times, time)
+			times = append(times, t)
 		}
 		hour += f.interval
 	}
 	return times, nil
+}
+func (f *Frequency) calcNextHourTime(after time.Time) (time.Time, error) {
+
+	// Calculate first hour
+	hour := after.Hour() + (after.Hour() % f.interval)
+
+	// Find next time
+	for hri := 0; hri < maxHrInt; hri++ {
+		for _, min := range f.atMinutes {
+			t := time.Date(after.Year(), after.Month(), after.Day(), hour, min, 0, 0, after.Location())
+			if t.Before(after) {
+				continue
+			}
+			return t, nil
+		}
+		hour += f.interval
+	}
+	return time.Time{}, fmt.Errorf("could not find next time")
 }
 
 func validateMinutes(mins []int) error {

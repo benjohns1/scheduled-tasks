@@ -11,31 +11,31 @@ import (
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi/test"
 )
 
-func TestTransientRestAPIBasic(t *testing.T) {
-	m := test.NewMockTransientAPI()
-	defer m.Close()
-	suiteBasic(t, m)
+func TestTransientRESTAPIBasic(t *testing.T) {
+	tester := test.NewTransientTester()
+	defer tester.Close()
+	suiteBasic(t, tester)
 }
 
-func TestPostgresRestAPIBasic(t *testing.T) {
-	m := test.NewMockPostgresAPI()
-	defer m.Close()
-	suiteBasic(t, m)
+func TestPostgresRESTAPIBasic(t *testing.T) {
+	tester := test.NewPostgresTester()
+	defer tester.Close()
+	suiteBasic(t, tester)
 }
 
-func suiteBasic(t *testing.T, m test.Mock) {
-	listTasks(t, m.NewAPI())
-	addTask(t, m.NewAPI())
-	getTask(t, m.NewAPI())
-	completeTask(t, m.NewAPI())
-	clearTask(t, m.NewAPI())
-	clearCompletedTasks(t, m.NewAPI())
-	listSchedules(t, m.NewAPI())
-	addRecurringTask(t, m.NewAPI())
-	addSchedule(t, m.NewAPI())
-	getSchedule(t, m.NewAPI())
-	pauseSchedule(t, m.NewAPI())
-	unpauseSchedule(t, m.NewAPI())
+func suiteBasic(t *testing.T, tester test.Tester) {
+	listTasks(t, tester.NewAPI())
+	addTask(t, tester.NewAPI())
+	getTask(t, tester.NewAPI())
+	completeTask(t, tester.NewAPI())
+	clearTask(t, tester.NewAPI())
+	clearCompletedTasks(t, tester.NewAPI())
+	listSchedules(t, tester.NewAPI())
+	addRecurringTask(t, tester.NewAPI())
+	addSchedule(t, tester.NewAPI())
+	getSchedule(t, tester.NewAPI())
+	pauseSchedule(t, tester.NewAPI())
+	unpauseSchedule(t, tester.NewAPI())
 }
 
 func listTasks(t *testing.T, api http.Handler) {

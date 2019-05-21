@@ -11,42 +11,49 @@ type Logger interface {
 	Printf(format string, v ...interface{})
 }
 
-const offset = 3 * time.Second
-
-type nextRun struct {
-	next time.Time
-	halt bool
-}
+// Offset is the offset added to the next run time
+const Offset = 3 * time.Second
 
 // Run starts the scheduler process
-func Run(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) {
+func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (close chan<- bool, closed <-chan bool, next <-chan time.Time) {
 	l.Printf("scheduler process starting")
 
-	for {
-		nextRun := checkSchedules(l)
-		if nextRun.halt {
-			break
+	closeSignal := make(chan bool)
+	onClosed := make(chan bool)
+	nextRunTimes := make(chan time.Time)
+
+	go func() {
+		defer func() {
+			onClosed <- true
+		}()
+		for {
+			l.Printf("checking schedules")
+			nextRecurrence, err := usecase.CheckSchedules(c, taskRepo, scheduleRepo)
+			if err != nil {
+				l.Printf("halting scheduler: %v", err)
+				break
+			}
+			if nextRecurrence.IsZero() {
+				l.Printf("no upcoming schedules, halting")
+				break
+			}
+
+			// Sleep until next scheduled time + offset
+			l.Printf("next run scheduled for %v + %v offset", nextRecurrence, Offset)
+			nextRunTime := nextRecurrence.Add(Offset)
+			wait := c.Until(nextRunTime)
+			nextRunTimes <- nextRunTime
+
+			// Listen for exit signal or until next schedule process
+			select {
+			case <-closeSignal:
+				l.Printf("scheduler exiting")
+				return
+			case <-c.After(wait):
+			}
 		}
+		l.Printf("scheduler process complete")
+	}()
 
-		// Sleep until next scheduled time + offset
-		wait := nextRun.next.Sub(time.Now())
-		time.Sleep(wait + offset)
-	}
-
-	l.Printf("scheduler process complete")
-}
-
-func checkSchedules(l Logger) nextRun {
-	l.Printf("checking schedules")
-	now := time.Now()
-	l.Printf("Now: %v", now)
-
-	// TODO: Check all schedules to see which have at least one recurrence between now and the last time they recurred
-	// TODO: Kick-off async processing for each of these
-	// TODO: Of the remaining schedules, get the time the soonest one is scheduled to recur
-
-	return nextRun{
-		next: time.Now().Add(1 * time.Second),
-		halt: false,
-	}
+	return closeSignal, onClosed, nextRunTimes
 }
