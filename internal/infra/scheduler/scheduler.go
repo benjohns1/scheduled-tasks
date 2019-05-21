@@ -27,7 +27,10 @@ func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usec
 
 	go func() {
 		defer func() {
-			onClosed <- true
+			select {
+			case onClosed <- true:
+			default:
+			}
 		}()
 		for {
 			l.Printf("checking schedules")
@@ -45,14 +48,17 @@ func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usec
 			l.Printf("next run scheduled for %v + %v offset", nextRecurrence, Offset)
 			nextRunTime := nextRecurrence.Add(Offset)
 			wait := c.Until(nextRunTime)
-			nextRunTimes <- nextRunTime
+			select {
+			case nextRunTimes <- nextRunTime:
+			default:
+			}
 
 			// Listen for exit signal or until next schedule process
 			select {
 			case <-closeSignal:
 				l.Printf("scheduler exiting")
 				return
-			case <-c.After(wait):
+			case <-time.After(wait):
 			}
 		}
 		l.Printf("scheduler process complete")
