@@ -6,6 +6,7 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/data/transient"
+	"github.com/benjohns1/scheduled-tasks/internal/infra/scheduler/test"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
@@ -13,51 +14,10 @@ type loggerStub struct{}
 
 func (l *loggerStub) Printf(format string, v ...interface{}) {}
 
-type ClockMock struct {
-	mockNow func() time.Time
-}
-
-func NewClockMock(now func() time.Time) *ClockMock {
-	return &ClockMock{mockNow: now}
-}
-
-func NewStaticClockMock(now time.Time) *ClockMock {
-	return &ClockMock{mockNow: func() time.Time { return now }}
-}
-
-// Now implementes the standard time function
-func (c *ClockMock) Now() time.Time {
-	return c.mockNow()
-}
-
-// After implementes the standard time function
-func (c *ClockMock) After(d time.Duration) <-chan time.Time {
-	return time.After(d)
-}
-
-// Sleep implementes the standard time function
-func (c *ClockMock) Sleep(d time.Duration) {
-	time.Sleep(d)
-}
-
-// Tick implementes the standard time function
-func (c *ClockMock) Tick(d time.Duration) <-chan time.Time {
-	return time.Tick(d)
-}
-
-// Since implementes the standard time function
-func (c *ClockMock) Since(t time.Time) time.Duration {
-	return c.Now().Sub(t)
-}
-
-// Until implementes the standard time function
-func (c *ClockMock) Until(t time.Time) time.Duration {
-	return t.Sub(c.Now())
-}
-
 func TestRun(t *testing.T) {
 	now := time.Now()
 	timeout := 100 * time.Nanosecond
+	staticClock := test.NewStaticClockMock(now)
 
 	type args struct {
 		l            Logger
@@ -80,7 +40,7 @@ func TestRun(t *testing.T) {
 			arrange: func(t *testing.T) args {
 				return args{
 					l:            &loggerStub{},
-					c:            NewStaticClockMock(now),
+					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
 				}
@@ -114,7 +74,7 @@ func TestRun(t *testing.T) {
 				sr.Add(s)
 				return args{
 					l:            &loggerStub{},
-					c:            NewStaticClockMock(now),
+					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
 				}
@@ -136,9 +96,9 @@ func TestRun(t *testing.T) {
 			},
 		},
 		{
-			name: "schedule with a past recurring time should create a new task",
+			name: "unchecked schedule with a past recurring time should not create a task",
 			arrange: func(t *testing.T) args {
-				now := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
+				testNow := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
 				sr := transient.NewScheduleRepo()
 				f, err := schedule.NewHourFrequency([]int{25})
 				if err != nil {
@@ -149,7 +109,7 @@ func TestRun(t *testing.T) {
 				sr.Add(s)
 				return args{
 					l:            &loggerStub{},
-					c:            NewStaticClockMock(now),
+					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
 				}
@@ -157,7 +117,7 @@ func TestRun(t *testing.T) {
 			assert: func(t *testing.T, a args, r resp) {
 				select {
 				case <-r.closed:
-					t.Errorf("scheduler.Run() should have created a task before closing")
+					t.Errorf("scheduler.Run() not have closed yet")
 					return
 				case next := <-r.next:
 					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
@@ -167,11 +127,111 @@ func TestRun(t *testing.T) {
 					}
 				case <-time.After(timeout):
 					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+					return
 				}
 
 				tasks, err := a.taskRepo.GetAll()
 				if err != nil {
-					t.Errorf("scheduler.Run() should have created 1 task, but there was an error retrieving task: %v", err)
+					t.Errorf("scheduler.Run() error retrieving tasks: %v", err)
+					return
+				}
+				if len(tasks) != 0 {
+					t.Errorf("scheduler.Run() should not have created any tasks, but there were %v tasks in repo", len(tasks))
+					return
+				}
+			},
+		},
+		{
+			name: "unchecked schedule should be checked",
+			arrange: func(t *testing.T) args {
+				testNow := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{25})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+				return args{
+					l:            &loggerStub{},
+					c:            test.NewStaticClockMock(testNow),
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed yet")
+					return
+				case next := <-r.next:
+					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+					return
+				}
+
+				schedules, err := a.scheduleRepo.GetAll()
+				if err != nil {
+					t.Errorf("scheduler.Run() error retrieving schedules: %v", err)
+					return
+				}
+				if len(schedules) != 1 {
+					t.Errorf("scheduler.Run() expected 1 schedule")
+					return
+				}
+				for _, s := range schedules {
+					if s.LastChecked() != a.c.Now() {
+						t.Errorf("scheduler.Run() should have set checked time for schedule")
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "checked schedule with a past recurring time should create a new task",
+			arrange: func(t *testing.T) args {
+				testNow := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{25})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				s := schedule.New(f)
+				s.Check(testNow.Add(-10 * time.Minute))
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+				return args{
+					l:            &loggerStub{},
+					c:            test.NewStaticClockMock(testNow),
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed yet")
+					return
+				case next := <-r.next:
+					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+					return
+				}
+
+				tasks, err := a.taskRepo.GetAll()
+				if err != nil {
+					t.Errorf("scheduler.Run() there was an error retrieving tasks: %v", err)
 					return
 				}
 				if len(tasks) != 1 {

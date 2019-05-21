@@ -168,6 +168,69 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 	}
 }
 
+
+func TestScheduleRepo_GetAllUnpaused(t *testing.T) {
+	conn, err := NewTestDBConn(DBTest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	r, err := NewScheduleRepo(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := schedule.NewHourFrequency([]int{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1 := schedule.New(f)
+	s1.Pause()
+
+	s2 := schedule.New(f)
+
+	_, err = r.Add(s1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id2, err := r.Add(s2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		r       *ScheduleRepo
+		wantMap map[usecase.ScheduleID]*schedule.Schedule
+		wantErr usecase.ErrorCode
+	}{
+		{
+			name:    "should get 1 empty hourly schedule",
+			r:       r,
+			wantMap: map[usecase.ScheduleID]*schedule.Schedule{id2: s2},
+			wantErr: usecase.ErrNone,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.r.GetAllUnpaused()
+			if len(got) != len(tt.wantMap) {
+				t.Errorf("ScheduleRepo.GetAllUnpaused() got = %v, want %v", got, tt.wantMap)
+			}
+			for id, schedule := range got {
+				if !reflect.DeepEqual(schedule, tt.wantMap[id]) {
+					t.Errorf("ScheduleRepo.GetAllUnpaused() schedule[%v] got = %v, want %v", id, schedule, tt.wantMap[id])
+				}
+			}
+			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
+				t.Errorf("ScheduleRepo.GetAllUnpaused() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
 func TestScheduleRepo_Add(t *testing.T) {
 	conn, err := NewTestDBConn(DBTest)
 	if err != nil {

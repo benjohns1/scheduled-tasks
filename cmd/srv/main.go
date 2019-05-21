@@ -16,16 +16,21 @@ func main() {
 	// Load environment vars
 	godotenv.Load("../../.env")
 
-	// Load DB connection info
-	dbconn := data.NewDBConn(l)
-	if err := dbconn.Connect(); err != nil {
+	// DB connections
+	scConn := data.NewDBConn(l)
+	if err := scConn.Connect(); err != nil {
 		l.Panic(err)
 	}
-	defer dbconn.Close()
+	defer scConn.Close()
+	acConn := data.NewDBConn(l)
+	if err := acConn.Connect(); err != nil {
+		l.Panic(err)
+	}
+	defer acConn.Close()
 
 	l.Print("starting scheduler and API server")
-	scChan := startScheduler(dbconn)
-	acChan := startAPIServer(dbconn)
+	scChan := startScheduler(scConn)
+	acChan := startAPIServer(acConn)
 
 	sc := false
 	ac := false
@@ -66,8 +71,7 @@ func startAPIServer(dbconn data.DBConn) (closed <-chan bool) {
 
 	// Serve REST API
 	api := restapi.New(l, taskRepo, scheduleRepo)
-	closed = restapi.Serve(l, api)
-	return
+	return restapi.Serve(l, api)
 }
 
 func startScheduler(dbconn data.DBConn) (closed <-chan bool) {
@@ -96,5 +100,5 @@ func startScheduler(dbconn data.DBConn) (closed <-chan bool) {
 
 	// Start scheduler process
 	_, closed, _ = scheduler.Run(l, c, taskRepo, scheduleRepo)
-	return
+	return closed
 }

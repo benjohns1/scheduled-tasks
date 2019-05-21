@@ -11,8 +11,7 @@ import (
 
 // TaskRepo handles persisting task data and maintaining an in-memory cache
 type TaskRepo struct {
-	db    *sql.DB
-	tasks map[usecase.TaskID]*task.Task
+	db *sql.DB
 }
 
 // NewTaskRepo instantiates a new TaskRepo
@@ -22,17 +21,11 @@ func NewTaskRepo(conn DBConn) (repo *TaskRepo, err error) {
 		return nil, fmt.Errorf("DB connection is nil")
 	}
 
-	return &TaskRepo{db: conn.DB, tasks: make(map[usecase.TaskID]*task.Task)}, nil
+	return &TaskRepo{db: conn.DB}, nil
 }
 
 // Get retrieves a task entity, given its persistent ID
 func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
-
-	// Try to retrieve from cache
-	t, ok := r.tasks[id]
-	if ok {
-		return t, nil
-	}
 
 	// Retrieve from DB
 	query := fmt.Sprintf("%s WHERE id = $1", taskSelectClause())
@@ -45,9 +38,6 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task id %d: %v", id, err)
 	}
 
-	// Add to cache
-	r.tasks[td.TaskID] = td.Task
-
 	return td.Task, nil
 }
 
@@ -58,17 +48,17 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
 	}
+
+	tasks := map[usecase.TaskID]*task.Task{}
 	for rows.Next() {
 		td, err := parseTaskRow(rows)
 		if err != nil {
 			return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task row: %v", err)
 		}
-
-		// Add to cache
-		r.tasks[td.TaskID] = td.Task
+		tasks[td.TaskID] = td.Task
 	}
 
-	return r.tasks, nil
+	return tasks, nil
 }
 
 func taskSelectClause() (selectClause string) {
@@ -117,8 +107,6 @@ func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new task: %v", err)
 	}
 
-	r.tasks[id] = t
-
 	return id, nil
 }
 
@@ -132,8 +120,6 @@ func (r *TaskRepo) Update(id usecase.TaskID, t *task.Task) usecase.Error {
 	if !rows.Next() {
 		return usecase.NewError(usecase.ErrRecordNotFound, "no task found for id = %v", id)
 	}
-
-	r.tasks[id] = t
 
 	return nil
 }

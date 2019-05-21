@@ -128,6 +128,7 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 		CREATE TABLE schedule (
 			id SERIAL PRIMARY KEY,
 			paused boolean NOT NULL,
+			last_checked TIMESTAMPTZ,
 			frequency_offset integer NOT NULL,
 			frequency_interval integer NOT NULL,
 			frequency_time_period smallint NOT NULL,

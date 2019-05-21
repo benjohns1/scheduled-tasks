@@ -7,9 +7,10 @@ import (
 
 // Schedule represents a collection of tasks that recur at some frequency
 type Schedule struct {
-	frequency Frequency
-	paused    bool
-	tasks     []RecurringTask
+	frequency   Frequency
+	paused      bool
+	lastChecked time.Time
+	tasks       []RecurringTask
 }
 
 // New instantiates a new schedule entity
@@ -18,8 +19,8 @@ func New(f Frequency) *Schedule {
 }
 
 // NewRaw creates a new schedule entity from raw data
-func NewRaw(frequency Frequency, paused bool, tasks []RecurringTask) *Schedule {
-	return &Schedule{frequency, paused, tasks}
+func NewRaw(frequency Frequency, paused bool, lastChecked time.Time, tasks []RecurringTask) *Schedule {
+	return &Schedule{frequency, paused, lastChecked, tasks}
 }
 
 // Pause pauses a schedule
@@ -35,6 +36,20 @@ func (s *Schedule) Unpause() {
 // Paused returns whether schedule is currently paused
 func (s *Schedule) Paused() bool {
 	return s.paused
+}
+
+// LastChecked returns the last time this schedule was checked for recurrences
+func (s *Schedule) LastChecked() time.Time {
+	return s.lastChecked
+}
+
+// Check sets the lastChecked time
+func (s *Schedule) Check(time time.Time) error {
+	if time.After(s.LastChecked()) {
+		s.lastChecked = time
+		return nil
+	}
+	return fmt.Errorf("error new check time must be later than LastChecked time")
 }
 
 // Tasks returns the slice of recurring tasks associated with a schedule

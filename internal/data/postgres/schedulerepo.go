@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
@@ -12,10 +13,9 @@ import (
 	"github.com/lib/pq"
 )
 
-// ScheduleRepo handles persisting task data and maintaining an in-memory cache
+// ScheduleRepo persists schedule data in a PostgreSQL DB
 type ScheduleRepo struct {
-	db        *sql.DB
-	schedules map[usecase.ScheduleID]*schedule.Schedule
+	db *sql.DB
 }
 
 // NewScheduleRepo instantiates a new ScheduleRepo
@@ -25,17 +25,11 @@ func NewScheduleRepo(conn DBConn) (repo *ScheduleRepo, err error) {
 		return nil, fmt.Errorf("DB connection is nil")
 	}
 
-	return &ScheduleRepo{db: conn.DB, schedules: make(map[usecase.ScheduleID]*schedule.Schedule)}, nil
+	return &ScheduleRepo{db: conn.DB}, nil
 }
 
 // Get retrieves a schedule aggregate, given its persistent ID
 func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.Error) {
-
-	// Try to retrieve from cache
-	s, ok := r.schedules[id]
-	if ok {
-		return s, nil
-	}
 
 	// Retrieve from DB
 	query := fmt.Sprintf("%s WHERE id = $1", scheduleSelectClause())
@@ -57,16 +51,28 @@ func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.E
 		sd.Schedule.AddTask(rt)
 	}
 
-	// Add to cache
-	r.schedules[sd.ScheduleID] = sd.Schedule
-
 	return sd.Schedule, nil
 }
 
 // GetAll retrieves all schedules
 func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+	return r.getAllWhere("")
+}
+
+// GetAllUnpaused retrieves all unpaused schedules
+func (r *ScheduleRepo) GetAllUnpaused() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+	return r.getAllWhere("paused = FALSE")
+}
+
+func (r *ScheduleRepo) getAllWhere(whereClause string) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+
+	q := scheduleSelectClause()
+	if whereClause != "" {
+		q = fmt.Sprintf("%v WHERE %v", q, whereClause)
+	}
+
 	// Retrieve from DB
-	rows, err := r.db.Query(scheduleSelectClause())
+	rows, err := r.db.Query(q)
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all schedules: %v", err)
 	}
@@ -94,14 +100,11 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 		}
 	}
 
-	// Replace cache
-	r.schedules = scheds
-
-	return r.schedules, nil
+	return scheds, nil
 }
 
 func scheduleSelectClause() (selectClause string) {
-	return "SELECT id, paused, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes FROM schedule"
+	return "SELECT id, paused, last_checked, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes FROM schedule"
 }
 
 func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
@@ -116,8 +119,9 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 		fTimePeriod schedule.TimePeriod
 		fAtMinutes  []sql.NullInt64
 		paused      bool
+		lastChecked *string
 	}
-	err = r.Scan(&row.id, &row.paused, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes))
+	err = r.Scan(&row.id, &row.paused, &row.lastChecked, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes))
 	if err != nil {
 		return
 	}
@@ -128,8 +132,13 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 		return
 	}
 
+	lastChecked, err := time.Parse(dbTimeFormat, *row.lastChecked)
+	if err != nil {
+		lastChecked = time.Time{}
+	}
+
 	// Construct schedule entity
-	sd.Schedule = schedule.NewRaw(f, row.paused, []schedule.RecurringTask{})
+	sd.Schedule = schedule.NewRaw(f, row.paused, lastChecked, []schedule.RecurringTask{})
 	sd.ScheduleID = usecase.ScheduleID(row.id)
 
 	return
@@ -151,10 +160,10 @@ func toIntSlice(sqlSlice []sql.NullInt64) []int {
 
 // Add adds a schedule to the persisence layer
 func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Error) {
-	q := "INSERT INTO schedule (paused, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+	q := "INSERT INTO schedule (paused, last_checked, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
 	var id usecase.ScheduleID
 	f := s.Frequency()
-	err := r.db.QueryRow(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes())).Scan(&id)
+	err := r.db.QueryRow(q, s.Paused(), s.LastChecked(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes())).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}
@@ -165,8 +174,6 @@ func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Er
 			return 0, usecase.NewError(usecase.ErrUnknown, "error inserting recurring tasks to schedule: %v", err)
 		}
 	}
-
-	r.schedules[id] = s
 
 	return id, nil
 }
@@ -243,9 +250,9 @@ func (r *ScheduleRepo) clearTasks(sid usecase.ScheduleID) error {
 func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) usecase.Error {
 
 	// Update schedule row
-	q := "UPDATE schedule SET paused = $1, frequency_offset = $2, frequency_interval = $3, frequency_time_period = $4, frequency_at_minutes = $5 WHERE id = $6 RETURNING id"
+	q := "UPDATE schedule SET paused = $1, last_checked = $2, frequency_offset = $3, frequency_interval = $4, frequency_time_period = $5, frequency_at_minutes = $6 WHERE id = $7 RETURNING id"
 	f := s.Frequency()
-	rows, err := r.db.Query(q, s.Paused(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
+	rows, err := r.db.Query(q, s.Paused(), s.LastChecked(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating schedule id %d: %v", id, err)
 	}
@@ -265,8 +272,6 @@ func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) useca
 			return usecase.NewError(usecase.ErrUnknown, "error updating recurring tasks for schedule id %v: %v", id, err)
 		}
 	}
-
-	r.schedules[id] = s
 
 	return nil
 }
