@@ -57,7 +57,7 @@ func (c *ClockMock) Until(t time.Time) time.Duration {
 
 func TestRun(t *testing.T) {
 	now := time.Now()
-	immediateTimeout := 10 * time.Nanosecond
+	timeout := 100 * time.Nanosecond
 
 	type args struct {
 		l            Logger
@@ -72,12 +72,12 @@ func TestRun(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		arrange func() args
-		assert  func(args, resp)
+		arrange func(*testing.T) args
+		assert  func(*testing.T, args, resp)
 	}{
 		{
-			name: "empty schedule should close scheduler immediately",
-			arrange: func() args {
+			name: "empty schedule should be scheduled to run again after default wait time",
+			arrange: func(t *testing.T) args {
 				return args{
 					l:            &loggerStub{},
 					c:            NewStaticClockMock(now),
@@ -85,21 +85,25 @@ func TestRun(t *testing.T) {
 					scheduleRepo: transient.NewScheduleRepo(),
 				}
 			},
-			assert: func(_ args, r resp) {
+			assert: func(t *testing.T, _ args, r resp) {
 				select {
-				case val := <-r.closed:
-					if val {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-r.next:
+					want := now.Add(DefaultWait).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
 						return
 					}
-					t.Errorf("scheduler.Run() closed channel should be true")
-				case <-time.After(immediateTimeout):
-					t.Errorf("scheduler.Run() should be closed immediately")
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
 				}
 			},
 		},
 		{
-			name: "schedule with no upcoming recurrences should close scheduler immediately",
-			arrange: func() args {
+			name: "schedule with no upcoming recurrences should be scheduled to run again after default wait time",
+			arrange: func(t *testing.T) args {
 				sr := transient.NewScheduleRepo()
 				f, err := schedule.NewHourFrequency([]int{})
 				if err != nil {
@@ -115,21 +119,25 @@ func TestRun(t *testing.T) {
 					scheduleRepo: transient.NewScheduleRepo(),
 				}
 			},
-			assert: func(_ args, r resp) {
+			assert: func(t *testing.T, _ args, r resp) {
 				select {
-				case val := <-r.closed:
-					if val {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-r.next:
+					want := now.Add(DefaultWait).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
 						return
 					}
-					t.Errorf("scheduler.Run() closed channel should be true")
-				case <-time.After(immediateTimeout):
-					t.Errorf("scheduler.Run() should be closed immediately")
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
 				}
 			},
 		},
 		{
 			name: "schedule with a past recurring time should create a new task",
-			arrange: func() args {
+			arrange: func(t *testing.T) args {
 				now := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
 				sr := transient.NewScheduleRepo()
 				f, err := schedule.NewHourFrequency([]int{25})
@@ -146,7 +154,7 @@ func TestRun(t *testing.T) {
 					scheduleRepo: sr,
 				}
 			},
-			assert: func(a args, r resp) {
+			assert: func(t *testing.T, a args, r resp) {
 				select {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() should have created a task before closing")
@@ -157,7 +165,8 @@ func TestRun(t *testing.T) {
 						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
 						return
 					}
-					break
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
 				}
 
 				tasks, err := a.taskRepo.GetAll()
@@ -178,15 +187,17 @@ func TestRun(t *testing.T) {
 					t.Errorf("scheduler.Run() should have created 1 task, but task values were not correct")
 					return
 				}
-				r.close <- true
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := tt.arrange()
+			args := tt.arrange(t)
 			close, closed, next := Run(args.l, args.c, args.taskRepo, args.scheduleRepo)
-			tt.assert(args, resp{close, closed, next})
+			defer func() {
+				close <- true
+			}()
+			tt.assert(t, args, resp{close, closed, next})
 		})
 	}
 }

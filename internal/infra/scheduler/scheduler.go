@@ -14,6 +14,9 @@ type Logger interface {
 // Offset is the offset added to the next run time
 const Offset = 3 * time.Second
 
+// DefaultWait is the default amount of time for the process to wait before automatically checking the schedule, if there's no upcoming recurrences
+const DefaultWait = 7 * 24 * time.Hour
+
 // Run starts the scheduler process
 func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (close chan<- bool, closed <-chan bool, next <-chan time.Time) {
 	l.Printf("scheduler process starting")
@@ -34,8 +37,8 @@ func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usec
 				break
 			}
 			if nextRecurrence.IsZero() {
-				l.Printf("no upcoming schedules, halting")
-				break
+				l.Printf("no upcoming schedules, setting default wait to check schedule in %v from now", DefaultWait)
+				nextRecurrence = c.Now().Add(DefaultWait)
 			}
 
 			// Sleep until next scheduled time + offset
