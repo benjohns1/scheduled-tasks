@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
-	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 )
 
 // Parser handles JSON parsing
@@ -37,7 +36,6 @@ type addSchedule struct {
 
 func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 
-	// @TODO: parse actual schedule data
 	var f schedule.Frequency
 	var err error
 	switch as.Frequency {
@@ -57,25 +55,6 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 		s.AddTask(schedule.NewRecurringTask(rt.Name, rt.Description))
 	}
 	return s, nil
-}
-
-// AddTask parses addTask request JSON data into a core Task struct
-func (p *Parser) AddTask(b io.Reader) (*task.Task, error) {
-	var addTask addTask
-	err := json.NewDecoder(b).Decode(&addTask)
-	if err != nil {
-		return nil, err
-	}
-	return parseAddTask(&addTask), nil
-}
-
-type addTask struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-func parseAddTask(at *addTask) *task.Task {
-	return task.New(at.Name, at.Description)
 }
 
 // AddRecurringTask parses addRecurringTask request JSON into a core RecurringTask struct
