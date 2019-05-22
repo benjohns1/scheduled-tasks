@@ -16,7 +16,7 @@ func (l *loggerStub) Printf(format string, v ...interface{}) {}
 
 func TestRun(t *testing.T) {
 	now := time.Now()
-	timeout := 100 * time.Nanosecond
+	timeout := 10 * time.Millisecond
 	staticClock := test.NewStaticClockMock(now)
 
 	type args struct {
@@ -24,11 +24,12 @@ func TestRun(t *testing.T) {
 		c            usecase.Clock
 		taskRepo     usecase.TaskRepo
 		scheduleRepo usecase.ScheduleRepo
+		nextRun      chan time.Time
 	}
 	type resp struct {
 		close  chan<- bool
+		check  chan<- bool
 		closed <-chan bool
-		next   <-chan time.Time
 	}
 	tests := []struct {
 		name    string
@@ -43,14 +44,15 @@ func TestRun(t *testing.T) {
 					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
+					nextRun:      make(chan time.Time),
 				}
 			},
-			assert: func(t *testing.T, _ args, r resp) {
+			assert: func(t *testing.T, a args, r resp) {
 				select {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() should not have closed")
 					return
-				case next := <-r.next:
+				case next := <-a.nextRun:
 					want := now.Add(DefaultWait).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
@@ -77,14 +79,15 @@ func TestRun(t *testing.T) {
 					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
+					nextRun:      make(chan time.Time),
 				}
 			},
-			assert: func(t *testing.T, _ args, r resp) {
+			assert: func(t *testing.T, a args, r resp) {
 				select {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() should not have closed")
 					return
-				case next := <-r.next:
+				case next := <-a.nextRun:
 					want := now.Add(DefaultWait).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
@@ -112,6 +115,7 @@ func TestRun(t *testing.T) {
 					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -119,7 +123,7 @@ func TestRun(t *testing.T) {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() not have closed yet")
 					return
-				case next := <-r.next:
+				case next := <-a.nextRun:
 					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
@@ -158,6 +162,7 @@ func TestRun(t *testing.T) {
 					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -165,7 +170,7 @@ func TestRun(t *testing.T) {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() should not have closed yet")
 					return
-				case next := <-r.next:
+				case next := <-a.nextRun:
 					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
@@ -211,6 +216,7 @@ func TestRun(t *testing.T) {
 					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -218,7 +224,7 @@ func TestRun(t *testing.T) {
 				case <-r.closed:
 					t.Errorf("scheduler.Run() should not have closed yet")
 					return
-				case next := <-r.next:
+				case next := <-a.nextRun:
 					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
@@ -253,11 +259,11 @@ func TestRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := tt.arrange(t)
-			close, closed, next := Run(args.l, args.c, args.taskRepo, args.scheduleRepo)
+			close, check, closed := Run(args.l, args.c, args.taskRepo, args.scheduleRepo, args.nextRun)
 			defer func() {
 				close <- true
 			}()
-			tt.assert(t, args, resp{close, closed, next})
+			tt.assert(t, args, resp{close, check, closed})
 		})
 	}
 }

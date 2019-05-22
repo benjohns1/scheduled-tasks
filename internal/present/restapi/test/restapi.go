@@ -3,9 +3,9 @@ package test
 import (
 	"net/http"
 
+	"github.com/benjohns1/scheduled-tasks/internal/data/postgres"
 	postgres_test "github.com/benjohns1/scheduled-tasks/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/internal/data/transient"
-	"github.com/benjohns1/scheduled-tasks/internal/data/postgres"
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi"
 )
 
@@ -30,7 +30,8 @@ func (m *transientTester) NewAPI() http.Handler {
 	l := &loggerStub{}
 	taskRepo := transient.NewTaskRepo()
 	scheduleRepo := transient.NewScheduleRepo()
-	return restapi.New(l, taskRepo, scheduleRepo)
+	c := make(chan<- bool)
+	return restapi.New(l, c, taskRepo, scheduleRepo)
 }
 
 func (m *transientTester) Close() error {
@@ -62,7 +63,8 @@ func (m *postgresTester) NewAPI() http.Handler {
 		panic(err)
 	}
 	l := &loggerStub{}
-	return restapi.New(l, taskRepo, scheduleRepo)
+	c := make(chan<- bool)
+	return restapi.New(l, c, taskRepo, scheduleRepo)
 }
 
 func (m *postgresTester) Close() error {

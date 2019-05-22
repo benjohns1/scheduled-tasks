@@ -43,7 +43,7 @@ type Parser interface {
 }
 
 // New creates a REST API server
-func New(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
+func New(l Logger, checkSchedule chan<- bool, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
 
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(l)
@@ -62,9 +62,9 @@ func New(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo)
 	sPre := prefix + "/schedule"
 	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
 	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
-	r.POST(sPre+"/", addSchedule(l, f, p, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, scheduleRepo))
+	r.POST(sPre+"/", addSchedule(l, f, p, checkSchedule, scheduleRepo))
+	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, checkSchedule, scheduleRepo))
+	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, checkSchedule, scheduleRepo))
 
 	rtPre := sPre + "/:scheduleID/task"
 	r.POST(rtPre+"/", addRecurringTask(l, f, p, scheduleRepo))
@@ -115,7 +115,7 @@ func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) htt
 	}
 }
 
-func addSchedule(l Logger, f Formatter, p Parser, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+func addSchedule(l Logger, f Formatter, p Parser, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		s, err := p.AddSchedule(r.Body)
 		defer r.Body.Close()
@@ -124,7 +124,7 @@ func addSchedule(l Logger, f Formatter, p Parser, scheduleRepo usecase.ScheduleR
 			f.WriteResponse(w, f.Errorf("Error: could not parse schedule data: %v", err), 400)
 			return
 		}
-		sID, ucerr := usecase.AddSchedule(scheduleRepo, s)
+		sID, ucerr := usecase.AddSchedule(scheduleRepo, s, checkSchedule)
 		if ucerr != nil {
 			l.Printf("error adding schedule: %v", ucerr)
 			f.WriteResponse(w, f.Error("Error: could not add schedule data"), 500)
@@ -168,7 +168,7 @@ func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httpr
 	}
 }
 
-func pauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+func pauseSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
 		if err != nil {
@@ -177,7 +177,7 @@ func pauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) htt
 			return
 		}
 		id := usecase.ScheduleID(scheduleIDInt)
-		ucerr := usecase.PauseSchedule(scheduleRepo, id)
+		ucerr := usecase.PauseSchedule(scheduleRepo, id, checkSchedule)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
@@ -191,7 +191,7 @@ func pauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) htt
 	}
 }
 
-func unpauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+func unpauseSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
 		if err != nil {
@@ -200,7 +200,7 @@ func unpauseSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) h
 			return
 		}
 		id := usecase.ScheduleID(scheduleIDInt)
-		ucerr := usecase.UnpauseSchedule(scheduleRepo, id)
+		ucerr := usecase.UnpauseSchedule(scheduleRepo, id, checkSchedule)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)

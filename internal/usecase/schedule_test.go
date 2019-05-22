@@ -100,6 +100,7 @@ func TestAddSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
 	hourSchedule := schedule.New(hourFreq)
+	c := make(chan<- bool)
 
 	type args struct {
 		r ScheduleRepo
@@ -120,7 +121,7 @@ func TestAddSchedule(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := AddSchedule(tt.args.r, tt.args.s)
+			got, err := AddSchedule(tt.args.r, tt.args.s, c)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AddSchedule() got = %v, want %v", got, tt.want)
 			}
@@ -137,6 +138,7 @@ func TestPauseSchedule(t *testing.T) {
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
 	hourSched := schedule.New(hourFreq)
 	hourSchedID, _ := r.Add(hourSched)
+	c := make(chan<- bool)
 
 	type args struct {
 		r  ScheduleRepo
@@ -160,7 +162,7 @@ func TestPauseSchedule(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := PauseSchedule(tt.args.r, tt.args.id)
+			err := PauseSchedule(tt.args.r, tt.args.id, c)
 			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("PauseSchedule() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -175,6 +177,7 @@ func TestUnpauseSchedule(t *testing.T) {
 	hourSched := schedule.New(hourFreq)
 	hourSched.Pause()
 	hourSchedID, _ := r.Add(hourSched)
+	c := make(chan<- bool)
 
 	type args struct {
 		r  ScheduleRepo
@@ -198,7 +201,7 @@ func TestUnpauseSchedule(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := UnpauseSchedule(tt.args.r, tt.args.id)
+			err := UnpauseSchedule(tt.args.r, tt.args.id, c)
 			if ((err == nil) != (tt.wantErr == ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("UnpauseSchedule() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -29,8 +29,8 @@ func main() {
 	defer acConn.Close()
 
 	l.Print("starting scheduler and API server")
-	scChan := startScheduler(scConn)
-	acChan := startAPIServer(acConn)
+	checkC, scChan := startScheduler(scConn)
+	acChan := startAPIServer(acConn, checkC)
 
 	sc := false
 	ac := false
@@ -48,7 +48,7 @@ func main() {
 	}
 }
 
-func startAPIServer(dbconn data.DBConn) (closed <-chan bool) {
+func startAPIServer(dbconn data.DBConn, check chan<- bool) (closed <-chan bool) {
 	l := log.New(os.Stderr, "api ", log.LstdFlags)
 
 	didSetup, err := dbconn.Setup()
@@ -70,11 +70,11 @@ func startAPIServer(dbconn data.DBConn) (closed <-chan bool) {
 	}
 
 	// Serve REST API
-	api := restapi.New(l, taskRepo, scheduleRepo)
+	api := restapi.New(l, check, taskRepo, scheduleRepo)
 	return restapi.Serve(l, api)
 }
 
-func startScheduler(dbconn data.DBConn) (closed <-chan bool) {
+func startScheduler(dbconn data.DBConn) (check chan<- bool, closed <-chan bool) {
 	l := log.New(os.Stderr, "sched ", log.LstdFlags)
 
 	didSetup, err := dbconn.Setup()
@@ -99,6 +99,6 @@ func startScheduler(dbconn data.DBConn) (closed <-chan bool) {
 	c := &scheduler.Clock{}
 
 	// Start scheduler process
-	_, closed, _ = scheduler.Run(l, c, taskRepo, scheduleRepo)
-	return closed
+	_, check, closed = scheduler.Run(l, c, taskRepo, scheduleRepo, nil)
+	return check, closed
 }

@@ -18,12 +18,12 @@ const Offset = 3 * time.Second
 const DefaultWait = 7 * 24 * time.Hour
 
 // Run starts the scheduler process
-func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (close chan<- bool, closed <-chan bool, next <-chan time.Time) {
+func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo, nextRun chan time.Time) (close chan<- bool, check chan<- bool, closed <-chan bool) {
 	l.Printf("scheduler process starting")
 
+	checkSignal := make(chan bool)
 	closeSignal := make(chan bool)
 	onClosed := make(chan bool)
-	nextRunTimes := make(chan time.Time)
 
 	go func() {
 		defer func() {
@@ -47,22 +47,28 @@ func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usec
 			// Sleep until next scheduled time + offset
 			l.Printf("next run scheduled for %v + %v offset", nextRecurrence, Offset)
 			nextRunTime := nextRecurrence.Add(Offset)
-			wait := c.Until(nextRunTime)
-			select {
-			case nextRunTimes <- nextRunTime:
-			default:
+
+			// Notify receivers of next runtime
+			if nextRun != nil {
+				nextRun <- nextRunTime
 			}
 
-			// Listen for exit signal or until next schedule process
+			wait := c.Until(nextRunTime)
+			if wait <= 0 {
+				wait = 1
+			}
+
+			// Listen for exit signal, check signal, or until next recurrence is ready
 			select {
 			case <-closeSignal:
 				l.Printf("scheduler exiting")
 				return
-			case <-time.After(wait):
+			case <-checkSignal:
+			case <-c.After(wait):
 			}
 		}
 		l.Printf("scheduler process complete")
 	}()
 
-	return closeSignal, onClosed, nextRunTimes
+	return closeSignal, checkSignal, onClosed
 }

@@ -41,16 +41,20 @@ func ListSchedules(r ScheduleRepo) (map[ScheduleID]*schedule.Schedule, Error) {
 }
 
 // AddSchedule adds a new schedule
-func AddSchedule(r ScheduleRepo, s *schedule.Schedule) (ScheduleID, Error) {
+func AddSchedule(r ScheduleRepo, s *schedule.Schedule, checkSchedule chan<- bool) (ScheduleID, Error) {
 	id, err := r.Add(s)
 	if err != nil {
 		return id, err.Prefix("error adding schedule")
+	}
+	select {
+	case checkSchedule <- true:
+	default:
 	}
 	return id, nil
 }
 
 // PauseSchedule pauses the schedule
-func PauseSchedule(r ScheduleRepo, id ScheduleID) Error {
+func PauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
 
 	s, err := r.Get(id)
 	if err != nil {
@@ -63,11 +67,15 @@ func PauseSchedule(r ScheduleRepo, id ScheduleID) Error {
 	if err != nil {
 		return err.Prefix("error updating schedule id %d attempting to pause", id)
 	}
+	select {
+	case checkSchedule <- true:
+	default:
+	}
 	return nil
 }
 
 // UnpauseSchedule unpauses the schedule
-func UnpauseSchedule(r ScheduleRepo, id ScheduleID) Error {
+func UnpauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
 
 	s, err := r.Get(id)
 	if err != nil {
@@ -79,6 +87,10 @@ func UnpauseSchedule(r ScheduleRepo, id ScheduleID) Error {
 	err = r.Update(id, s)
 	if err != nil {
 		return err.Prefix("error updating schedule id %d attempting to unpause", id)
+	}
+	select {
+	case checkSchedule <- true:
+	default:
 	}
 	return nil
 }
