@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const outTimeFormat = time.RFC3339Nano
+const OutTimeFormat = time.RFC3339Nano
 
 // Logger interface needed for log messages
 type Logger interface {
@@ -42,7 +42,7 @@ func (ft *Time) MarshalJSON() ([]byte, error) {
 	if t.IsZero() {
 		return []byte("null"), nil
 	}
-	timeStr = t.Format(outTimeFormat)
+	timeStr = t.Format(OutTimeFormat)
 	return []byte(fmt.Sprintf("\"%s\"", timeStr)), nil
 }
 

@@ -7,8 +7,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+	"fmt"
 	
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi/test"
+	format "github.com/benjohns1/scheduled-tasks/internal/present/restapi/json"
 )
 
 func TestTransientRESTAPIMulti(t *testing.T) {
@@ -30,6 +34,14 @@ func suiteMulti(t *testing.T, tester test.Tester) {
 }
 
 func addListGetCompleteTasks(t *testing.T, api http.Handler) {
+	
+	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+	nowStr := now.Format(format.OutTimeFormat)
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
+
 	type args struct {
 		method string
 		url    string
@@ -76,13 +88,13 @@ func addListGetCompleteTasks(t *testing.T, api http.Handler) {
 			name:    "should return 200 list with 3 tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"name":"task1","description":"task1 description","completedTime":null},"2":{"id":2,"name":"task2","description":"task2 description","completedTime":null},"3":{"id":3,"name":"task3","description":"task3 description","completedTime":null}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"1":{"id":1,"name":"task1","description":"task1 description","completedTime":null,"createdTime":"%v"},"2":{"id":2,"name":"task2","description":"task2 description","completedTime":null,"createdTime":"%v"},"3":{"id":3,"name":"task3","description":"task3 description","completedTime":null,"createdTime":"%v"}}`, nowStr, nowStr, nowStr))},
 		},
 		{
 			name:    "get task ID 1 should return incompleted task",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"name":"task1","description":"task1 description","completedTime":null}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"id":1,"name":"task1","description":"task1 description","completedTime":null,"createdTime":"%v"}`, nowStr))},
 		},
 		{
 			name:    "complete ID 1 should return 204",
@@ -94,7 +106,7 @@ func addListGetCompleteTasks(t *testing.T, api http.Handler) {
 			name:    "get task ID 1 should return completed task",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyContains: test.Strp(`{"id":1,"name":"task1","description":"task1 description","completedTime":`), bodyNotContains: test.Strp(`"completedTime":null`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"id":1,"name":"task1","description":"task1 description","completedTime":"%v","createdTime":"%v"}`, nowStr, nowStr))},
 		},
 	}
 	for _, tt := range tests {

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
-	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 	format "github.com/benjohns1/scheduled-tasks/internal/present/restapi/json"
+	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
 // Formatter formats application data into JSON for output
@@ -23,6 +23,7 @@ type outTask struct {
 	Name          string         `json:"name"`
 	Description   string         `json:"description"`
 	CompletedTime format.Time    `json:"completedTime"`
+	CreatedTime   format.Time    `json:"createdTime"`
 }
 
 type outTaskID struct {
@@ -67,6 +68,7 @@ func taskToOut(id usecase.TaskID, t *task.Task) *outTask {
 		Name:          t.Name(),
 		Description:   t.Description(),
 		CompletedTime: format.Time(t.CompletedTime()),
+		CreatedTime:   format.Time(t.CreatedTime()),
 	}
 }
 
