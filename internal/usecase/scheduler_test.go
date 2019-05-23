@@ -15,7 +15,7 @@ func TestCheckSchedules(t *testing.T) {
 	staticClock := test.NewStaticClockMock(now)
 
 	type args struct {
-		c            Clock
+		c            *test.ClockMock
 		taskRepo     TaskRepo
 		scheduleRepo ScheduleRepo
 	}

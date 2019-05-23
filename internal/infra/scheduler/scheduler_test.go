@@ -21,7 +21,7 @@ func TestRun(t *testing.T) {
 
 	type args struct {
 		l            Logger
-		c            usecase.Clock
+		c            *test.ClockMock
 		taskRepo     usecase.TaskRepo
 		scheduleRepo usecase.ScheduleRepo
 		nextRun      chan time.Time

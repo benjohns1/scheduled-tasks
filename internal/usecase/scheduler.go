@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 )
 
 // CheckSchedules checks all schedules, determines all recurrences that have occurred, and when the next run is needed
-func CheckSchedules(c Clock, taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, error) {
+func CheckSchedules(c clock.Time, taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, error) {
 	// Check all unpaused schedules
 	schedules, err := scheduleRepo.GetAllUnpaused()
 	if err != nil {

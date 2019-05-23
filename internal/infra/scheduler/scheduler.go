@@ -3,6 +3,7 @@ package scheduler
 import (
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
@@ -18,7 +19,7 @@ const Offset = 3 * time.Second
 const DefaultWait = 7 * 24 * time.Hour
 
 // Run starts the scheduler process
-func Run(l Logger, c usecase.Clock, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo, nextRun chan time.Time) (close chan<- bool, check chan<- bool, closed <-chan bool) {
+func Run(l Logger, c clock.Time, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo, nextRun chan time.Time) (close chan<- bool, check chan<- bool, closed <-chan bool) {
 	l.Printf("scheduler process starting")
 
 	checkSignal := make(chan bool)
