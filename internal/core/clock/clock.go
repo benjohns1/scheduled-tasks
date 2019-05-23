@@ -1,16 +1,35 @@
+// The clock package provides a wrapper around the global time functions to 
+// allow for easier testing without needing to inject a clock implementation 
+// everywhere
+//
+// Application Usage:
+// Import this package and use the clock.Now(), clock.After(d time.Duration), 
+// etc functions instead of the time.Now(), time.After(d time.Duration), etc 
+// functions respectively. The standard clock will use the underlying time 
+// functions.
+// 
+// Testing Usage:
+// Create a mock clock (either the basic one provided in mock.go, or roll your
+// own that implements clock.Time) and call clock.Set(mockClock) before running
+// your tests. For instance, this will create a static clock who's Now() 
+// function will always return 2000-01-01 12:00:00 UTC:
+// 
+// testNow := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+// clockMock := clock.NewStaticMock(testNow)
+// clock.Set(clockMock)
+// 
+// You can use clock.Get() and defer clock.Set() to push and pop clock
+// implementations for nested tests:
+// 
+// prevClock := clock.Get()
+// clockMock := clock.NewStaticMock(time.Now())
+// clock.Set(clockMock)
+// defer clock.Set(prevClock)
+// ... run outer test ...
+//   ... run nested test with its own clock set/get ...
 package clock
 
 import "time"
-
-// Time describes the time functions needed by the scheduler
-type Time interface {
-	Now() time.Time
-	After(d time.Duration) <-chan time.Time
-	Sleep(d time.Duration)
-	Tick(d time.Duration) <-chan time.Time
-	Since(t time.Time) time.Duration
-	Until(t time.Time) time.Duration
-}
 
 // Clock is a concrete implementation of standard time functions for production usage
 type Clock struct{}

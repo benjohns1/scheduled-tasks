@@ -9,14 +9,14 @@ import (
 )
 
 // CheckSchedules checks all schedules, determines all recurrences that have occurred, and when the next run is needed
-func CheckSchedules(c clock.Time, taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, error) {
+func CheckSchedules(taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, error) {
 	// Check all unpaused schedules
 	schedules, err := scheduleRepo.GetAllUnpaused()
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	now := c.Now()
+	now := clock.Now()
 	var next time.Time
 	for id, sched := range schedules {
 		// If the schedule has previously been checked, create tasks for any recurrences

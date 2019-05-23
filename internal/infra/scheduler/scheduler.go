@@ -19,7 +19,7 @@ const Offset = 3 * time.Second
 const DefaultWait = 7 * 24 * time.Hour
 
 // Run starts the scheduler process
-func Run(l Logger, c clock.Time, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo, nextRun chan time.Time) (close chan<- bool, check chan<- bool, closed <-chan bool) {
+func Run(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo, nextRun chan time.Time) (close chan<- bool, check chan<- bool, closed <-chan bool) {
 	l.Printf("scheduler process starting")
 
 	checkSignal := make(chan bool)
@@ -35,14 +35,14 @@ func Run(l Logger, c clock.Time, taskRepo usecase.TaskRepo, scheduleRepo usecase
 		}()
 		for {
 			l.Printf("checking schedules")
-			nextRecurrence, err := usecase.CheckSchedules(c, taskRepo, scheduleRepo)
+			nextRecurrence, err := usecase.CheckSchedules(taskRepo, scheduleRepo)
 			if err != nil {
 				l.Printf("halting scheduler: %v", err)
 				break
 			}
 			if nextRecurrence.IsZero() {
 				l.Printf("no upcoming schedules, setting default wait to check schedule in %v from now", DefaultWait)
-				nextRecurrence = c.Now().Add(DefaultWait)
+				nextRecurrence = clock.Now().Add(DefaultWait)
 			}
 
 			// Sleep until next scheduled time + offset
@@ -54,7 +54,7 @@ func Run(l Logger, c clock.Time, taskRepo usecase.TaskRepo, scheduleRepo usecase
 				nextRun <- nextRunTime
 			}
 
-			wait := c.Until(nextRunTime)
+			wait := clock.Until(nextRunTime)
 			if wait <= 0 {
 				wait = 1
 			}
@@ -65,7 +65,7 @@ func Run(l Logger, c clock.Time, taskRepo usecase.TaskRepo, scheduleRepo usecase
 				l.Printf("scheduler exiting")
 				return
 			case <-checkSignal:
-			case <-c.After(wait):
+			case <-clock.After(wait):
 			}
 		}
 		l.Printf("scheduler process complete")

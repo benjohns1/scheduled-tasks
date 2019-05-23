@@ -3,6 +3,8 @@
 package postgres_test
 
 import (
+	"time"
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"reflect"
 	"testing"
 
@@ -40,7 +42,6 @@ func TestNewTaskRepo(t *testing.T) {
 			gotRepo, err := NewTaskRepo(tt.args.conn)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewTaskRepo() error = %v, wantErr %v", err, tt.wantErr)
-				return
 			}
 			gotTasks, err := gotRepo.GetAll()
 			if !reflect.DeepEqual(gotTasks, tt.wantTasks) {
@@ -51,6 +52,12 @@ func TestNewTaskRepo(t *testing.T) {
 }
 
 func TestTaskRepo_Get(t *testing.T) {
+	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
+
 	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
@@ -58,8 +65,11 @@ func TestTaskRepo_Get(t *testing.T) {
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
-	newTask := task.New("", "")
-	id, _ := r.Add(newTask)
+	newTask := task.New("t1", "t1desc")
+	id, err := r.Add(newTask)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type args struct {
 		id usecase.TaskID
@@ -82,18 +92,23 @@ func TestTaskRepo_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.r.Get(tt.args.id)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("TaskRepo.Get() got = %v, want %v", got, tt.want)
-			}
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("TaskRepo.Get() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TaskRepo.Get() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestTaskRepo_GetAll(t *testing.T) {
+	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
+
 	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
@@ -122,12 +137,11 @@ func TestTaskRepo_GetAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.r.GetAll()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("TaskRepo.GetAll() got = %v, want %v", got, tt.want)
-			}
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("TaskRepo.GetAll() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TaskRepo.GetAll() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -164,12 +178,11 @@ func TestTaskRepo_Add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.r.Add(tt.args.t)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("TaskRepo.Add() got = %v, want %v", got, tt.want)
-			}
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("TaskRepo.Add() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TaskRepo.Add() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -209,7 +222,6 @@ func TestTaskRepo_Update(t *testing.T) {
 			err := tt.r.Update(tt.args.id, tt.args.t)
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("TaskRepo.Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
 			}
 		})
 	}

@@ -62,7 +62,7 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 }
 
 func taskSelectClause() (selectClause string) {
-	return "SELECT id, name, description, completed_time, cleared_time FROM task"
+	return "SELECT id, name, description, completed_time, cleared_time, created_time FROM task"
 }
 
 func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
@@ -76,8 +76,9 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 		description   string
 		completedTime *string
 		clearedTime   *string
+		createdTime   *string
 	}
-	err = r.Scan(&row.id, &row.name, &row.description, &row.completedTime, &row.clearedTime)
+	err = r.Scan(&row.id, &row.name, &row.description, &row.completedTime, &row.clearedTime, &row.createdTime)
 	if err != nil {
 		return
 	}
@@ -91,8 +92,12 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 	if err != nil {
 		clearedTime = time.Time{}
 	}
+	createdTime, err := time.Parse(dbTimeFormat, *row.createdTime)
+	if err != nil {
+		createdTime = time.Time{}
+	}
 
-	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime)
+	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime, createdTime)
 	td.TaskID = usecase.TaskID(row.id)
 
 	return
@@ -100,9 +105,9 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 
 // Add adds a task to the persisence layer
 func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
-	q := "INSERT INTO task (name, description, completed_time, cleared_time) VALUES ($1, $2, $3, $4) RETURNING id"
+	q := "INSERT INTO task (name, description, completed_time, cleared_time, created_time) VALUES ($1, $2, $3, $4, $5) RETURNING id"
 	var id usecase.TaskID
-	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime()).Scan(&id)
+	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime()).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new task: %v", err)
 	}
@@ -112,8 +117,8 @@ func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
 
 // Update updates a task's persistent data to the given entity values
 func (r *TaskRepo) Update(id usecase.TaskID, t *task.Task) usecase.Error {
-	q := "UPDATE task SET name = $1, description = $2, completed_time = $3, cleared_time = $4 WHERE id = $5 RETURNING id"
-	rows, err := r.db.Query(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), id)
+	q := "UPDATE task SET name = $1, description = $2, completed_time = $3, cleared_time = $4, created_time = $5 WHERE id = $6 RETURNING id"
+	rows, err := r.db.Query(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime(), id)
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating task id %d: %v", id, err)
 	}

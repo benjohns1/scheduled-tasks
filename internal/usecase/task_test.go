@@ -5,18 +5,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/internal/core/task"
 	data "github.com/benjohns1/scheduled-tasks/internal/data/transient"
 	. "github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
 func TestGetTask(t *testing.T) {
+	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
 	taskID, _ := taskRepo.Add(task1)
-	task2 := task.NewRaw("task2", "", time.Now(), time.Time{})
+	task2 := task.NewRaw("task2", "", now, time.Time{}, now)
 	completedTaskID, _ := taskRepo.Add(task2)
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
 
 	type args struct {
 		r  TaskRepo
@@ -110,10 +112,11 @@ func TestAddTask(t *testing.T) {
 }
 
 func TestCompleteTask(t *testing.T) {
+	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
 	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
 
 	type args struct {
 		r  TaskRepo
@@ -165,10 +168,11 @@ func TestCompleteTask(t *testing.T) {
 }
 
 func TestClearTask(t *testing.T) {
+	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
 	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
 
 	type args struct {
 		r  TaskRepo
@@ -220,16 +224,17 @@ func TestClearTask(t *testing.T) {
 }
 
 func TestClearCompletedTasks(t *testing.T) {
+	now := clock.Now()
 	emptyRepo := data.NewTaskRepo()
 
 	singleCompletedTaskRepo := data.NewTaskRepo()
 	singleCompletedTaskRepo.Add(task.New("task1", ""))
-	singleCompletedTaskRepo.Add(task.NewRaw("task2", "", time.Now(), time.Time{}))
-	singleCompletedTaskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
+	singleCompletedTaskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
+	singleCompletedTaskRepo.Add(task.NewRaw("task3", "", now, now, now))
 
 	thousandCompletedTasksRepo := data.NewTaskRepo()
 	for i := 0; i < 1000; i++ {
-		_, err := thousandCompletedTasksRepo.Add(task.NewRaw("", "", time.Now(), time.Time{}))
+		_, err := thousandCompletedTasksRepo.Add(task.NewRaw("", "", now, time.Time{}, now))
 		if err != nil {
 			t.Errorf("error setting up task repo: %v", err)
 		}
@@ -278,12 +283,13 @@ func TestClearCompletedTasks(t *testing.T) {
 }
 
 func TestListTasks(t *testing.T) {
+	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
 	task1 := task.New("task1", "")
 	id1, _ := taskRepo.Add(task1)
-	task2 := task.NewRaw("task2", "", time.Now(), time.Time{})
+	task2 := task.NewRaw("task2", "", now, time.Time{}, now)
 	id2, _ := taskRepo.Add(task2)
-	taskRepo.Add(task.NewRaw("task3", "", time.Now(), time.Now()))
+	taskRepo.Add(task.NewRaw("task3", "", now, now, now))
 
 	type args struct {
 		r TaskRepo

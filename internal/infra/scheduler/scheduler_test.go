@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/internal/data/transient"
-	"github.com/benjohns1/scheduled-tasks/internal/infra/scheduler/test"
 	"github.com/benjohns1/scheduled-tasks/internal/usecase"
 )
 
@@ -15,16 +15,21 @@ type loggerStub struct{}
 func (l *loggerStub) Printf(format string, v ...interface{}) {}
 
 func TestRun(t *testing.T) {
-	now := time.Now()
+
 	timeout := 10 * time.Millisecond
-	staticClock := test.NewStaticClockMock(now)
+
+	now := time.Now()
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
 
 	type args struct {
 		l            Logger
-		c            *test.ClockMock
 		taskRepo     usecase.TaskRepo
 		scheduleRepo usecase.ScheduleRepo
 		nextRun      chan time.Time
+		prevClock    clock.Time
 	}
 	type resp struct {
 		close  chan<- bool
@@ -41,7 +46,6 @@ func TestRun(t *testing.T) {
 			arrange: func(t *testing.T) args {
 				return args{
 					l:            &loggerStub{},
-					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
 					nextRun:      make(chan time.Time),
@@ -76,7 +80,6 @@ func TestRun(t *testing.T) {
 				sr.Add(s)
 				return args{
 					l:            &loggerStub{},
-					c:            staticClock,
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: transient.NewScheduleRepo(),
 					nextRun:      make(chan time.Time),
@@ -102,6 +105,7 @@ func TestRun(t *testing.T) {
 			name: "unchecked schedule with a past recurring time should not create a task",
 			arrange: func(t *testing.T) args {
 				testNow := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
+
 				sr := transient.NewScheduleRepo()
 				f, err := schedule.NewHourFrequency([]int{25})
 				if err != nil {
@@ -110,12 +114,17 @@ func TestRun(t *testing.T) {
 				s := schedule.New(f)
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
+
+				prevClock := clock.Get()
+				clockMock := clock.NewStaticMock(testNow)
+				clock.Set(clockMock)
+
 				return args{
 					l:            &loggerStub{},
-					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
 					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -157,12 +166,17 @@ func TestRun(t *testing.T) {
 				s := schedule.New(f)
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
+
+				prevClock := clock.Get()
+				clockMock := clock.NewStaticMock(testNow)
+				clock.Set(clockMock)
+
 				return args{
 					l:            &loggerStub{},
-					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
 					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -191,7 +205,7 @@ func TestRun(t *testing.T) {
 					return
 				}
 				for _, s := range schedules {
-					if s.LastChecked() != a.c.Now() {
+					if s.LastChecked() != clock.Now() {
 						t.Errorf("scheduler.Run() should have set checked time for schedule")
 						return
 					}
@@ -211,12 +225,17 @@ func TestRun(t *testing.T) {
 				s.Check(testNow.Add(-10 * time.Minute))
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
+
+				prevClock := clock.Get()
+				clockMock := clock.NewStaticMock(testNow)
+				clock.Set(clockMock)
+
 				return args{
 					l:            &loggerStub{},
-					c:            test.NewStaticClockMock(testNow),
 					taskRepo:     transient.NewTaskRepo(),
 					scheduleRepo: sr,
 					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
 				}
 			},
 			assert: func(t *testing.T, a args, r resp) {
@@ -259,7 +278,10 @@ func TestRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := tt.arrange(t)
-			close, check, closed := Run(args.l, args.c, args.taskRepo, args.scheduleRepo, args.nextRun)
+			if args.prevClock != nil {
+				defer clock.Set(args.prevClock)
+			}
+			close, check, closed := Run(args.l, args.taskRepo, args.scheduleRepo, args.nextRun)
 			defer func() {
 				close <- true
 			}()

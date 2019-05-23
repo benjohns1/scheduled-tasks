@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/benjohns1/scheduled-tasks/internal/core/clock"
 	data "github.com/benjohns1/scheduled-tasks/internal/data/postgres"
 	"github.com/benjohns1/scheduled-tasks/internal/infra/scheduler"
 	"github.com/benjohns1/scheduled-tasks/internal/present/restapi"
@@ -96,10 +95,7 @@ func startScheduler(dbconn data.DBConn) (check chan<- bool, closed <-chan bool) 
 		l.Panic(err)
 	}
 
-	// Instantiate time clock
-	c := clock.New()
-
 	// Start scheduler process
-	_, check, closed = scheduler.Run(l, c, taskRepo, scheduleRepo, nil)
+	_, check, closed = scheduler.Run(l, taskRepo, scheduleRepo, nil)
 	return check, closed
 }

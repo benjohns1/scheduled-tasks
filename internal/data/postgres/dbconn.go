@@ -123,7 +123,8 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			name character varying(100) NOT NULL,
 			description character varying(500) NOT NULL,
 			completed_time TIMESTAMPTZ,
-			cleared_time TIMESTAMPTZ
+			cleared_time TIMESTAMPTZ,
+			created_time TIMESTAMPTZ
 			);
 		CREATE TABLE schedule (
 			id SERIAL PRIMARY KEY,
