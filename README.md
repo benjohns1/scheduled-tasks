@@ -1,42 +1,48 @@
 # Scheduled Tasks
-[![Go Report Card](https://goreportcard.com/badge/github.com/benjohns1/scheduled-tasks)](https://goreportcard.com/report/github.com/benjohns1/scheduled-tasks)
+[![Go Report Card](https://goreportcard.com/badge/github.com/benjohns1/scheduled-tasks/services)](https://goreportcard.com/report/github.com/benjohns1/scheduled-tasks/services)
 [![License MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](LICENSE)
-## Task app with scheduled recurrences
-To test and run this you'll first need to:
-1. Install [Docker](https://www.docker.com/products/docker-desktop)
-2. Copy `.env.default` to `.env` (these environment variables are injected into containers and used in the app)
+## Setup
+To test and run this locally you'll first need to:
+1. Install [Go](https://golang.org/) :-)
+2. Install [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
+3. Install [Docker](https://www.docker.com/products/docker-desktop)
+4. Copy `.env.default` to `.env` (these environment variables are injected into containers and used in the app)
 
-### Run tests
+## API and Scheduling Services
+### Run tests for the API and scheduling services
 #### Run unit tests locally
-1. `go test ./...`
+1. `cd services`
+2. `go test ./...`
 
 #### Run integration tests locally
 Connects to DB containers for integration testing
 1. `docker-compose up`
-2. `go test ./... -tags="integration"`
-3. `docker-compose down`
+2. In a new terminal: `cd services`
+3. `go test ./... -tags="integration"`
+4. `cd ../`
+5. `docker-compose down`
 
-### Build & run
+### Build & run the API and scheduling services
 
 #### Dev/test environment
-Run & build the app locally, run a transient DB in Docker container
+Run & build the services locally, run a transient DB in Docker container
 1. `docker-compose up`
-2. Build and run the API server & scheduler processes:
+2. Build and run the API server & scheduler processes (in a new terminal):
    1. `set GOOS=<your-local-OS>`
-   2. `cd cmd/srv`
+   2. `cd services/cmd/srv`
    3. `go build && ./srv`
 3. API Server: `localhost:8080`
 4. DB Adminer: `localhost:8081`
 5. Tear it down: `docker-compose down`
 
 #### Staging environment
-Build the app locally, run it and a transient DB in Docker containers
+Build the services locally, run them and a transient DB in Docker containers
 1. Build the server and image:
    1. `set GOOS=linux`
-   2. `cd cmd/srv`
+   2. `cd services/cmd/srv`
    4. `go build`
    5. `docker build --no-cache -t scheduled-tasks .`
-   9. `cd ../..`
+   9. `cd ../../..`
 2. `docker-compose -f docker-compose.stage.yml up`
 3. Server: `localhost:8080`
 4. DB Adminer: `localhost:8081`

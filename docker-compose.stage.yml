@@ -1,17 +1,9 @@
 version: '3.1'
 services:
-  api:
-    build: ./cmd/srv
+  srv:
+    build: ./services/cmd/srv
     ports:
       - ${APPLICATION_PORT}:${APPLICATION_PORT}
-    env_file:
-      - ./.env
-    environment:
-      # override vars from .env to allow image to connect to db
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-  sched:
-    build: ./cmd/sched
     env_file:
       - ./.env
     environment:
