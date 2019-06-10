@@ -7,6 +7,7 @@ To test and run this locally you'll first need to:
 2. Install [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
 3. Install [Docker](https://www.docker.com/products/docker-desktop)
 4. Copy `.env.default` to `.env` (these environment variables are injected into containers and used in the app)
+5. Install client web app node modules `cd app` and `npm install`
 
 ## API and Scheduling Services
 ### Run tests for the API and scheduling services
@@ -47,3 +48,23 @@ Build the services locally, run them and a transient DB in Docker containers
 3. Server: `localhost:8080`
 4. DB Adminer: `localhost:8081`
 5. Tear it down: `docker-compose -f docker-compose.stage.yml down`
+
+## Client Web App
+### Run cypress tests
+After starting the services dev/test environment
+1. `cd app`
+3. Run tests once `npm test`
+
+### Dev/test environment
+After starting the services dev/test environment
+1. `cd app`
+2. Start the web app `npm run dev`
+3. Open/watch cypress tests during development `npm run cy:open`
+4. Web app server: `localhost:3000`
+
+### Staging environment
+After starting the services staging environment
+1. `cd app`
+2. Build the app `npm run build`
+3. Start the node server `npm start`
+4. Web app server: `localhost:3000`
