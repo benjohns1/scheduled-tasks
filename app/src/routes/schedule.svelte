@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Schedule Tasks - Schedules</title>
+	<title>Scheduled Tasks - Schedules</title>
 </svelte:head>
 
 <h1>Schedules</h1>

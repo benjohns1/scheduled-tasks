@@ -1,5 +1,7 @@
-<script>
-	import About from './about.svelte';
-</script>
+<svelte:head>
+	<title>Scheduled Tasks</title>
+</svelte:head>
 
-<About />
+<h1>Scheduled Tasks</h1>
+
+<p>About this app</p>
