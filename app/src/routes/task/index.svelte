@@ -1,4 +1,6 @@
 <script context="module">
+	import Task from "../../components/Task.svelte"
+	
 	export async function preload({ params, query }) {
 		return this.fetch(`task.json`).then(r => r.json()).then(tasks => {
 			return { tasks };
@@ -10,6 +12,15 @@
 	export let tasks;
 </script>
 
+<style>
+	ul {
+		list-style: none;
+	}
+	li {
+		padding-bottom: 1px;
+	}
+</style>
+
 <svelte:head>
 	<title>Scheduled Tasks - Tasks</title>
 </svelte:head>
@@ -17,7 +28,7 @@
 <h1>Tasks</h1>
 <ul>
 	{#each Object.values(tasks) as task}
-		<li><a href="task/{task.id}">{task.name}</a></li>
+		<li><Task {task}/></li>
 	{/each}
 </ul>
 

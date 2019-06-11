@@ -1,4 +1,6 @@
 <script context="module">
+    import Task from "../../components/Task.svelte"
+
     export async function preload({ params, query }) {
         const res = await this.fetch(`task/${params.task}.json`);
         const data = await res.json();
@@ -19,8 +21,4 @@
     <title>Scheduled Tasks - {task.name}</title>
 </svelte:head>
 
-<h1>{task.name}</h1>
-
-<div class="content">
-    {@html task.description}
-</div>
+<Task {task} open={true} />
