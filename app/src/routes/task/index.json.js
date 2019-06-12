@@ -2,11 +2,19 @@ import * as taskRepo from '../../data/task.repo';
 
 // Pass-through tasks from API service to Sapper Node API
 export async function get(_, res) {
-	const data = taskRepo.getAll();
 
-	res.writeHead(200, {
+	const taskPromise = taskRepo.getAll();
+	const contentType = {
 		'Content-Type': 'application/json'
+	};
+
+	taskPromise.then(data => {
+		res.writeHead(200, contentType);
+		res.end(data);
+	}).catch(err => {
+		res.writeHead(500, contentType);
+		res.end(JSON.stringify({
+			error: err
+		}));
 	});
-	
-	res.end(await data);
 }
