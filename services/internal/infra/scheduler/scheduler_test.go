@@ -213,22 +213,33 @@ func TestRun(t *testing.T) {
 			},
 		},
 		{
-			name: "checked schedule with a past recurring time should create a new task",
+			name: "after unpausing a paused schedule, recurring tasks should not be created during paused time period",
 			arrange: func(t *testing.T) args {
-				testNow := time.Date(2000, time.January, 1, 12, 30, 0, 0, time.UTC)
+
+				prevClock := clock.Get()
+				
+				// setup schedule repo
 				sr := transient.NewScheduleRepo()
-				f, err := schedule.NewHourFrequency([]int{25})
+				f, err := schedule.NewHourFrequency([]int{5,10,15})
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
 				s := schedule.New(f)
-				s.Check(testNow.Add(-10 * time.Minute))
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
-				prevClock := clock.Get()
-				clockMock := clock.NewStaticMock(testNow)
-				clock.Set(clockMock)
+				firstCheckTime := time.Date(2000, time.January, 1, 12, 1, 0, 0, time.UTC)
+				s.Check(firstCheckTime)
+				s.Pause()
+
+				// should NOT create a task at 12:35
+				unpauseTime := time.Date(2000, time.January, 1, 12, 7, 0, 0, time.UTC)
+				clock.Set(clock.NewStaticMock(unpauseTime))
+				s.Unpause()
+
+				// should create task at 12:40
+				checkNow := time.Date(2000, time.January, 1, 12, 11, 0, 0, time.UTC)
+				clock.Set(clock.NewStaticMock(checkNow))
 
 				return args{
 					l:            &loggerStub{},
@@ -244,7 +255,7 @@ func TestRun(t *testing.T) {
 					t.Errorf("scheduler.Run() should not have closed yet")
 					return
 				case next := <-a.nextRun:
-					want := time.Date(2000, time.January, 1, 13, 25, 0, 0, time.UTC).Add(Offset)
+					want := time.Date(2000, time.January, 1, 12, 15, 0, 0, time.UTC).Add(Offset)
 					if !next.Equal(want) {
 						t.Errorf("scheduler.Run() next run time should be the next scheduled time plus scheduler.Offset, got = %v, want = %v", next, want)
 						return

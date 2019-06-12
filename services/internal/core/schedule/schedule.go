@@ -3,6 +3,8 @@ package schedule
 import (
 	"fmt"
 	"time"
+
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
 )
 
 // Schedule represents a collection of tasks that recur at some frequency
@@ -30,7 +32,10 @@ func (s *Schedule) Pause() {
 
 // Unpause unpauses a schedule
 func (s *Schedule) Unpause() {
-	s.paused = false
+	if s.paused {
+		s.paused = false
+		s.Check(clock.Now())
+	}
 }
 
 // Paused returns whether schedule is currently paused
