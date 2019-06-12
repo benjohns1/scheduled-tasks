@@ -1,6 +1,6 @@
 describe('Task page basic elements', () => {
 	beforeEach(() => {
-		cy.visit('/task')
+		cy.visit('/task');
 	});
 
 	it('has the correct title', () => {
@@ -25,9 +25,4 @@ describe('Task page basic elements', () => {
 	it('has a new task button', () => {
 		cy.get('button').contains('new task');
 	});
-
-	it('new task button creates a new task section at the top', () => {
-		cy.get('button').contains('new task').click();
-		cy.get('section.tasks section').first().get('header h2').should('eq', 'new task');
-	})
 });

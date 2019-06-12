@@ -1,11 +1,15 @@
 import fetch from 'node-fetch';
 
-async function getAll() {
-  return fetch(`http://localhost:8080/api/v1/task`).then(r => r.text());
+const baseUrl = `http://localhost:8080/api/v1`;
+
+export async function getAll() {
+  return fetch(`${baseUrl}/task`).then(r => r.text());
 }
 
-async function get(id) {
-  return fetch(`http://localhost:8080/api/v1/task/${id}`).then(r => r.text());
+export async function get(id) {
+  return fetch(`${baseUrl}/task/${id}`).then(r => r.text());
 }
 
-export { getAll, get }
+export async function add(taskData) {
+  return fetch(`${baseUrl}/task/`, { method: "POST", body: JSON.stringify(taskData)}).then(r => r.text());
+}

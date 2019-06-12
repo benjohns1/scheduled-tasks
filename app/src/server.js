@@ -1,6 +1,7 @@
 import sirv from 'sirv';
 import polka from 'polka';
 import compression from 'compression';
+import { json } from 'body-parser';
 import * as sapper from '@sapper/server';
 
 const { PORT, NODE_ENV } = process.env;
@@ -10,6 +11,7 @@ polka() // You can also use Express
 	.use(
 		compression({ threshold: 0 }),
 		sirv('static', { dev }),
+		json(),
 		sapper.middleware()
 	)
 	.listen(PORT, err => {

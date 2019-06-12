@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// OutTimeFormat defines the date/time format of output fields
 const OutTimeFormat = time.RFC3339Nano
 
 // Logger interface needed for log messages
