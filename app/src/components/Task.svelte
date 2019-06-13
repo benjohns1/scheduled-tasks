@@ -86,7 +86,7 @@
     {#if opened}
         <div class="panel" transition:slide="{{ duration: 50 }}">
             {#if editing}
-                <textarea bind:value={task.description} placeholder="description"></textarea>
+                <textarea class="description" bind:value={task.description} placeholder="description"></textarea>
             {:else}
                 <p class="description">{@html (task.description || "")}</p>
             {/if}
