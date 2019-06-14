@@ -1,5 +1,5 @@
 const visitWait = url => {
-	cy.visit(url).wait(500); // because of Sapper's script chunking, we need to wait extra for all svelte script chunks to be loaded after a page load
+	cy.visit(url).wait(1000); // because of Sapper's script chunking, we need to wait extra for all svelte script chunks to be loaded after a page load
 };
 
 describe('new task functionality', () => {
@@ -9,9 +9,10 @@ describe('new task functionality', () => {
 	});
 	
 	it('new task button creates an editable task form at the top', () => {
-		cy.get('[data-test=task-item]').then($lis => {
+		cy.get('[data-test=tasks]').then($t => $t.find('[data-test=task-item]').length).then(startingCount => {
 			cy.get('[data-test=new-task-button]').click();
-			cy.get('[data-test=task-item]').should('have.length', $lis.length + 1);
+			const expectedCount = startingCount + 1;
+			cy.get('[data-test=task-item]').should('have.length', expectedCount);
 			cy.get('[data-test=task-item]').first().then($s => {
 				cy.log('form inputs exist have expected default values');
 				cy.wrap($s).find('[data-test=task-name-input]').should('have.value', 'new task');
@@ -24,7 +25,7 @@ describe('new task functionality', () => {
 
 				cy.log('data persists after page reload');
 				visitWait('/task');
-				cy.get('[data-test=task-item]').should('have.length', $lis.length + 1);
+				cy.get('[data-test=task-item]').should('have.length', expectedCount);
 				cy.get('[data-test=task-item]').first().then($rs => {
 					cy.wrap($rs).contains('[data-test=open-button]', '>').click();
 					cy.wrap($rs).find('[data-test=task-name]').should('have.text', 'new task');

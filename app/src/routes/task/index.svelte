@@ -86,7 +86,7 @@
 	<title>Scheduled Tasks - Tasks</title>
 </svelte:head>
 
-<section class='tasks'>
+<section class='tasks' data-test='tasks'>
 	<header>
 		<h1>Tasks</h1>
 		<button on:click={newTask} data-test='new-task-button'>new task</button>
