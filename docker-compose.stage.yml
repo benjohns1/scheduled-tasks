@@ -1,5 +1,14 @@
 version: '3.1'
 services:
+  webapp:
+    build: ./app
+    ports:
+      - ${WEBAPP_PORT}:${WEBAPP_PORT}
+    env_file:
+      - ./.env
+    environment:
+      - APPLICATION_HOST=srv
+      - PORT=${WEBAPP_PORT}
   srv:
     build: ./services/cmd/srv
     ports:
@@ -7,7 +16,6 @@ services:
     env_file:
       - ./.env
     environment:
-      # override vars from .env to allow image to connect to db
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
   db:

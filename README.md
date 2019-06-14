@@ -9,62 +9,56 @@ To test and run this locally you'll first need to:
 4. Copy `.env.default` to `.env` (these environment variables are injected into containers and used in the app)
 5. Install client web app node modules `cd app` and `npm install`
 
-## API and Scheduling Services
-### Run tests for the API and scheduling services
-#### Run unit tests locally
-1. `cd services`
-2. `go test ./...`
-
-#### Run integration tests locally
-Connects to DB containers for integration testing
-1. `docker-compose up`
-2. In a new terminal: `cd services`
-3. `go test ./... -tags="integration"`
-4. `cd ../`
-5. `docker-compose down`
-
-### Build & run the API and scheduling services
-
-#### Dev/test environment
-Run & build the services locally, run a transient DB in Docker container
-1. `docker-compose up`
-2. Build and run the API server & scheduler processes (in a new terminal):
-   1. `set GOOS=<your-local-OS>`
-   2. `cd services/cmd/srv`
-   3. `go build && ./srv`
-3. API Server: `localhost:8080`
-4. DB Adminer: `localhost:8081`
-5. Tear it down: `docker-compose down`
-
-#### Staging environment
-Build the services locally, run them and a transient DB in Docker containers
-1. Build the server and image:
+## Staging Environment
+1. Build the services:
    1. `set GOOS=linux`
    2. `cd services/cmd/srv`
    4. `go build`
-   5. `docker build --no-cache -t scheduled-tasks .`
-   9. `cd ../../..`
-2. `docker-compose -f docker-compose.stage.yml up`
-3. Server: `localhost:8080`
-4. DB Adminer: `localhost:8081`
-5. Tear it down: `docker-compose -f docker-compose.stage.yml down`
+   5. `set GOOS=<your local OS e.g. windows>`
+   6. `cd ../../..`
+2. Rebuild app & service images: `docker-compose -f docker-compose.stage.yml build`
+3. Start the containers: `docker-compose -f docker-compose.stage.yml up`
+4. Web app: `localhost:3000`
+5. API server: `localhost:8080`
+6. DB adminer: `localhost:8081`
+7. Tear it down: `docker-compose -f docker-compose.stage.yml down`
 
-## Client Web App
-### Run cypress tests
-After starting the services dev/test environment
-1. `cd app`
-3. Run tests once `npm test`
+## Testing
+### Run services unit tests
+1. `cd services`
+2. Run tests: `go test ./...`
 
-### Dev/test environment
-After starting the services dev/test environment
-1. `cd app`
-2. Start the web app `npm run dev`
-3. Open/watch cypress tests during development `npm run cy:open`
-4. Web app server: `localhost:3000`
+### Run services integration tests
+Connects to DB containers for integration testing
+1. `docker-compose up`
+2. In a new terminal: `cd services`
+3. Run tests: `go test ./... -tags="integration"`
+4. `cd ../`
+5. `docker-compose down`
 
-### Staging environment
-After starting the services staging environment
-1. `cd app`
-2. Build the app `npm run build`
-3. Start the node server `npm start`
-4. Web app server: `localhost:3000`
+### Run client web app cypress tests
+1. `docker-compose up`
+2. Build and run the API server & scheduler processes (in a new terminal):
+   1. `cd services/cmd/srv`
+   1. `go build && ./srv`
+3. In a new terminal: `cd app`
+4. `npm test`
+5. `cd ../`
+6. `docker-compose down`
+
+## Development Environment
+
+Run the app and services locally with a transient DB container
+1. `docker-compose up`
+2. Modify `./services` code, rebuild as-needed
+3. Rebuild and run the services (in a new terminal):
+   1. `cd services/cmd/srv`
+   2. `go build && ./srv`
+5. API server: `localhost:8080`
+6. DB adminer: `localhost:8081`
+7. `cd app`
+8. Start the web app with hot reloading: `npm run dev`
+9. Open cypress for live testing: `npm run cy:open`
+10. Modify `./app` code
+11. Web app: `localhost:3000`
+12. Tear it down: `docker-compose down`
