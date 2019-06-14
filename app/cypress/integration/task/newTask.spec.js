@@ -1,54 +1,36 @@
-describe('New task functionality', () => {
+const visitWait = url => {
+	cy.visit(url).wait(100); // for some reason, without this delay after page load, buttons do not trigger DOM changes
+};
+
+describe('new task functionality', () => {
 
 	beforeEach(() => {
-		cy.visit('/task').wait(50); // for some reason, without this delay the 'new task' button doesn't trigger DOM updates consistently
-	});
-
-	it('new task button creates a new task list element', () => {
-		cy.get('section.tasks ul li').then($lis => {
-			cy.contains('button', 'new task').click();
-			cy.get('section.tasks ul li').should('have.length', $lis.length + 1);
-		});
+		visitWait('/task');
 	});
 	
-	it('new task button has editable task name input field', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().find('header h2 input').should('have.value', 'new task');
-	});
-
-	it('new task button has editable task description textarea', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().find('.panel textarea').should('have.value', '');
-	});
-
-	it('new task form has save button', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().contains('button', 'save');
-	});
-
-	it('save task makes task name uneditable', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().then($s => {
-			cy.wrap($s).contains('button', 'save').click();
-			cy.wrap($s).find('header h2').should('have.text', 'new task');
-		});
-	});
-
-	it('save task makes task description uneditable', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().then($s => {
-			cy.wrap($s).contains('button', 'save').click();
-			cy.wrap($s).find('.panel .description').should('have.text', '');
-		});
-	});
-
-	it('save task persists new task after page reload', () => {
+	it('new task button creates an editable task form at the top', () => {
 		cy.get('section.tasks ul li').then($lis => {
 			cy.contains('button', 'new task').click();
-			cy.get('section.tasks section').first().contains('button', 'save').click();
-			cy.visit('/task').wait(10);
 			cy.get('section.tasks ul li').should('have.length', $lis.length + 1);
-			cy.get('section.tasks section').first().find('header h2').should('have.text', 'new task');
+			cy.get('section.tasks section').first().then($s => {
+				cy.log('form inputs exist have expected default values');
+				cy.wrap($s).find('header h2 input').should('have.value', 'new task');
+				cy.wrap($s).find('.panel textarea').should('have.value', '');
+				cy.wrap($s).contains('button', 'save').click();
+
+				cy.log('save button should make form input uneditable');
+				cy.wrap($s).find('header h2').should('have.text', 'new task');
+				cy.wrap($s).find('.panel .description').should('have.text', '');
+
+				cy.log('data persists after page reload');
+				visitWait('/task');
+				cy.get('section.tasks ul li').should('have.length', $lis.length + 1);
+				cy.get('section.tasks section').first().then($rs => {
+					cy.wrap($rs).contains('header button', '>').click();
+					cy.wrap($rs).find('header h2').should('have.text', 'new task');
+					cy.wrap($rs).find('.panel .description').should('have.text', '');
+				});
+			});
 		});
 	});
 	
@@ -58,27 +40,18 @@ describe('New task functionality', () => {
 			cy.wrap($s).find('header h2 input').clear().type('my test task name');
 			cy.wrap($s).find('.panel textarea.description').clear().type('my test task description');
 			cy.wrap($s).contains('button', 'save').click();
-		});
-		
-		cy.get('section.tasks section').first().then($s => {
+
+			cy.log('save button saves custom task data');
 			cy.wrap($s).find('header h2').should('have.text', 'my test task name');
 			cy.wrap($s).find('.panel .description').should('have.text', 'my test task description');
-		});
-	});
 
-	it('save task persists custom task data after page reload', () => {
-		cy.contains('button', 'new task').click();
-		cy.get('section.tasks section').first().then($s => {
-			cy.wrap($s).find('header h2 input').clear().type('my persistent test task name');
-			cy.wrap($s).find('.panel textarea.description').clear().type('my persistent test task description');
-			cy.wrap($s).contains('button', 'save').click();
-		});
-		cy.visit('/task').wait(10);
-		
-		cy.get('section.tasks section').first().then($s => {
-			cy.wrap($s).contains('header button', '>').click();
-			cy.wrap($s).find('header h2').should('have.text', 'my persistent test task name');
-			cy.wrap($s).find('.panel .description').should('have.text', 'my persistent test task description');
+			cy.log('custom task data persists after page reload');
+			visitWait('/task');
+			cy.get('section.tasks section').first().then($rs => {
+				cy.wrap($rs).contains('header button', '>').click();
+				cy.wrap($rs).find('header h2').should('have.text', 'my test task name');
+				cy.wrap($rs).find('.panel .description').should('have.text', 'my test task description');
+			});
 		});
 	});
 });
