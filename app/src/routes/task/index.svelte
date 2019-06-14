@@ -86,22 +86,22 @@
 	<title>Scheduled Tasks - Tasks</title>
 </svelte:head>
 
-<section class="tasks">
+<section class='tasks'>
 	<header>
 		<h1>Tasks</h1>
-		<button on:click={newTask}>new task</button>
+		<button on:click={newTask} data-test='new-task-button'>new task</button>
 	</header>
-	<div class="content">
+	<div class='content'>
 		{#if taskError !== undefined}
 			<p class="error">{taskError.message}</p>
 		{/if}
 
 		{#if tasks.length === 0}
-			<p class="emptyMessage">No tasks found</p>
+			<p class='emptyMessage'>No tasks found</p>
 		{:else}
 			<ul>
 				{#each tasks as task}
-					<li><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask}/></li>
+					<li data-test='task-item'><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask}/></li>
 				{/each}
 			</ul>
 		{/if}

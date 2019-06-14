@@ -7,10 +7,10 @@
     export let addTaskHandler = undefined;
 
     if (!task.name) {
-        task.name = "";
+        task.name = '';
     }
     if (!task.description) {
-        task.description = "";
+        task.description = '';
     }
     
     function open(event) {
@@ -63,32 +63,32 @@
     }
 </style>
 
-<section class="accordion">
+<section class='accordion'>
     <header>
-        <h2>
+        <h2 data-test='task-name'>
             {#if editing}
-                <input type="text" bind:value={task.name} placeholder="task name">
+                <input type='text' bind:value={task.name} placeholder='task name' data-test='task-name-input'>
             {:else}
-                {(task.name || "task")}
+                {(task.name || 'task')}
             {/if}
         </h2>
-        <span class="right">
+        <span class='right'>
             {#if opened}
                 {#if editing}
-                    <button on:click={save}>save</button>
+                    <button on:click={save} data-test='save-button'>save</button>
                 {/if}
                 <button on:click={close}>v</button>
             {:else}
-                <button on:click={open}>></button>
+                <button on:click={open} data-test='open-button'>></button>
             {/if}
         </span>
     </header>
     {#if opened}
-        <div class="panel" transition:slide="{{ duration: 50 }}">
+        <div class='panel' transition:slide='{{ duration: 50 }}'>
             {#if editing}
-                <textarea class="description" bind:value={task.description} placeholder="description"></textarea>
+                <textarea class='description' bind:value={task.description} placeholder='description' data-test='task-description-input'></textarea>
             {:else}
-                <p class="description">{@html (task.description || "")}</p>
+                <p class='description' data-test='task-description'>{@html (task.description || '')}</p>
             {/if}
         </div>
     {/if}
