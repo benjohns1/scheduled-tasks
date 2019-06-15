@@ -23,3 +23,19 @@
 //
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+
+// Because of Sapper's script chunking, we need to wait extra for all Svelte 
+// script chunks to be loaded after a page load before using Svelte functionality
+Cypress.Commands.add("visitWait", url => {
+	cy.visit(url).wait(1000);
+});
+
+Cypress.Commands.add("addTask", (name, description) => {
+	cy.visitWait('/task');
+	cy.get('[data-test=new-task-button]').click();
+	cy.get('[data-test=task-item]').first().then($s => {
+		cy.wrap($s).find('[data-test=task-name-input]').clear().type(name);
+		cy.wrap($s).find('[data-test=task-description-input]').clear().type(description);
+		cy.wrap($s).find('[data-test=save-button]').click();
+	});
+});

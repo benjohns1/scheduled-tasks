@@ -12,12 +12,13 @@
 				};
 			}
 		}).then(tasks => {
-			return { tasks: Object.values(tasks).reverse().map(t => {
+			const allTasks = Object.values(tasks).reverse().map(t => {
 				return {
 					data: t,
 					open: false
 				}
-			}) };
+			});
+			return { tasks: allTasks.filter(t => !t.data.completedTime), completedTasks: allTasks.filter(t => t.data.completedTime) };
 		}).catch(taskError => {
 			return { taskError }
 		});
@@ -27,6 +28,7 @@
 <script>
 	export let taskError = undefined;
 	export let tasks = [];
+	export let completedTasks = [];
 
 	let editID = 1;
 
@@ -37,8 +39,20 @@
 				tasks = [{
 					data: taskData,
 					open: true
-				}, ...(tasks.filter(t => t.edit !== taskEditID))];
+				}, ...(tasks.filter(t => t.editID !== taskEditID))];
 			});
+		}).catch(err => {
+			console.error(err);
+		});
+	}
+
+	const completeTask = taskID => {
+		return fetch(`task/${taskID}/complete.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
+			completedTasks = [...(tasks.filter(t => t.data.id === taskID).map(t => {
+				t.data.completedTime = 'just now';
+				return t;
+			})), ...completedTasks];
+			tasks = [...(tasks.filter(t => t.data.id !== taskID))];
 		}).catch(err => {
 			console.error(err);
 		});
@@ -57,7 +71,6 @@
 			editID: editID++,
 			open: true
 		}, ...tasks];
-		console.log(editID);
 	}
 </script>
 
@@ -86,30 +99,37 @@
 	<title>Scheduled Tasks - Tasks</title>
 </svelte:head>
 
-<section class='tasks' data-test='tasks'>
+<section data-test=tasks>
 	<header>
 		<h1>Tasks</h1>
-		<button on:click={newTask} data-test='new-task-button'>new task</button>
+		<button on:click={newTask} data-test=new-task-button>new task</button>
 	</header>
-	<div class='content'>
-		{#if taskError !== undefined}
-			<p class="error">{taskError.message}</p>
-		{/if}
+	{#if taskError !== undefined}
+		<p class="error">{taskError.message}</p>
+	{/if}
 
-		{#if tasks.length === 0}
-			<p class='emptyMessage'>No tasks found</p>
-		{:else}
-			<ul>
-				{#each tasks as task}
-					<li data-test='task-item'><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask}/></li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
+	{#if tasks.length === 0}
+		<p class='emptyMessage'>No tasks found</p>
+	{:else}
+		<ul>
+			{#each tasks as task}
+				<li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask} completeTaskHandler={completeTask}/></li>
+			{/each}
+		</ul>
+	{/if}
 </section>
 
-<h1>Completed</h1>
-<ul>
-	<li>Completed Task 3</li>
-	<li>Completed Task 4</li>
-</ul>
+<section data-test=completed-tasks>
+	<header>
+		<h1>Completed</h1>
+	</header>
+	{#if completedTasks.length === 0}
+		<p class='emptyMessage'>No completed tasks</p>
+	{:else}
+		<ul>
+			{#each completedTasks as task}
+				<li data-test=completed-task-item><Task task={task.data} opened={task.open}/></li>
+			{/each}
+		</ul>
+	{/if}
+</section>

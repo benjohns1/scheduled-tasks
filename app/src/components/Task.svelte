@@ -5,6 +5,7 @@
     export let opened = false;
     export let editing = undefined;
     export let addTaskHandler = undefined;
+    export let completeTaskHandler = undefined;
 
     if (!task.name) {
         task.name = '';
@@ -14,22 +15,24 @@
     }
     
     function open(event) {
-        event.stopPropagation();
         opened = true;
     }
 
     function close(event) {
-        event.stopPropagation();
         opened = false;
-        editing = undefined;
     }
 
     function save(event) {
-        event.stopPropagation();
         if (addTaskHandler) {
             addTaskHandler(editing, task);
         }
         editing = undefined;
+    }
+
+    function complete(event) {
+        if (completeTaskHandler && task.id) {
+            completeTaskHandler(task.id);
+        }
     }
 </script>
 
@@ -41,8 +44,11 @@
     header h2 {
         display: inline;
     }
-    header span.right {
+    span.right {
         float: right;
+    }
+    span.left {
+        float: left;
     }
     section {
         background-color: #eee;
@@ -63,32 +69,37 @@
     }
 </style>
 
-<section class='accordion'>
+<section>
     <header>
-        <h2 data-test='task-name'>
+        <h2 data-test=task-name>
             {#if editing}
-                <input type='text' bind:value={task.name} placeholder='task name' data-test='task-name-input'>
+                <input type=text bind:value={task.name} placeholder='task name' data-test=task-name-input>
             {:else}
                 {(task.name || 'task')}
             {/if}
         </h2>
-        <span class='right'>
+        {#if !editing && !task.completedTime}
+            <span class='left'>
+                <input type=checkbox on:change={complete} data-test=complete-toggle>
+            </span>
+        {/if}
+        <span class=right>
+            {#if editing}
+                <button on:click={save} data-test=save-button>save</button>
+            {/if}
             {#if opened}
-                {#if editing}
-                    <button on:click={save} data-test='save-button'>save</button>
-                {/if}
-                <button on:click={close}>v</button>
+                <button on:click={close} data-test=close-button>v</button>
             {:else}
-                <button on:click={open} data-test='open-button'>></button>
+                <button on:click={open} data-test=open-button>&gt;</button>
             {/if}
         </span>
     </header>
     {#if opened}
-        <div class='panel' transition:slide='{{ duration: 50 }}'>
+        <div class='panel' transition:slide='{{ duration: 100 }}'>
             {#if editing}
-                <textarea class='description' bind:value={task.description} placeholder='description' data-test='task-description-input'></textarea>
+                <textarea bind:value={task.description} placeholder='description' data-test=task-description-input></textarea>
             {:else}
-                <p class='description' data-test='task-description'>{@html (task.description || '')}</p>
+                <p data-test=task-description>{@html (task.description || '')}</p>
             {/if}
         </div>
     {/if}

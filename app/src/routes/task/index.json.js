@@ -7,8 +7,10 @@ const contentType = {
 // Pass-through tasks from API service to Sapper Node API
 export function get(_, res) {
 	taskRepo.getAll().then(data => {
-		res.writeHead(200, contentType);
-		res.end(data);
+		res.writeHead(data.status, data.headers);
+		data.text().then(text => {
+			res.end(text);
+		});
 	}).catch(err => {
 		res.writeHead(500, contentType);
 		res.end(JSON.stringify({
@@ -18,9 +20,11 @@ export function get(_, res) {
 }
 
 export function post(req, res) {
-	taskRepo.add(req.body).then(resp => {
-		res.writeHead(200, contentType);
-		res.end(resp);
+	taskRepo.add(req.body).then(data => {
+		res.writeHead(data.status, data.headers);
+		data.text().then(text => {
+			res.end(text);
+		});
 	}).catch(err => {
 		res.writeHead(500, contentType);
 		res.end(JSON.stringify({
