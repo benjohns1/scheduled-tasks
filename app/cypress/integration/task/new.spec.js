@@ -43,7 +43,7 @@ describe('new task functionality', () => {
 			cy.get('[data-test=task-item]').first().then($s => {
 				const id = createUUID();
 				const name = 'test task name ' + id;
-				const description = 'test task description' + id;
+				const description = 'test task description ' + id;
 
 				cy.wrap($s).find('[data-test=task-name-input]').clear().type(name);
 				cy.wrap($s).find('[data-test=task-description-input]').clear().type(description);

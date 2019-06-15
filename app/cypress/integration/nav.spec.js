@@ -25,7 +25,7 @@ describe('navigation menu from all routes', () => {
 });
 
 function testNavLink(startPath, testid, label, endPath) {
-  it('navigates to ' + endPath, () => {
+  it(`'${label}' link navigates to ${endPath} from ${startPath}`, () => {
     cy.visit(startPath);
     cy.get(`[data-test=${testid}]`).should('have.text', label).click();
     cy.url().should('eq', baseUrl + endPath);

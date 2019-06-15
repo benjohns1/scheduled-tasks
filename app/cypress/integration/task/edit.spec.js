@@ -2,14 +2,14 @@ import { createUUID } from '../../support/uuid';
 
 describe('edit task functionality', () => {
 
-	describe('complete task checkbox', () => {
+	describe('complete task button', () => {
 		it('completes an existing task and moves it to the top of the completed list', () => {
 			const id = createUUID();
 			const name = 'complete test task name ' + id;
 			const description = 'complete test task description ' + id;
 			cy.addTask(name, description);
 			cy.get('[data-test=task-item]').first().then($ti => {
-				cy.wrap($ti).find('[data-test=complete-toggle]').should('not.checked');
+				cy.wrap($ti).contains('[data-test=complete-toggle]', 'done');
 				cy.wrap($ti).find('[data-test=task-name]').should('have.text', name);
 				cy.wrap($ti).find('[data-test=task-description]').should('have.text', description);
 				cy.wrap($ti).find('[data-test=complete-toggle]').click();

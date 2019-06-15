@@ -46,9 +46,11 @@
     }
     span.right {
         float: right;
+        margin-left: 1rem;
     }
     span.left {
         float: left;
+        margin-right: 1rem;
     }
     section {
         background-color: #eee;
@@ -80,7 +82,7 @@
         </h2>
         {#if !editing && !task.completedTime}
             <span class='left'>
-                <input type=checkbox on:change={complete} data-test=complete-toggle>
+                <button on:click={complete} data-test=complete-toggle>done</button>
             </span>
         {/if}
         <span class=right>
