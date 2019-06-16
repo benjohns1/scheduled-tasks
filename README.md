@@ -11,18 +11,14 @@ To test and run this locally you'll first need to:
 
 ## Staging Environment
 1. Build the services:
-   1. if on windows: `set GOOS=linux`
-   2. `cd services/cmd/srv`
-   4. `env GOOS=linux GOARCH=386 go build`  
-   or, if on windows: `go build`
-   5. if on windows: `set GOOS=windows`
-   6. `cd ../../..`
-2. Rebuild app & service images: `docker-compose -f docker-compose.stage.yml build`
+   * on nix: `(cd services/cmd/srv && env GOOS=linux GOARCH=386 go build)`  
+   * -or- on windows: `cmd /C "cd services/cmd/srv&&set GOOS=linux&&set GOARCH=386&&go build"`
+2. Build the container images: `docker-compose -f docker-compose.stage.yml build`
 3. Start the containers: `docker-compose -f docker-compose.stage.yml up`
-4. Web app: `localhost:3000`
-5. API server: `localhost:8080`
-6. DB adminer: `localhost:8081`
-7. Tear it down: `docker-compose -f docker-compose.stage.yml down`
+   * Web app: `localhost:3000`
+   * API server: `localhost:8080`
+   * DB adminer: `localhost:8081`
+4. Tear it down: `docker-compose -f docker-compose.stage.yml down`
 
 ## Testing
 ### Run services unit tests
@@ -53,13 +49,13 @@ Run the app and services locally with a transient DB container
 1. `docker-compose up`
 2. Modify `./services` code, rebuild as-needed
 3. Rebuild and run the services (in a new terminal):
-   1. `cd services/cmd/srv`
-   2. `go build && ./srv`
-5. API server: `localhost:8080`
-6. DB adminer: `localhost:8081`
-7. `cd app`
-8. Start the web app with hot reloading: `npm run dev`
-9. Open cypress for live testing: `npm run cy:open`
-10. Modify `./app` code
-11. Web app: `localhost:3000`
-12. Tear it down: `docker-compose down`
+   * on nix: `(cd services/cmd/srv && go build && ./srv)`
+   * -or- on windows: `cmd /C "cd services/cmd/srv&&go build&&srv"`
+   * API server: `localhost:8080`
+   * DB adminer: `localhost:8081`
+6. `cd app`
+7. Start the web app with hot reloading: `npm run dev`
+8. Open cypress for live testing: `npm run cy:open`
+9.  Modify `./app` code
+    * Web app: `localhost:3000`
+    * Tear it down: `docker-compose down`
