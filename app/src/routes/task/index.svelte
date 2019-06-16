@@ -29,6 +29,7 @@
 	export let taskError = undefined;
 	export let tasks = [];
 	export let completedTasks = [];
+	export let completedSuccessMessage = undefined;
 
 	let editID = 1;
 
@@ -50,6 +51,7 @@
 		return fetch(`task/${taskID}/complete.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
 			completedTasks = [...(tasks.filter(t => t.data.id === taskID).map(t => {
 				t.data.completedTime = 'just now';
+				t.open = false;
 				return t;
 			})), ...completedTasks];
 			tasks = [...(tasks.filter(t => t.data.id !== taskID))];
@@ -72,6 +74,19 @@
 			open: true
 		}, ...tasks];
 	}
+
+	function clearTasks() {
+		const prevCompletedTasks = completedTasks.slice(0);
+		completedTasks = [];
+		return fetch(`task/clear.json`, { method: "POST", headers: {'Content-Type': 'application/json'} }).then(r => {
+			r.json().then(({ count, message }) => {
+				completedSuccessMessage = `${message}${count ? ` (${count})` : ''}`;
+			});
+		}).catch(err => {
+			completedTasks = prevCompletedTasks;
+			console.error(err);
+		});
+	}
 </script>
 
 <style>
@@ -80,9 +95,13 @@
 	}
 	li {
 		padding-bottom: 1px;
+		clear: both;
 	}
 	.error {
 		color: rgb(199, 25, 60);
+	}
+	.successMessage {
+		color: #2dc066;
 	}
 	.emptyMessage {
 		color: #4d4d4d;
@@ -122,9 +141,14 @@
 <section data-test=completed-tasks>
 	<header>
 		<h1>Completed</h1>
+		<button on:click={clearTasks} data-test=clear-tasks-button>clear all completed tasks</button>
 	</header>
+	{#if completedSuccessMessage !== undefined}
+		<p class="successMessage" data-test=completed-success-message>{completedSuccessMessage}</p>
+	{/if}
+
 	{#if completedTasks.length === 0}
-		<p class='emptyMessage'>No completed tasks</p>
+		<p class='emptyMessage' data-test=completed-empty-message>No completed tasks</p>
 	{:else}
 		<ul>
 			{#each completedTasks as task}

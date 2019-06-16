@@ -13,3 +13,7 @@ export async function add(taskData) {
 export async function complete(id) {
   return fetch(`${baseUrl}/task/${id}/complete`, { method: "PUT"});
 }
+
+export async function clear() {
+  return fetch(`${baseUrl}/task/clear`, { method: "POST"});
+}
