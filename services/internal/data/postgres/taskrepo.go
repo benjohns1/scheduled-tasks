@@ -48,6 +48,7 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
 	}
+	defer rows.Close()
 
 	tasks := map[usecase.TaskID]*task.Task{}
 	for rows.Next() {
@@ -122,6 +123,7 @@ func (r *TaskRepo) Update(id usecase.TaskID, t *task.Task) usecase.Error {
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating task id %d: %v", id, err)
 	}
+	defer rows.Close()
 	if !rows.Next() {
 		return usecase.NewError(usecase.ErrRecordNotFound, "no task found for id = %v", id)
 	}

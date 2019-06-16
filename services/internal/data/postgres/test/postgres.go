@@ -42,7 +42,7 @@ func NewTestDBConn(test testType) (postgres.DBConn, error) {
 	}
 
 	// Load DB connection info
-	dbconn := postgres.NewDBConn(l)
+	dbconn := postgres.NewDBConn(l, "postgres_test")
 	testPort, err := strconv.Atoi(os.Getenv(portEnvVar))
 	if err != nil || testPort == 0 {
 		dbconn.Close()

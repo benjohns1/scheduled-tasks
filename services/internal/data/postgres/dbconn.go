@@ -34,6 +34,7 @@ type DBConn struct {
 	RetrySleepSeconds int
 	DB                *sql.DB
 	l                 Logger
+	AppName           string
 }
 
 // Close closes the wrapped DB connection
@@ -45,7 +46,7 @@ func (conn *DBConn) Close() error {
 }
 
 // NewDBConn creates struct with default DB connection info, and overrides with environment variables if set
-func NewDBConn(l Logger) DBConn {
+func NewDBConn(l Logger, appName string) DBConn {
 
 	// Defaults
 	conn := DBConn{
@@ -57,6 +58,7 @@ func NewDBConn(l Logger) DBConn {
 		MaxRetryAttempts:  20,
 		RetrySleepSeconds: 3,
 		l:                 l,
+		AppName:           appName,
 	}
 
 	// Override from env vars
@@ -86,18 +88,22 @@ func NewDBConn(l Logger) DBConn {
 }
 
 // Connect opens and ping-checks a DB connection
-func (conn *DBConn) Connect() error {
-	conn.l.Printf("connecting to db %s as %s...", conn.Name, conn.User)
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name))
-	if err != nil {
-		err = fmt.Errorf("error opening db: %v", err)
-		return err
+func (conn *DBConn) Connect() (err error) {
+	if conn.DB == nil {
+		conn.l.Printf("connecting to db %s as %s...", conn.Name, conn.User)
+		db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s application_name=%s sslmode=disable", conn.Host, conn.Port, conn.User, conn.Password, conn.Name, conn.AppName))
+		if err != nil {
+			err = fmt.Errorf("error opening db: %v", err)
+			return err
+		}
+		conn.DB = db
+	} else {
+		conn.l.Printf("already connected to db %s", conn.Name)
 	}
-	conn.DB = db
 
 	// Ping & retry if needed
 	for attempts := 0; attempts < conn.MaxRetryAttempts; attempts++ {
-		err = db.Ping()
+		err = conn.DB.Ping()
 		if err == nil {
 			break
 		}

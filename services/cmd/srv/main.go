@@ -16,13 +16,16 @@ func main() {
 	// Load environment vars
 	godotenv.Load("../../../.env")
 
-	// DB connections
-	scConn := data.NewDBConn(l)
+	// Scheduler DB connection
+	scConn := data.NewDBConn(l, "scheduler")
 	if err := scConn.Connect(); err != nil {
 		l.Panic(err)
 	}
 	defer scConn.Close()
-	acConn := data.NewDBConn(l)
+
+
+	// API DB connection
+	acConn := data.NewDBConn(l, "api")
 	if err := acConn.Connect(); err != nil {
 		l.Panic(err)
 	}

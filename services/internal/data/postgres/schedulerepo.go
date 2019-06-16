@@ -76,6 +76,7 @@ func (r *ScheduleRepo) getAllWhere(whereClause string) (map[usecase.ScheduleID]*
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all schedules: %v", err)
 	}
+	defer rows.Close()
 
 	scheds := map[usecase.ScheduleID]*schedule.Schedule{}
 	sids := []usecase.ScheduleID{}
@@ -212,6 +213,7 @@ func (r *ScheduleRepo) getRecurringTasks(sids []usecase.ScheduleID) (map[usecase
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving tasks: %v", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		id, sid, t, err := parseRecurringTaskRow(rows)
 		if err != nil {
@@ -256,6 +258,7 @@ func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) useca
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating schedule id %d: %v", id, err)
 	}
+	defer rows.Close()
 	if !rows.Next() {
 		return usecase.NewError(usecase.ErrRecordNotFound, "no schedule found for id = %v", id)
 	}
