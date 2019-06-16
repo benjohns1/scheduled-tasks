@@ -11,10 +11,11 @@ To test and run this locally you'll first need to:
 
 ## Staging Environment
 1. Build the services:
-   1. `set GOOS=linux`
+   1. if on windows: `set GOOS=linux`
    2. `cd services/cmd/srv`
-   4. `go build`
-   5. `set GOOS=<your local OS e.g. windows>`
+   4. `env GOOS=linux GOARCH=386 go build`  
+   or, if on windows: `go build`
+   5. if on windows: `set GOOS=windows`
    6. `cd ../../..`
 2. Rebuild app & service images: `docker-compose -f docker-compose.stage.yml build`
 3. Start the containers: `docker-compose -f docker-compose.stage.yml up`
