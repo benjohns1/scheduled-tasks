@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
-	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 	format "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
+	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
 // Formatter formats application data into JSON for output
