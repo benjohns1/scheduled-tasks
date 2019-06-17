@@ -1,4 +1,4 @@
-describe('new schedul functionality', () => {
+describe('new schedule functionality', () => {
   
 	beforeEach(() => {
 		cy.visitWait('/schedule');
