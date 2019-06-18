@@ -29,6 +29,8 @@ func (p *Parser) AddSchedule(b io.Reader) (*schedule.Schedule, error) {
 
 type addSchedule struct {
 	Frequency string             `json:"frequency"`
+	Interval  int                `json:"interval"`
+	Offset    int                `json:"offset"`
 	AtMinutes []int              `json:"atMinutes"`
 	Paused    bool               `json:"paused"`
 	Tasks     []addRecurringTask `json:"tasks"`
@@ -39,14 +41,21 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 	var f schedule.Frequency
 	var err error
 	switch as.Frequency {
-	case "hourly":
+	case "Hour":
 		f, err = schedule.NewHourFrequency(as.AtMinutes)
 	default:
-		return nil, fmt.Errorf("invalid frequency '%v', should be 'hourly', 'daily', 'weekly', or 'monthly'", as.Frequency)
+		return nil, fmt.Errorf("invalid frequency '%v', should be 'Hour', 'Day', 'Week', or 'Month'", as.Frequency)
 	}
 	if err != nil {
 		return nil, err
 	}
+	if as.Interval != 1 && as.Interval != 0 {
+		f.SetInterval(as.Interval)
+	}
+	if as.Offset != 0 {
+		f.SetOffset(as.Offset)
+	}
+
 	s := schedule.New(f)
 	if as.Paused {
 		s.Pause()

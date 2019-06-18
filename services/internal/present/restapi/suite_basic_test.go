@@ -397,7 +397,7 @@ func addSchedule(t *testing.T, api http.Handler) {
 		{
 			name:    "empty hourly schedule should return 201 and ID",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "hourly"}`},
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{

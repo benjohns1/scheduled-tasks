@@ -21,6 +21,8 @@ func NewFormatter(rf format.ResponseFormatter) *Formatter {
 type outSchedule struct {
 	ID        usecase.ScheduleID `json:"id"`
 	Frequency string             `json:"frequency"`
+	Interval  int                `json:"interval"`
+	Offset    int                `json:"offset"`
 	AtMinutes []int              `json:"atMinutes"`
 	Paused    bool               `json:"paused"`
 	Tasks     []outRecurringTask `json:"tasks"`
@@ -57,15 +59,17 @@ func (f *Formatter) ScheduleID(id usecase.ScheduleID) ([]byte, error) {
 }
 
 func scheduleToOut(id usecase.ScheduleID, s *schedule.Schedule) *outSchedule {
-	outS := outSchedule{
-		ID:     id,
-		Paused: s.Paused(),
-		Tasks:  []outRecurringTask{},
-	}
 	f := s.Frequency()
+	outS := outSchedule{
+		ID:        id,
+		Frequency: f.TimePeriod().String(),
+		Interval:  f.Interval(),
+		Offset:    f.Offset(),
+		Paused:    s.Paused(),
+		Tasks:     []outRecurringTask{},
+	}
 	switch f.TimePeriod() {
 	case schedule.TimePeriodHour:
-		outS.Frequency = "hourly"
 		outS.AtMinutes = f.AtMinutes()
 		break
 	}

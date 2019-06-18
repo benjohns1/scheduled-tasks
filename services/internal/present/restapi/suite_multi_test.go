@@ -170,44 +170,44 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 		{
 			name:    "empty hourly schedule should return 201 and ID 1",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"hourly", "atMinutes":[]}`},
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"Hour", "atMinutes":[]}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "new hourly schedule should return 201 and ID 2",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "hourly", "atMinutes": [0,30], "paused":true}`},
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0,30], "paused":true}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
 		},
 		{
 			name:    "new hourly schedule should return 201 and ID 3",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "hourly", "atMinutes": [0,30,59], "tasks": [{"name": "rtask1", "description": "rtask1 desc"}]}`},
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0,30,59], "tasks": [{"name": "rtask1", "description": "rtask1 desc"}]}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
 			name:    "get schedule ID 1 should return empty schedule with no recurring tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[]}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]}`)},
 		},
 		{
 			name:    "get schedule ID 2 should return hourly schedule with no recurring tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/2"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":2,"frequency":"hourly","atMinutes":[0,30],"paused":true,"tasks":[]}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]}`)},
 		},
 		{
 			name:    "get schedule ID 3 should return hourly schedule with 1 recurring tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/3"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":3,"frequency":"hourly","atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}`)},
 		},
 		{
 			name:    "should return 200 list with 3 schedules",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[]},"2":{"id":2,"frequency":"hourly","atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"hourly","atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]},"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -259,20 +259,20 @@ func addRecurringTasksToEmptySchedule(t *testing.T, api http.Handler) {
 		{
 			name:    "empty hourly schedule should return 201 and ID 1",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"hourly", "atMinutes":[]}`},
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"Hour", "atMinutes":[]}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "get schedule ID 1 should return empty schedule with no recurring tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[]}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]}`)},
 		},
 		{
 			name:    "should return 200 list with 1 schedule",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[]}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]}}`)},
 		},
 		{
 			name:    "adding recurring task to schedule ID 1 should return 201",
@@ -284,13 +284,13 @@ func addRecurringTasksToEmptySchedule(t *testing.T, api http.Handler) {
 			name:    "get schedule ID 1 should return schedule with 1 task",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[{"name":"task1","description":"task1 description"}]}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[{"name":"task1","description":"task1 description"}]}`)},
 		},
 		{
 			name:    "should return 200 list with 1 schedule with 1 task",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"hourly","atMinutes":[],"paused":false,"tasks":[{"name":"task1","description":"task1 description"}]}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[{"name":"task1","description":"task1 description"}]}}`)},
 		},
 	}
 	for _, tt := range tests {
