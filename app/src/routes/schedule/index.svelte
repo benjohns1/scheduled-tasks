@@ -53,11 +53,11 @@
 				frequency: "Hour",
 				interval: 1,
 				offset: 0,
-				atMinutes: [0,15,30,45]
+				atMinutes: [0]
 			},
 			editID: editID++,
 			open: true
-		}, ...schedules];	
+		}, ...schedules];
 	}
 </script>
 

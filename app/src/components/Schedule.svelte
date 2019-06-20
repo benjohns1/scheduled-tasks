@@ -3,65 +3,86 @@
 
     export let schedule = {};
     export let addScheduleHandler = undefined;
-    let ui = {
-        intervalMax: 0,
-        atMinutes: '0',
-        name: '[new unsaved schedule]'
-    };
 
-    $: ui.name = (() => {
-        let frequency = '[unknown]'
-        switch (schedule.data.frequency) {
-            case 'Hour':
-                frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
-                break;
-            case 'Day':
-                frequency = schedule.data.interval === 1 ? 'day' : 'days';
-                break;
-            case 'Week':
-                frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
-                break;
-            case 'Month':
-                frequency = schedule.data.interval === 1 ? 'month' : 'months';
-                break;
+    let ui = {};
+
+    $: {
+        if (schedule.data.id !== ui.id || schedule.editID !== ui.editID) {
+            ui = {
+                id: schedule.data.id,
+                editID: schedule.editID,
+                minuteMax: 59,
+                atMinutes: formatAtMinutes()
+            };
         }
-        let interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
-        return `every ${interval}${frequency} at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
-    })();
 
-    $: ui.intervalMax = (() => {
-        switch (schedule.data.frequency) {
-            case 'Hour':
-                return 24;
-            case 'Day':
-                return 365;
-            case 'Week':
-                return 52;
-            case 'Month':
-                return 12;
-        }
-        return undefined;
-    })();
+        ui.name = (() => {
+            let frequency = '[unknown]'
+            switch (schedule.data.frequency) {
+                case 'Hour':
+                    frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
+                    break;
+                case 'Day':
+                    frequency = schedule.data.interval === 1 ? 'day' : 'days';
+                    break;
+                case 'Week':
+                    frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
+                    break;
+                case 'Month':
+                    frequency = schedule.data.interval === 1 ? 'month' : 'months';
+                    break;
+            }
+            const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
+            const minutes =  (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
+            return `every ${interval}${frequency}${minutes}`;
+        })();
 
-    function showMinutes() {
-        ui.atMinutes = schedule.data.atMinutes.join(',');
+        ui.intervalMax = (() => {
+            switch (schedule.data.frequency) {
+                case 'Hour':
+                    return 24;
+                case 'Day':
+                    return 365;
+                case 'Week':
+                    return 52;
+                case 'Month':
+                    return 12;
+            }
+            return undefined;
+        })();
+    }
+
+    function formatAtMinutes() {
+        return schedule.data.atMinutes.join(',');
     }
     
     function validateMinutes() {
-        schedule.data.atMinutes = (ui.atMinutes || '').split(',').reduce((arr, val) => {
+        let atMinutes = (ui.atMinutes || '').split(',').reduce((arr, val) => {
             const intVal = parseInt(val);
-            if (intVal < 0) {
-                return [...arr, 0];
+            const clampedVal = (() => {
+                if (intVal < 0) {
+                    return 0;
+                }
+                if (intVal > ui.minuteMax) {
+                    return intVal % (ui.minuteMax + 1);
+                }
+                if (intVal >= 0 && intVal <= ui.minuteMax) {
+                    return intVal;
+                }
+                return undefined
+            })();
+
+            if (clampedVal === undefined) {
+                return arr;
             }
-            if (intVal > 59) {
-                return [...arr, val % 60];
+            if (arr.indexOf(clampedVal) !== -1) {
+                return arr;
             }
-            if (intVal >= 0 && intVal < 60) {
-                return [...arr, intVal];
-            }
-            return arr;
-        }, []).sort();
-        showMinutes();
+            return [...arr, clampedVal];
+        }, []);
+        atMinutes.sort((a, b) => a - b);
+        schedule.data.atMinutes = atMinutes;
+        ui.atMinutes = formatAtMinutes();
     }
     
     function open() {
@@ -78,7 +99,6 @@
             addScheduleHandler(schedule);
         }
     }
-    showMinutes();
 </script>
 
 <style>
@@ -129,10 +149,10 @@
                 <label for='schedule-frequency'><span>Frequency:</span>
                 {#if schedule.editID}
                     <select id='schedule-frequency' data-test=schedule-frequency-input bind:value={schedule.data.frequency}>
-                        <option value='Hour'>Hourly</option>
-                        <option value='Day'>Daily</option>
-                        <option value='Week'>Weekly</option>
-                        <option value='Month'>Monthly</option>
+                        <option value='Hour'>Hour</option>
+                        <option value='Day'>Day</option>
+                        <option value='Week'>Week</option>
+                        <option value='Month'>Month</option>
                     </select>
                 {:else}
                     <span data-test=schedule-frequency id='schedule-frequency'>{schedule.data.frequency}</span>
@@ -142,7 +162,7 @@
             <div>
                 <label><span>Interval:</span>
                 {#if schedule.editID}
-                    <input type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax}>
+                    <input type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax}> (0 - {ui.intervalMax})
                 {:else}
                     <span data-test=schedule-interval>{schedule.data.interval}</span>
                 {/if}
@@ -151,7 +171,7 @@
             <div>
                 <label><span>Offset:</span>
                 {#if schedule.editID}
-                    <input type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax}>
+                    <input type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax}> (0 - {ui.intervalMax})
                 {:else}
                     <span data-test=schedule-offset>{schedule.data.offset}</span>
                 {/if}
@@ -160,7 +180,7 @@
             <div>
                 <label><span>At minutes:</span>
                 {#if schedule.editID}
-                    <input type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}> (comma-separated)
+                    <input type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}> (comma-separated, 0 - {ui.minuteMax})
                 {:else}
                     <span data-test=schedule-at-minutes>{ui.atMinutes}</span>
                 {/if}
