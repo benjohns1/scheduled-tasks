@@ -40,7 +40,7 @@ Cypress.Commands.add("addTask", (name, description) => {
 	});
 });
 
-Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes}, { save = true, visit = true }) => {
+Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes}, { save = true, visit = true } = {}) => {
 	if (visit) {
 		cy.visitWait('/schedule');
 	}
@@ -51,7 +51,7 @@ Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes}, 
 		cy.wrap($s).find('[data-test=schedule-offset-input]').clear().type(offset);
 		cy.wrap($s).find('[data-test=schedule-at-minutes-input]').clear().type(atMinutes).blur();
 		if (save) {
-			cy.wrap($s).contains('[data-test=save-button]', 'save').click();
+			cy.wrap($s).find('[data-test=save-button]').click();
 		}
 	});
 });

@@ -11,3 +11,11 @@ export function createUUID() {
 
   return s.join("");
 }
+
+export function createUUIDs(count) {
+  let uuids = [];
+  for (let i = 0; i < count; i++) {
+    uuids.push(createUUID());
+  }
+  return uuids;
+}
