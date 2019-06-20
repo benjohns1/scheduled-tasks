@@ -6,8 +6,8 @@ export async function getAll() {
   return fetch(`${baseUrl}`);
 }
 
-export async function add(taskData) {
-  return fetch(`${baseUrl}/`, { method: "POST", body: JSON.stringify(taskData)});
+export async function add(data) {
+  return fetch(`${baseUrl}/`, { method: "POST", body: JSON.stringify(data)});
 }
 
 export async function complete(id) {

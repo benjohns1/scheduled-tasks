@@ -1,11 +1,8 @@
 describe('new schedule functionality', () => {
-  
-	beforeEach(() => {
-		cy.visitWait('/schedule');
-	});
 	
 	describe('new schedule button', () => {
 		it('creates an editable schedule form at the top', () => {
+			cy.visitWait('/schedule');
 			cy.get('[data-test=schedules]').then($t => $t.find('[data-test=schedule-item]').length).then(startingCount => {
 				cy.get('[data-test=new-schedule-button]').click();
 				const expectedCount = startingCount + 1;
@@ -42,5 +39,168 @@ describe('new schedule functionality', () => {
 				});
 			});
 		});
+
+		it('saves custom schedule data for multiple schedules', () => {
+			cy.visitWait('/schedule');
+			cy.get('[data-test=schedules]').then($t => $t.find('[data-test=schedule-item]').length).then(startingCount => {
+				let count = startingCount;
+				const scheduleData = [
+					{
+						args: {
+							frequency: 'Hour',
+							interval: 1,
+							offset: 0,
+							atMinutes: '0',
+						},
+						want: {
+							name: 'every hour',
+							frequency: 'Hour',
+							interval: '1',
+							offset: '0',
+							atMinutes: '0'
+						}
+					},
+					{
+						args: {
+							frequency: 'Hour',
+							interval: 2,
+							offset: 1,
+							atMinutes: '0,15',
+						},
+						want: {
+							name: 'every 2 hours at 00, 15 minutes',
+							frequency: 'Hour',
+							interval: '2',
+							offset: '1',
+							atMinutes: '0,15'
+						}
+					},
+					{
+						args: {
+							frequency: 'Hour',
+							interval: 25,
+							offset: 25,
+							atMinutes: '30,0,61,5',
+						},
+						want: {
+							name: 'every 24 hours at 00, 01, 05, 30 minutes',
+							frequency: 'Hour',
+							interval: '24',
+							offset: '24',
+							atMinutes: '0,1,5,30'
+						}
+					}
+				];
+
+				cy.log('add multiple schedules without saving')
+				scheduleData.forEach(s => {
+					cy.addSchedule(s.args, { save: false, visit: false });
+					count++;
+					cy.get('[data-test=schedule-item]').should('have.length', count);
+				});
+
+				cy.log('save schedules from the top down')
+				const bottomEditSchedule = count - startingCount;
+				for (let i = 1; i <= bottomEditSchedule; i++) {
+					cy.get(`[data-test=schedule-item]:nth-child(${i})`).then($s => {
+						cy.wrap($s).contains('[data-test=save-button]', 'save').click();
+					});
+				}
+
+				cy.log('save button should make form fields uneditable');
+				scheduleData.forEach((s, i) => {
+					cy.get(`[data-test=schedule-item]:nth-child(${i+1})`).then($s => {
+						cy.wrap($s).find('[data-test=schedule-name]').should('have.text', s.want.name);
+						cy.wrap($s).find('[data-test=schedule-frequency]').should('have.text', s.want.frequency);
+						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
+						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
+						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
+					});
+				});
+				
+				cy.log('data persists after page reload');
+				cy.visitWait('/schedule');
+				cy.get('[data-test=schedule-item]').should('have.length', count);
+				scheduleData.forEach((s, i) => {
+					cy.get(`[data-test=schedule-item]:nth-child(${i+1})`).then($s => {
+						cy.wrap($s).contains('[data-test=open-button]', '>').click();
+						cy.wrap($s).find('[data-test=schedule-name]').should('have.text', s.want.name);
+						cy.wrap($s).find('[data-test=schedule-frequency]').should('have.text', s.want.frequency);
+						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
+						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
+						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
+					});
+				});
+			});
+		});
+	
+		describe('add task button', () => {
+			it(`adds recurring tasks to a new schedule`, () => {
+				const task1 = {
+					name: "recurring task 1",
+					description: "recurring task 1 description"
+				};
+				const task2 = {
+					name: "recurring task 2",
+					description: "recurring task 2 description"
+				};
+				cy.addSchedule({
+					frequency: 'Hour',
+					interval: 1,
+					offset: 0,
+					atMinutes: '0,30'
+				}, {save: false});
+
+				cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+					cy.wrap($s).find('[data-test=schedule-name]').should('have.text', 'every hour at 00, 30 minutes');
+
+					cy.log('add 2 recurring tasks');
+					cy.wrap($s).find('[data-test=new-task]').click();
+					cy.wrap($s).find('[data-test=task-item]:nth-child(1)').then($ti => {
+						cy.wrap($ti).find('[data-test=task-name-input]').clear().type(task1.name);
+						cy.wrap($ti).find('[data-test=task-description-input]').clear().type(task1.description);
+						cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
+					});
+					
+					cy.wrap($s).find('[data-test=new-task]').click();
+					cy.wrap($s).find('[data-test=task-item]').then($tis => {
+						cy.wrap($tis[0]).find('[data-test=task-name-input]').clear().type(task2.name);
+						cy.wrap($tis[0]).find('[data-test=task-description-input]').clear().type(task2.description);
+						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+					});
+
+					cy.log('save entire schedule with tasks');
+					cy.wrap($s).find('[data-test=save-button]').click();
+					cy.wrap($s).find('[data-test=task-item]').then($tis => {
+						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+						cy.wrap($tis[0]).find('[data-test=open-button]').click();
+						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', task2.name);
+						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', task2.description);
+						
+						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
+						cy.wrap($tis[1]).find('[data-test=open-button]').click();
+						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', task1.name);
+						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', task1.description);
+					});
+				});
+				
+				cy.log('ensure data persists after page reload');
+				cy.visitWait('/schedule');
+				cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+					cy.wrap($s).find('[data-test=open-button]').click();
+					cy.wrap($s).find('[data-test=task-item]').then($tis => {
+						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+						cy.wrap($tis[0]).find('[data-test=open-button]').click();
+						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', task2.name);
+						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', task2.description);
+						
+						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
+						cy.wrap($tis[1]).find('[data-test=open-button]').click();
+						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', task1.name);
+						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', task1.description);
+					});
+				});
+			});
+		});
 	});
-})
+});

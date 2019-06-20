@@ -39,3 +39,19 @@ Cypress.Commands.add("addTask", (name, description) => {
 		cy.wrap($s).find('[data-test=save-button]').click();
 	});
 });
+
+Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes}, { save = true, visit = true }) => {
+	if (visit) {
+		cy.visitWait('/schedule');
+	}
+	cy.get('[data-test=new-schedule-button]').click();
+	cy.get('[data-test=schedule-item]').first().then($s => {
+		cy.wrap($s).find('[data-test=schedule-frequency-input]').select(frequency);
+		cy.wrap($s).find('[data-test=schedule-interval-input]').clear().type(interval);
+		cy.wrap($s).find('[data-test=schedule-offset-input]').clear().type(offset);
+		cy.wrap($s).find('[data-test=schedule-at-minutes-input]').clear().type(atMinutes).blur();
+		if (save) {
+			cy.wrap($s).contains('[data-test=save-button]', 'save').click();
+		}
+	});
+});

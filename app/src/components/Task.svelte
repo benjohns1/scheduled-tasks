@@ -14,22 +14,21 @@
         task.description = '';
     }
     
-    function open(event) {
+    function open() {
         opened = true;
     }
 
-    function close(event) {
+    function close() {
         opened = false;
     }
 
-    function save(event) {
+    function save() {
         if (addTaskHandler) {
             addTaskHandler(editing, task);
         }
-        editing = undefined;
     }
 
-    function complete(event) {
+    function complete() {
         if (completeTaskHandler && task.id) {
             completeTaskHandler(task.id);
         }
@@ -80,13 +79,13 @@
                 {(task.name || 'task')}
             {/if}
         </h2>
-        {#if !editing && !task.completedTime}
+        {#if !editing && !task.completedTime && completeTaskHandler}
             <span class='left'>
                 <button on:click={complete} data-test=complete-toggle>done</button>
             </span>
         {/if}
         <span class=right>
-            {#if editing}
+            {#if editing && addTaskHandler}
                 <button on:click={save} data-test=save-button>save</button>
             {/if}
             {#if opened}

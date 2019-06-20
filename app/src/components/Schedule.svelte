@@ -1,8 +1,11 @@
 <script>
     import { slide } from 'svelte/transition';
+	import Task from "./Task.svelte";
 
     export let schedule = {};
     export let addScheduleHandler = undefined;
+
+    let tasks = [];
 
     let ui = {};
 
@@ -12,8 +15,19 @@
                 id: schedule.data.id,
                 editID: schedule.editID,
                 minuteMax: 59,
-                atMinutes: formatAtMinutes()
+                atMinutes: formatAtMinutes(),
+                currTaskEditID: 1
             };
+            setAddTaskHandler();
+
+            if (schedule.data && schedule.data.tasks) {
+                tasks = schedule.data.tasks.map(t => {
+                    return {
+                        data: t,
+                        open: false
+                    };
+                });
+            }
         }
 
         ui.name = (() => {
@@ -37,6 +51,10 @@
             return `every ${interval}${frequency}${minutes}`;
         })();
 
+        setIntervalMax();
+    }
+
+    function setIntervalMax() {
         ui.intervalMax = (() => {
             switch (schedule.data.frequency) {
                 case 'Hour':
@@ -54,6 +72,14 @@
 
     function formatAtMinutes() {
         return schedule.data.atMinutes.join(',');
+    }
+
+    function validateAll() {
+        setIntervalMax();
+
+        validateInterval();
+        validateOffset();
+        validateMinutes();
     }
     
     function validateMinutes() {
@@ -84,6 +110,14 @@
         schedule.data.atMinutes = atMinutes;
         ui.atMinutes = formatAtMinutes();
     }
+
+    function validateInterval() {
+        schedule.data.interval = Math.max(1, Math.min(ui.intervalMax, parseInt(schedule.data.interval)));
+    }
+
+    function validateOffset() {
+        schedule.data.offset = Math.max(0, Math.min(ui.intervalMax, parseInt(schedule.data.offset)));
+    }
     
     function open() {
         schedule.open = true;
@@ -94,11 +128,46 @@
     }
 
     function save() {
-        validateMinutes();
+        validateAll();
         if (addScheduleHandler) {
+            schedule.data.tasks = tasks.map(t => t.data);
             addScheduleHandler(schedule);
         }
     }
+
+	function newTask() {
+		tasks = [{
+			data: {
+				name: "recurring task",
+				description: ""
+			},
+			editID: ui.currTaskEditID++,
+			open: true
+		}, ...tasks];
+    }
+
+    let addTaskHandler = undefined;
+    
+	function addTask(taskEditID, taskData) {
+		return fetch(`schedule/${schedule.data.id}/task.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(taskData)}).then(r => {
+            if (r.status === 201) {
+				tasks = [{
+					data: taskData,
+					open: true
+				}, ...(tasks.filter(t => t.editID !== taskEditID))];
+            } else {
+                console.error(r);
+            }
+		}).catch(err => {
+			console.error(err);
+		});
+    }
+
+    function setAddTaskHandler() {
+        addTaskHandler = schedule.editID ? undefined : addTask;
+    }
+    setAddTaskHandler();
+
 </script>
 
 <style>
@@ -116,6 +185,9 @@
     section {
         background-color: #eee;
     }
+	.emptyMessage {
+		color: #4d4d4d;
+	}
     .panel {
         margin: 0;
         padding: 0.4rem 1rem;
@@ -127,6 +199,15 @@
         display: inline-block;
         width: 6.5rem;
     }
+	ul {
+		list-style: none;
+        margin: 1px 0;
+        padding: 0;
+	}
+	li {
+		padding-bottom: 1px;
+		clear: both;
+	}
 </style>
 
 <section>
@@ -148,7 +229,7 @@
             <div>
                 <label for='schedule-frequency'><span>Frequency:</span>
                 {#if schedule.editID}
-                    <select id='schedule-frequency' data-test=schedule-frequency-input bind:value={schedule.data.frequency}>
+                    <select id='schedule-frequency' data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={validateAll}>
                         <option value='Hour'>Hour</option>
                         <option value='Day'>Day</option>
                         <option value='Week'>Week</option>
@@ -162,7 +243,7 @@
             <div>
                 <label><span>Interval:</span>
                 {#if schedule.editID}
-                    <input type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax}> (0 - {ui.intervalMax})
+                    <input type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax} on:blur={validateInterval} on:focus={validateInterval}> (1 - {ui.intervalMax})
                 {:else}
                     <span data-test=schedule-interval>{schedule.data.interval}</span>
                 {/if}
@@ -171,7 +252,7 @@
             <div>
                 <label><span>Offset:</span>
                 {#if schedule.editID}
-                    <input type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax}> (0 - {ui.intervalMax})
+                    <input type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax} on:blur={validateOffset} on:focus={validateOffset}> (0 - {ui.intervalMax})
                 {:else}
                     <span data-test=schedule-offset>{schedule.data.offset}</span>
                 {/if}
@@ -185,6 +266,18 @@
                     <span data-test=schedule-at-minutes>{ui.atMinutes}</span>
                 {/if}
                 </label>
+            </div>
+            <div>
+                <button on:click={newTask} data-test=new-task>new task</button>               
+                {#if tasks.length === 0}
+                    <p class='emptyMessage'>No recurring tasks</p>
+                {:else}
+                    <ul>
+                        {#each tasks as task}
+                            <li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTaskHandler}/></li>
+                        {/each}
+                    </ul>
+                {/if}
             </div>
         </div>
     {/if}

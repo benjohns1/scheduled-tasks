@@ -53,7 +53,8 @@
 				frequency: "Hour",
 				interval: 1,
 				offset: 0,
-				atMinutes: [0]
+				atMinutes: [0],
+				tasks: []
 			},
 			editID: editID++,
 			open: true
