@@ -1,3 +1,5 @@
+import { createUUIDs, createUUID } from '../../support/uuid';
+
 describe('new schedule functionality', () => {
 	
 	describe('new schedule button', () => {
@@ -136,14 +138,12 @@ describe('new schedule functionality', () => {
 	
 		describe('add task button', () => {
 			it(`adds recurring tasks to a new schedule`, () => {
-				const task1 = {
-					name: "recurring task 1",
-					description: "recurring task 1 description"
-				};
-				const task2 = {
-					name: "recurring task 2",
-					description: "recurring task 2 description"
-				};
+				const tasks = createUUIDs(2).map((id, index) => {
+					return {
+						name: `recurring task ${index}: ${id}`,
+						description: `recurring task ${index} description: ${id}`
+					};
+				});
 				cy.addSchedule({
 					frequency: 'Hour',
 					interval: 1,
@@ -157,15 +157,15 @@ describe('new schedule functionality', () => {
 					cy.log('add 2 recurring tasks');
 					cy.wrap($s).find('[data-test=new-task]').click();
 					cy.wrap($s).find('[data-test=task-item]:nth-child(1)').then($ti => {
-						cy.wrap($ti).find('[data-test=task-name-input]').clear().type(task1.name);
-						cy.wrap($ti).find('[data-test=task-description-input]').clear().type(task1.description);
+						cy.wrap($ti).find('[data-test=task-name-input]').clear().type(tasks[0].name);
+						cy.wrap($ti).find('[data-test=task-description-input]').clear().type(tasks[0].description);
 						cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
 					});
 					
 					cy.wrap($s).find('[data-test=new-task]').click();
 					cy.wrap($s).find('[data-test=task-item]').then($tis => {
-						cy.wrap($tis[0]).find('[data-test=task-name-input]').clear().type(task2.name);
-						cy.wrap($tis[0]).find('[data-test=task-description-input]').clear().type(task2.description);
+						cy.wrap($tis[0]).find('[data-test=task-name-input]').clear().type(tasks[1].name);
+						cy.wrap($tis[0]).find('[data-test=task-description-input]').clear().type(tasks[1].description);
 						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
 					});
 
@@ -174,13 +174,13 @@ describe('new schedule functionality', () => {
 					cy.wrap($s).find('[data-test=task-item]').then($tis => {
 						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
 						cy.wrap($tis[0]).find('[data-test=open-button]').click();
-						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', task2.name);
-						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', task2.description);
+						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
+						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
 						
 						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
 						cy.wrap($tis[1]).find('[data-test=open-button]').click();
-						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', task1.name);
-						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', task1.description);
+						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
+						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
 					});
 				});
 				
@@ -191,13 +191,13 @@ describe('new schedule functionality', () => {
 					cy.wrap($s).find('[data-test=task-item]').then($tis => {
 						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
 						cy.wrap($tis[0]).find('[data-test=open-button]').click();
-						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', task2.name);
-						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', task2.description);
+						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
+						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
 						
 						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
 						cy.wrap($tis[1]).find('[data-test=open-button]').click();
-						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', task1.name);
-						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', task1.description);
+						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
+						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
 					});
 				});
 			});

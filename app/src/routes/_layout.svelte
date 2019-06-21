@@ -1,7 +1,16 @@
 <script>
 	import Nav from '../components/Nav.svelte';
+	import { onMount, tick } from 'svelte';
 
 	export let segment;
+
+	let testID = 'loading';
+	onMount(() => {
+		tick().then(() => {
+			testID = 'loaded';
+		});
+	});
+
 </script>
 
 <style>
@@ -17,6 +26,6 @@
 
 <Nav {segment}/>
 
-<main>
+<main data-test={testID}>
 	<slot></slot>
 </main>

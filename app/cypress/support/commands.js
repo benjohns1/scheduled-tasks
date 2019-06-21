@@ -26,8 +26,9 @@
 
 // Because of Sapper's script chunking, we need to wait extra for all Svelte 
 // script chunks to be loaded after a page load before using Svelte functionality
-Cypress.Commands.add("visitWait", url => {
-	cy.visit(url).wait(1000);
+Cypress.Commands.add("visitWait", (url, options) => {
+	cy.visit(url, options);
+	cy.get('[data-test=loaded]');
 });
 
 Cypress.Commands.add("addTask", (name, description) => {
