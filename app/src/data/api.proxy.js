@@ -13,3 +13,12 @@ export function proxy(res, apiPromise) {
 		}));
 	});
 }
+
+export function error(res, code, msg) {
+	res.writeHead(code, {
+		'Content-Type': 'application/json'
+	});
+	res.end(JSON.stringify({
+		error: msg
+	}));
+}

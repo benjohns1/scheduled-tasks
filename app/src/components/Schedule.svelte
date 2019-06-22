@@ -168,6 +168,17 @@
     }
     setAddTaskHandler();
 
+    function togglePause() {
+        const pause = schedule.data.paused ? 'pause' : 'unpause';
+		return fetch(`schedule/${schedule.data.id}/${pause}.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
+            if (r.status !== 204) {
+                console.error(r);
+            }
+		}).catch(err => {
+			console.error(err);
+        });
+    }
+
 </script>
 
 <style>
@@ -268,7 +279,16 @@
                 </label>
             </div>
             <div>
-                <button on:click={newTask} data-test=new-task>new task</button>               
+                <label><span>Paused:</span>
+                {#if schedule.editID}
+                    <input type=checkbox data-test=paused-toggle bind:checked={schedule.data.paused}>
+                {:else}
+                    <input type=checkbox data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
+                {/if}
+                </label>
+            </div>
+            <div>
+                <span class='right'><button on:click={newTask} data-test=new-task>new task</button></span>
                 {#if tasks.length === 0}
                     <p class='emptyMessage'>No recurring tasks</p>
                 {:else}
