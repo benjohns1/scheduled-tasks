@@ -9,6 +9,14 @@ To test and run this locally you'll first need to:
 4. Copy `.env.default` to `.env` (these environment variables are injected into containers and used in the app)
 5. Install client web app node modules `cd app` and `npm install`
 
+## Quick Run Scripts (windows only for now)
+* Staging: `run.stage`
+* Development: `run.dev.webapp` (hot reloading for Svelte app and Cypress tests)
+
+Web app: http://localhost:3000  
+API server: http://localhost:8080  
+DB adminer: http://localhost:8081  
+
 ## Staging Environment
 1. Build the services:
    * on nix: `(cd services/cmd/srv && env GOOS=linux GOARCH=386 go build)`  
