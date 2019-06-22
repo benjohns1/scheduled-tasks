@@ -80,6 +80,20 @@
         validateInterval();
         validateOffset();
         validateMinutes();
+        validateTasks();
+    }
+
+    function validateTasks() {
+        // Remove task duplicates
+        tasks = tasks.filter((t, i) => {
+            for (let j = i + 1; j < tasks.length; j++) {
+                if (t.data.name === tasks[j].data.name
+                    && t.data.description === tasks[j].data.description) {
+                    return false;
+                }
+            }
+            return true;
+        });
     }
     
     function validateMinutes() {
@@ -138,8 +152,8 @@
 	function newTask() {
 		tasks = [{
 			data: {
-				name: "recurring task",
-				description: ""
+				name: `recurring task ${tasks.length}`,
+				description: ''
 			},
 			editID: ui.currTaskEditID++,
 			open: true

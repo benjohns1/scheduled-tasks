@@ -135,70 +135,121 @@ describe('new schedule functionality', () => {
 				});
 			});
 		});
+	});
 	
-		describe('add task button', () => {
-			it(`adds recurring tasks to a new schedule`, () => {
-				const tasks = createUUIDs(2).map((id, index) => {
-					return {
-						name: `recurring task ${index}: ${id}`,
-						description: `recurring task ${index} description: ${id}`
-					};
-				});
-				cy.addSchedule({
-					frequency: 'Hour',
-					interval: 1,
-					offset: 0,
-					atMinutes: '0,30'
-				}, {save: false});
+	describe('add task button', () => {
+		it(`adds recurring tasks to a new schedule`, () => {
+			const tasks = createUUIDs(2).map((id, index) => {
+				return {
+					name: `recurring task ${index}: ${id}`,
+					description: `recurring task ${index} description: ${id}`
+				};
+			});
+			cy.addSchedule({
+				frequency: 'Hour',
+				interval: 1,
+				offset: 0,
+				atMinutes: '0,30'
+			}, {save: false});
 
-				cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
-					cy.wrap($s).find('[data-test=schedule-name]').should('have.text', 'every hour at 00, 30 minutes');
+			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+				cy.wrap($s).find('[data-test=schedule-name]').should('have.text', 'every hour at 00, 30 minutes');
 
-					cy.log('add 2 recurring tasks');
-					cy.wrap($s).find('[data-test=new-task]').click();
-					cy.wrap($s).find('[data-test=task-item]:nth-child(1)').then($ti => {
-						cy.wrap($ti).find('[data-test=task-name-input]').clear().type(tasks[0].name);
-						cy.wrap($ti).find('[data-test=task-description-input]').clear().type(tasks[0].description);
-						cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
-					});
-					
-					cy.wrap($s).find('[data-test=new-task]').click();
-					cy.wrap($s).find('[data-test=task-item]').then($tis => {
-						cy.wrap($tis[0]).find('[data-test=task-name-input]').clear().type(tasks[1].name);
-						cy.wrap($tis[0]).find('[data-test=task-description-input]').clear().type(tasks[1].description);
-						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
-					});
-
-					cy.log('save entire schedule with tasks');
-					cy.wrap($s).find('[data-test=save-button]').click();
-					cy.wrap($s).find('[data-test=task-item]').then($tis => {
-						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
-						cy.wrap($tis[0]).find('[data-test=open-button]').click();
-						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
-						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
-						
-						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
-						cy.wrap($tis[1]).find('[data-test=open-button]').click();
-						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
-						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
-					});
+				cy.log('add 2 recurring tasks');
+				cy.wrap($s).find('[data-test=new-task]').click();
+				cy.wrap($s).find('[data-test=task-item]:nth-child(1)').then($ti => {
+					cy.wrap($ti).find('[data-test=task-name-input]').clear().type(tasks[0].name);
+					cy.wrap($ti).find('[data-test=task-description-input]').clear().type(tasks[0].description);
+					cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
 				});
 				
-				cy.log('ensure data persists after page reload');
-				cy.visitWait('/schedule');
-				cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
-					cy.wrap($s).find('[data-test=open-button]').click();
-					cy.wrap($s).find('[data-test=task-item]').then($tis => {
-						cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
-						cy.wrap($tis[0]).find('[data-test=open-button]').click();
-						cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
-						cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
-						
-						cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
-						cy.wrap($tis[1]).find('[data-test=open-button]').click();
-						cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
-						cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
+				cy.wrap($s).find('[data-test=new-task]').click();
+				cy.wrap($s).find('[data-test=task-item]').then($tis => {
+					cy.wrap($tis[0]).find('[data-test=task-name-input]').clear().type(tasks[1].name);
+					cy.wrap($tis[0]).find('[data-test=task-description-input]').clear().type(tasks[1].description);
+					cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+				});
+
+				cy.log('save entire schedule with tasks');
+				cy.wrap($s).find('[data-test=save-button]').click();
+				cy.wrap($s).find('[data-test=task-item]').then($tis => {
+					cy.wrap($tis.length).should('eq', tasks.length);
+					cy.wrap($tis).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($tis[0]).find('[data-test=open-button]').click();
+					cy.wrap($tis[1]).find('[data-test=open-button]').click();
+					cy.wrap($tis).find('[data-test=task-name]').should('contain', tasks[0].name);
+					cy.wrap($tis).find('[data-test=task-description]').should('contain', tasks[0].description);
+					cy.wrap($tis).find('[data-test=task-name]').should('contain', tasks[1].name);
+					cy.wrap($tis).find('[data-test=task-description]').should('contain', tasks[1].description);
+				});
+			});
+			
+			cy.log('ensure data persists after page reload');
+			cy.visitWait('/schedule');
+			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+				cy.wrap($s).find('[data-test=open-button]').click();
+				cy.wrap($s).find('[data-test=task-item]').then($tis => {
+					cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($tis[0]).find('[data-test=open-button]').click();
+					cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
+					cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
+					
+					cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($tis[1]).find('[data-test=open-button]').click();
+					cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
+					cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
+				});
+			});
+		});
+
+		it(`only adds first recurring task that is a duplicate`, () => {
+			const id = createUUID();
+			const duplicateTask = {
+				name: `recurring task duplicate: ${id}`,
+				description: `recurring task duplicate description: ${id}`
+			}
+			
+			cy.addSchedule({
+				frequency: 'Hour',
+				interval: 1,
+				offset: 0,
+				atMinutes: '0,20'
+			}, {save: false});
+
+			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+				cy.wrap($s).find('[data-test=schedule-name]').should('have.text', 'every hour at 00, 20 minutes');
+
+				cy.log('add 2 recurring task duplicates');
+				for (let i = 0; i < 2; i++) {
+					cy.wrap($s).find('[data-test=new-task]').click();
+					cy.wrap($s).find('[data-test=task-item]:nth-child(1)').then($ti => {
+						cy.wrap($ti).find('[data-test=task-name-input]').clear().type(duplicateTask.name);
+						cy.wrap($ti).find('[data-test=task-description-input]').clear().type(duplicateTask.description);
+						cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
 					});
+				}
+
+				cy.log('save schedule with tasks');
+				cy.wrap($s).find('[data-test=save-button]').click();
+				cy.wrap($s).find('[data-test=task-item]').should('have.length', 1);
+				cy.wrap($s).find('[data-test=task-item]').then($ti => {
+					cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($ti).find('[data-test=open-button]').click();
+					cy.wrap($ti).find('[data-test=task-name]').should('have.text', duplicateTask.name);
+					cy.wrap($ti).find('[data-test=task-description]').should('have.text', duplicateTask.description);
+				});
+			});
+			
+			cy.log('ensure data persists after page reload');
+			cy.visitWait('/schedule');
+			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
+				cy.wrap($s).find('[data-test=open-button]').click();
+				cy.wrap($s).find('[data-test=task-item]').should('have.length', 1);
+				cy.wrap($s).find('[data-test=task-item]').then($ti => {
+					cy.wrap($ti).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($ti).find('[data-test=open-button]').click();
+					cy.wrap($ti).find('[data-test=task-name]').should('have.text', duplicateTask.name);
+					cy.wrap($ti).find('[data-test=task-description]').should('have.text', duplicateTask.description);
 				});
 			});
 		});
