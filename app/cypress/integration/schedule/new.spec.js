@@ -189,15 +189,13 @@ describe('new schedule functionality', () => {
 			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
 				cy.wrap($s).find('[data-test=open-button]').click();
 				cy.wrap($s).find('[data-test=task-item]').then($tis => {
-					cy.wrap($tis[0]).find('[data-test=save-button]').should('not.exist');
+					cy.wrap($tis).find('[data-test=save-button]').should('not.exist');
 					cy.wrap($tis[0]).find('[data-test=open-button]').click();
-					cy.wrap($tis[0]).find('[data-test=task-name]').should('have.text', tasks[1].name);
-					cy.wrap($tis[0]).find('[data-test=task-description]').should('have.text', tasks[1].description);
-					
-					cy.wrap($tis[1]).find('[data-test=save-button]').should('not.exist');
 					cy.wrap($tis[1]).find('[data-test=open-button]').click();
-					cy.wrap($tis[1]).find('[data-test=task-name]').should('have.text', tasks[0].name);
-					cy.wrap($tis[1]).find('[data-test=task-description]').should('have.text', tasks[0].description);
+					cy.wrap($tis).find('[data-test=task-name]').should('contain', tasks[0].name);
+					cy.wrap($tis).find('[data-test=task-description]').should('contain', tasks[0].description);
+					cy.wrap($tis).find('[data-test=task-name]').should('contain', tasks[1].name);
+					cy.wrap($tis).find('[data-test=task-description]').should('contain', tasks[1].description);
 				});
 			});
 		});
