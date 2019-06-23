@@ -36,6 +36,7 @@ func suiteBasic(t *testing.T, tester test.Tester) {
 	getSchedule(t, tester.NewAPI())
 	pauseSchedule(t, tester.NewAPI())
 	unpauseSchedule(t, tester.NewAPI())
+	removeSchedule(t, tester.NewAPI())
 }
 
 func listTasks(t *testing.T, api http.Handler) {
@@ -485,6 +486,51 @@ func getSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
+func removeSchedule(t *testing.T, api http.Handler) {
+	type args struct {
+		method string
+		url    string
+		body   string
+	}
+	type asserts struct {
+		statusEquals int
+		bodyEquals   *string
+		bodyContains *string
+	}
+	tests := []struct {
+		name    string
+		h       http.Handler
+		args    args
+		asserts asserts
+	}{
+		{
+			name:    "unknown ID should return 404",
+			h:       api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/1"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.args.method, tt.args.url, strings.NewReader(tt.args.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			tt.h.ServeHTTP(rr, req)
+			if rr.Code != tt.asserts.statusEquals {
+				t.Errorf("status code = %v, want %v", rr.Code, tt.asserts.statusEquals)
+			}
+			if tt.asserts.bodyEquals != nil && rr.Body.String() != *tt.asserts.bodyEquals {
+				t.Errorf("response body = %v, should equal %v", rr.Body.String(), *tt.asserts.bodyEquals)
+			}
+			if tt.asserts.bodyContains != nil && !strings.Contains(rr.Body.String(), *tt.asserts.bodyContains) {
+				t.Errorf("response body = %v, should contain %v", rr.Body.String(), *tt.asserts.bodyContains)
+			}
+		})
+	}
+}
+
 func pauseSchedule(t *testing.T, api http.Handler) {
 	type args struct {
 		method string
@@ -529,6 +575,7 @@ func pauseSchedule(t *testing.T, api http.Handler) {
 		})
 	}
 }
+
 func unpauseSchedule(t *testing.T, api http.Handler) {
 	type args struct {
 		method string

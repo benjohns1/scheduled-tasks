@@ -15,6 +15,12 @@ func TestGetSchedule(t *testing.T) {
 	hourSched := schedule.New(hourFreq)
 	hourSchedID, _ := r.Add(hourSched)
 
+	r2 := data.NewScheduleRepo()
+	f, _ := schedule.NewHourFrequency([]int{0})
+	s1 := schedule.New(f)
+	s1.Remove()
+	sID1, _ := r2.Add(s1)
+
 	type args struct {
 		r  ScheduleRepo
 		id ScheduleID
@@ -34,6 +40,11 @@ func TestGetSchedule(t *testing.T) {
 		{
 			name:    "should return 'not found' error",
 			args:    args{r: r, id: 9999},
+			wantErr: ErrRecordNotFound,
+		},
+		{
+			name:    "should return 'not found' error if schedule has been removed",
+			args:    args{r: r2, id: sID1},
 			wantErr: ErrRecordNotFound,
 		},
 	}
@@ -59,6 +70,14 @@ func TestListSchedules(t *testing.T) {
 	hourSched := schedule.New(hourFreq)
 	hourSchedID1, _ := r2.Add(hourSched)
 	hourSchedID2, _ := r2.Add(hourSched)
+	
+	r3 := data.NewScheduleRepo()
+	f, _ := schedule.NewHourFrequency([]int{0})
+	s1 := schedule.New(f)
+	s2 := schedule.New(f)
+	s2.Remove()
+	sID1, _ := r3.Add(s1)
+	r3.Add(s2)
 
 	type args struct {
 		r ScheduleRepo
@@ -79,6 +98,12 @@ func TestListSchedules(t *testing.T) {
 			name:    "should list 2 schedules",
 			args:    args{r2},
 			want:    map[ScheduleID]*schedule.Schedule{hourSchedID1: hourSched, hourSchedID2: hourSched},
+			wantErr: ErrNone,
+		},
+		{
+			name:    "should list 1 schedule",
+			args:    args{r3},
+			want:    map[ScheduleID]*schedule.Schedule{sID1: s1},
 			wantErr: ErrNone,
 		},
 	}
@@ -135,9 +160,12 @@ func TestAddSchedule(t *testing.T) {
 
 func TestPauseSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
-	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
-	hourSchedID, _ := r.Add(hourSched)
+	f, _ := schedule.NewHourFrequency([]int{0})
+	s1 := schedule.New(f)
+	s2 := schedule.New(f)
+	s2.Remove()
+	sID1, _ := r.Add(s1)
+	sID2, _ := r.Add(s2)
 	c := make(chan<- bool)
 
 	type args struct {
@@ -151,12 +179,17 @@ func TestPauseSchedule(t *testing.T) {
 	}{
 		{
 			name:    "should pause schedule",
-			args:    args{r: r, id: hourSchedID},
+			args:    args{r: r, id: sID1},
 			wantErr: ErrNone,
 		},
 		{
 			name:    "should return 'not found' error",
 			args:    args{r: r, id: 9999},
+			wantErr: ErrRecordNotFound,
+		},
+		{
+			name:    "should return 'not found' error if schedule has been removed",
+			args:    args{r: r, id: sID2},
 			wantErr: ErrRecordNotFound,
 		},
 	}
@@ -173,10 +206,13 @@ func TestPauseSchedule(t *testing.T) {
 
 func TestUnpauseSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
-	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
-	hourSched.Pause()
-	hourSchedID, _ := r.Add(hourSched)
+	f, _ := schedule.NewHourFrequency([]int{0})
+	s1 := schedule.New(f)
+	s2 := schedule.New(f)
+	s1.Pause()
+	s2.Remove()
+	sID1, _ := r.Add(s1)
+	sID2, _ := r.Add(s2)
 	c := make(chan<- bool)
 
 	type args struct {
@@ -190,12 +226,17 @@ func TestUnpauseSchedule(t *testing.T) {
 	}{
 		{
 			name:    "should unpause schedule",
-			args:    args{r: r, id: hourSchedID},
+			args:    args{r: r, id: sID1},
 			wantErr: ErrNone,
 		},
 		{
 			name:    "should return 'not found' error",
 			args:    args{r: r, id: 9999},
+			wantErr: ErrRecordNotFound,
+		},
+		{
+			name:    "should return 'not found' error if schedule has been removed",
+			args:    args{r: r, id: sID2},
 			wantErr: ErrRecordNotFound,
 		},
 	}
@@ -207,6 +248,33 @@ func TestUnpauseSchedule(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestRemoveSchedule(t *testing.T) {
+	r := data.NewScheduleRepo()
+	f, err := schedule.NewHourFrequency([]int{0})
+	if err != nil {
+		t.Fatal(err);
+	}
+	s := schedule.New(f)
+	sID, err := r.Add(s)
+	if err != nil {
+		t.Fatal(err);
+	}
+	c := make(chan<- bool)
+
+	err = RemoveSchedule(r, sID, c)
+	if err != nil {
+		t.Errorf("RemoveSchedule() error = %v, wantErr %v", err, nil)
+	}
+
+	retrievedS, ucErr := r.Get(sID)
+	if ucErr != nil {
+		t.Errorf("Get(%v) should have retrieved the removed schedule", sID)
+	}
+	if retrievedS.IsValid() {
+		t.Errorf("RemoveSchedule() should cause IsValid() to return false for schedule: %v", retrievedS)
 	}
 }
 

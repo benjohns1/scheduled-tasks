@@ -47,6 +47,29 @@
 		});
 	}
 
+    const deleteSchedule = schedule => {
+		if (schedule.data.id !== undefined) {
+			const id = schedule.data.id;
+			return fetch(`schedule/${id}.json`, { method: "DELETE", headers: {'Content-Type': 'application/json'} }).then(r => {
+				if (r.status !== 204) {
+					console.error(r);
+					return;
+				}
+				schedules = schedules.filter(s => s.data.id !== id);
+			}).catch(err => {
+				console.error(err);
+			});
+		}
+
+		if (schedule.editID !== undefined) {
+			const editID = schedule.editID;
+			schedules = schedules.filter(s => s.editID !== editID);
+			return;
+		}
+
+		console.error('error deleting schedule, no valid ID', schedule);
+    }
+
 	function newSchedule() {
 		schedules = [{
 			data: {
@@ -102,7 +125,7 @@
 	{:else}
 		<ul>
 			{#each schedules as schedule}
-				<li data-test=schedule-item><Schedule schedule={schedule} addScheduleHandler={addSchedule}/></li>
+				<li data-test=schedule-item><Schedule schedule={schedule} addScheduleHandler={addSchedule} deleteScheduleHandler={deleteSchedule}/></li>
 			{/each}
 		</ul>
 	{/if}

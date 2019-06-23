@@ -105,7 +105,7 @@ func (r *ScheduleRepo) getAllWhere(whereClause string) (map[usecase.ScheduleID]*
 }
 
 func scheduleSelectClause() (selectClause string) {
-	return "SELECT id, paused, last_checked, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes FROM schedule"
+	return "SELECT id, paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes FROM schedule"
 }
 
 func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
@@ -121,8 +121,9 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 		fAtMinutes  []sql.NullInt64
 		paused      bool
 		lastChecked *string
+		removed     *string
 	}
-	err = r.Scan(&row.id, &row.paused, &row.lastChecked, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes))
+	err = r.Scan(&row.id, &row.paused, &row.lastChecked, &row.removed, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes))
 	if err != nil {
 		return
 	}
@@ -137,9 +138,13 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 	if err != nil {
 		lastChecked = time.Time{}
 	}
+	removed, err := time.Parse(dbTimeFormat, *row.removed)
+	if err != nil {
+		removed = time.Time{}
+	}
 
 	// Construct schedule entity
-	sd.Schedule = schedule.NewRaw(f, row.paused, lastChecked, []schedule.RecurringTask{})
+	sd.Schedule = schedule.NewRaw(f, row.paused, lastChecked, []schedule.RecurringTask{}, removed)
 	sd.ScheduleID = usecase.ScheduleID(row.id)
 
 	return
@@ -161,10 +166,10 @@ func toIntSlice(sqlSlice []sql.NullInt64) []int {
 
 // Add adds a schedule to the persisence layer
 func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Error) {
-	q := "INSERT INTO schedule (paused, last_checked, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+	q := "INSERT INTO schedule (paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
 	var id usecase.ScheduleID
 	f := s.Frequency()
-	err := r.db.QueryRow(q, s.Paused(), s.LastChecked(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes())).Scan(&id)
+	err := r.db.QueryRow(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes())).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}
@@ -252,9 +257,9 @@ func (r *ScheduleRepo) clearTasks(sid usecase.ScheduleID) error {
 func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) usecase.Error {
 
 	// Update schedule row
-	q := "UPDATE schedule SET paused = $1, last_checked = $2, frequency_offset = $3, frequency_interval = $4, frequency_time_period = $5, frequency_at_minutes = $6 WHERE id = $7 RETURNING id"
+	q := "UPDATE schedule SET paused = $1, last_checked = $2, removed_time = $3, frequency_offset = $4, frequency_interval = $5, frequency_time_period = $6, frequency_at_minutes = $7 WHERE id = $8 RETURNING id"
 	f := s.Frequency()
-	rows, err := r.db.Query(q, s.Paused(), s.LastChecked(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
+	rows, err := r.db.Query(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), id)
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating schedule id %d: %v", id, err)
 	}

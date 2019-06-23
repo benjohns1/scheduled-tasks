@@ -381,11 +381,37 @@ func TestSchedule_TaskListUpdates(t *testing.T) {
 	s.RemoveTask(rt2remove)
 	s.RemoveTask(rt3unknown)
 
-	t.Run("should list 1st task", func(t *testing.T) {
+	t.Run("should list first task", func(t *testing.T) {
 		want := []RecurringTask{rt1}
 		got := s.Tasks()
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("Schedule.List() = %v, want %v", got, want)
 		}
 	})
+}
+
+func TestSchedule_IsValid(t *testing.T) {
+	tests := []struct {
+		name string
+		s    *Schedule
+		want bool
+	}{
+		{
+			name: "schedule with a zero removed time should be valid",
+			s:    &Schedule{removedTime: time.Time{}},
+			want: true,
+		},
+		{
+			name: "schedule with a removed time should be invalid",
+			s:    &Schedule{removedTime: time.Now()},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.s.IsValid(); got != tt.want {
+				t.Errorf("Schedule.IsValid() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

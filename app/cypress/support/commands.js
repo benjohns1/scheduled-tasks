@@ -41,7 +41,7 @@ Cypress.Commands.add("addTask", (name, description) => {
 	});
 });
 
-Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, paused}, { save = true, visit = true } = {}) => {
+Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, paused, tasks}, { save = true, visit = true } = {}) => {
 	if (visit) {
 		cy.visitWait('/schedule');
 	}
@@ -54,8 +54,24 @@ Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, p
 		if (paused) {
 			cy.wrap($s).find('[data-test=paused-toggle]').check();
 		}
+		if (tasks) {
+			cy.addRecurringTasks($s, tasks, {save: false});
+		}
 		if (save) {
 			cy.wrap($s).find('[data-test=save-button]').click();
 		}
+	});
+});
+
+Cypress.Commands.add("addRecurringTasks", ($scheduleItem, tasks, { save = true } = {}) => {
+	tasks.forEach(task => {
+		cy.wrap($scheduleItem).find('[data-test=new-task]').click();
+		cy.wrap($scheduleItem).find('[data-test=task-item]:nth-child(1)').then($ti => {
+			cy.wrap($ti).find('[data-test=task-name-input]').clear().type(task.name);
+			cy.wrap($ti).find('[data-test=task-description-input]').clear().type(task.description);
+			if (save) {
+				cy.wrap($ti).find('[data-test=save-button]').click();
+			}
+		});
 	});
 });

@@ -136,6 +136,7 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			id SERIAL PRIMARY KEY,
 			paused boolean NOT NULL,
 			last_checked TIMESTAMPTZ,
+			removed_time TIMESTAMPTZ,
 			frequency_offset integer NOT NULL,
 			frequency_interval integer NOT NULL,
 			frequency_time_period smallint NOT NULL,

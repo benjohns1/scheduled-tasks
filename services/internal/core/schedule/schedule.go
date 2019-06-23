@@ -13,6 +13,7 @@ type Schedule struct {
 	paused      bool
 	lastChecked time.Time
 	tasks       []RecurringTask
+	removedTime time.Time
 }
 
 // New instantiates a new schedule entity
@@ -21,8 +22,8 @@ func New(f Frequency) *Schedule {
 }
 
 // NewRaw creates a new schedule entity from raw data
-func NewRaw(frequency Frequency, paused bool, lastChecked time.Time, tasks []RecurringTask) *Schedule {
-	return &Schedule{frequency, paused, lastChecked, tasks}
+func NewRaw(frequency Frequency, paused bool, lastChecked time.Time, tasks []RecurringTask, removedTime time.Time) *Schedule {
+	return &Schedule{frequency, paused, lastChecked, tasks, removedTime}
 }
 
 // Pause pauses a schedule
@@ -41,6 +42,11 @@ func (s *Schedule) Unpause() {
 // Paused returns whether schedule is currently paused
 func (s *Schedule) Paused() bool {
 	return s.paused
+}
+
+// RemovedTime returns removed time
+func (s *Schedule) RemovedTime() time.Time {
+	return s.removedTime
 }
 
 // LastChecked returns the last time this schedule was checked for recurrences
@@ -103,4 +109,17 @@ func (s *Schedule) Times(start time.Time, end time.Time) ([]time.Time, error) {
 // NextTime gets the next scheduled time after the given time
 func (s *Schedule) NextTime(after time.Time) (time.Time, error) {
 	return s.frequency.next(after)
+}
+
+// Remove removes a schedule
+func (s *Schedule) Remove() error {
+	if s.removedTime.IsZero() {
+		s.removedTime = clock.Now()
+	}
+	return nil
+}
+
+// IsValid returns whether a schedule is valid and can be operated upon
+func (s *Schedule) IsValid() bool {
+	return s.removedTime.IsZero()
 }

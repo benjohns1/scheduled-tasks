@@ -28,6 +28,11 @@ func GetSchedule(r ScheduleRepo, id ScheduleID) (*ScheduleData, Error) {
 	if err != nil {
 		return nil, err.Prefix("error getting schedule id %v", id)
 	}
+
+	if !s.IsValid() {
+		return nil, NewError(ErrRecordNotFound, "schedule id %d not found", id)
+	}
+
 	return &ScheduleData{ScheduleID: id, Schedule: s}, nil
 }
 
@@ -37,7 +42,16 @@ func ListSchedules(r ScheduleRepo) (map[ScheduleID]*schedule.Schedule, Error) {
 	if err != nil {
 		return nil, err.Prefix("error listing all schedules")
 	}
-	return ss, nil
+
+	list := make(map[ScheduleID]*schedule.Schedule)
+	for id, s := range ss {
+		if !s.IsValid() {
+			continue
+		}
+		list[id] = s
+	}
+
+	return list, nil
 }
 
 // AddSchedule adds a new schedule
@@ -61,6 +75,10 @@ func PauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Err
 		return err.Prefix("error retrieving schedule id %d to pause", id)
 	}
 
+	if !s.IsValid() {
+		return NewError(ErrRecordNotFound, "schedule id %d not found", id)
+	}
+
 	s.Pause()
 
 	err = r.Update(id, s)
@@ -82,11 +100,38 @@ func UnpauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) E
 		return err.Prefix("error retrieving schedule id %d to unpause", id)
 	}
 
+	if !s.IsValid() {
+		return NewError(ErrRecordNotFound, "schedule id %d not found", id)
+	}
+
 	s.Unpause()
 
 	err = r.Update(id, s)
 	if err != nil {
 		return err.Prefix("error updating schedule id %d attempting to unpause", id)
+	}
+	select {
+	case checkSchedule <- true:
+	default:
+	}
+	return nil
+}
+
+// RemoveSchedule removes a schedule
+func RemoveSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
+	s, ucErr := r.Get(id)
+	if ucErr != nil {
+		return ucErr.Prefix("error retrieving schedule id %d to remove", id)
+	}
+
+	err := s.Remove()
+	if err != nil {
+		return NewError(ErrUnknown, "error removing schedule id %d", id)
+	}
+
+	ucErr = r.Update(id, s)
+	if err != nil {
+		return ucErr.Prefix("error attempting to remove schedule id %d", id)
 	}
 	select {
 	case checkSchedule <- true:

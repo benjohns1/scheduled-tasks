@@ -104,7 +104,7 @@ func ClearCompletedTasks(r TaskRepo) (int, Error) {
 
 	count := 0
 	for id, t := range ts {
-		if t.CompletedTime().IsZero() || !t.ClearedTime().IsZero() {
+		if t.CompletedTime().IsZero() || !t.IsValid() {
 			continue
 		}
 		err := t.ClearCompleted()
@@ -121,7 +121,7 @@ func ClearCompletedTasks(r TaskRepo) (int, Error) {
 	return count, nil
 }
 
-// ListTasks returns all tasks that haven't been cleared
+// ListTasks returns all valid (uncleared) tasks
 func ListTasks(r TaskRepo) (map[TaskID]*task.Task, Error) {
 	all, ucerr := r.GetAll()
 	if ucerr != nil {
@@ -130,7 +130,7 @@ func ListTasks(r TaskRepo) (map[TaskID]*task.Task, Error) {
 
 	list := make(map[TaskID]*task.Task)
 	for id, t := range all {
-		if !t.ClearedTime().IsZero() {
+		if !t.IsValid() {
 			continue
 		}
 		list[id] = t

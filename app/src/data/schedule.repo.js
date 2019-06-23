@@ -14,6 +14,14 @@ export async function addRecurringTask(id, data) {
   return fetch(`${baseUrl}/${id}/task`, { method: "POST", body: JSON.stringify(data) });
 }
 
-export async function pause(id, pause) {
-  return fetch(`${baseUrl}/${id}/${pause}`, { method: "PUT" });
+export async function pause(id) {
+  return fetch(`${baseUrl}/${id}/pause`, { method: "PUT" });
+}
+
+export async function unpause(id) {
+  return fetch(`${baseUrl}/${id}/unpause`, { method: "PUT" });
+}
+
+export async function remove(id) {
+  return fetch(`${baseUrl}/${id}`, { method: "DELETE" });
 }

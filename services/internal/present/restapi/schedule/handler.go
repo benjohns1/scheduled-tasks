@@ -44,6 +44,7 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	sPre := prefix + "/schedule"
 	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
 	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
+	r.DELETE(sPre+"/:scheduleID", removeSchedule(l, f, checkSchedule, scheduleRepo))
 	r.POST(sPre+"/", addSchedule(l, f, p, checkSchedule, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, checkSchedule, scheduleRepo))
 	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, checkSchedule, scheduleRepo))
@@ -121,6 +122,29 @@ func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httpr
 			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
+	}
+}
+
+func removeSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		scheduleIDInt, err := strconv.Atoi(ps.ByName("scheduleID"))
+		if err != nil {
+			l.Printf("valid schedule ID required")
+			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
+			return
+		}
+		id := usecase.ScheduleID(scheduleIDInt)
+		ucerr := usecase.RemoveSchedule(scheduleRepo, id, checkSchedule)
+		if ucerr != nil {
+			if ucerr.Code() == usecase.ErrRecordNotFound {
+				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
+				return
+			}
+			l.Printf("error removing schedule: %v", ucerr)
+			f.WriteResponse(w, f.Error("Error removing schedule"), 500)
+			return
+		}
+		f.WriteEmpty(w, 204)
 	}
 }
 

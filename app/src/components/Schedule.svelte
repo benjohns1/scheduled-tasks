@@ -4,6 +4,7 @@
 
     export let schedule = {};
     export let addScheduleHandler = undefined;
+    export let deleteScheduleHandler = undefined;
 
     let tasks = [];
 
@@ -20,7 +21,7 @@
             };
             setAddTaskHandler();
 
-            if (schedule.data && schedule.data.tasks) {
+            if (schedule.data.tasks) {
                 tasks = schedule.data.tasks.map(t => {
                     return {
                         data: t,
@@ -193,6 +194,12 @@
         });
     }
 
+    function deleteSchedule() {
+        if (deleteScheduleHandler) {
+            deleteScheduleHandler(schedule);
+        }
+    }
+
 </script>
 
 <style>
@@ -251,6 +258,7 @@
     </header>
     {#if schedule.open}
         <div class='panel' transition:slide='{{ duration: 100 }}'>
+            <span class='right'><button on:click={deleteSchedule} data-test=delete-schedule-button>delete</button></span>
             <div>
                 <label for='schedule-frequency'><span>Frequency:</span>
                 {#if schedule.editID}
