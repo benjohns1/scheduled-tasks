@@ -91,8 +91,8 @@ describe('edit schedule functionality', () => {
 			});
 
 			cy.log('pause/unpause schedules and check persistence');
-			cy.get('[data-test=schedule-item]:nth-child(1) [data-test=paused-toggle]').uncheck();
-			cy.get('[data-test=schedule-item]:nth-child(2) [data-test=paused-toggle]').check();
+			cy.get('[data-test=schedule-item]:nth-child(1) [data-test=paused-toggle]').uncheck({force: true});
+			cy.get('[data-test=schedule-item]:nth-child(2) [data-test=paused-toggle]').check({force: true});
 			cy.visitWait('/schedule');
 			cy.get('[data-test=schedule-item]:nth-child(1)').then($s => {
 				cy.wrap($s).find('[data-test=open-button]').click();

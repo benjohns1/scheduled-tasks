@@ -1,6 +1,7 @@
 <script>
     import { slide } from 'svelte/transition';
 	import Task from "./Task.svelte";
+	import Button from "./Button.svelte";
 
     export let schedule = {};
     export let addScheduleHandler = undefined;
@@ -203,124 +204,126 @@
 </script>
 
 <style>
-    header {
-        background-color: #ddd;
-        padding: 0.4rem 1rem;
-    }
-    header h2 {
+    header h3 {
         display: inline;
     }
-    span.right {
+    .right {
         float: right;
         margin-left: 1rem;
     }
-    section {
-        background-color: #eee;
+    .clearfix:after,
+    header:after {
+        content: "";
+        clear: both;
+        display: table;
     }
 	.emptyMessage {
 		color: #4d4d4d;
 	}
-    .panel {
-        margin: 0;
-        padding: 0.4rem 1rem;
-    }
-    button {
-        cursor: pointer;
-    }
-    label span:nth-child(1) {
-        display: inline-block;
-        width: 6.5rem;
-    }
 	ul {
 		list-style: none;
         margin: 1px 0;
-        padding: 0;
+        padding: 0.5rem 0 0 0;
 	}
 	li {
 		padding-bottom: 1px;
 		clear: both;
 	}
+    .card-text {
+        padding-top: 0.5rem;
+    }
+    .custom-switch input[type=checkbox] {
+        position: relative;
+    }
 </style>
 
-<section>
-    <header>
-        <h2 data-test=schedule-name>{ui.name}</h2>
-        <span class=right>
-            {#if addScheduleHandler && schedule.editID}
-                <button on:click={save} data-test=save-button>save</button>
-            {/if}
-            {#if schedule.open}
-                <button on:click={close} data-test=close-button>v</button>
-            {:else}
-                <button on:click={open} data-test=open-button>&gt;</button>
-            {/if}
-        </span>
-    </header>
-    {#if schedule.open}
-        <div class='panel' transition:slide='{{ duration: 100 }}'>
-            <span class='right'><button on:click={deleteSchedule} data-test=delete-schedule-button>delete</button></span>
-            <div>
-                <label for='schedule-frequency'><span>Frequency:</span>
-                {#if schedule.editID}
-                    <select id='schedule-frequency' data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={validateAll}>
-                        <option value='Hour'>Hour</option>
-                        <option value='Day'>Day</option>
-                        <option value='Week'>Week</option>
-                        <option value='Month'>Month</option>
-                    </select>
-                {:else}
-                    <span data-test=schedule-frequency id='schedule-frequency'>{schedule.data.frequency}</span>
+<section class=card>
+    <div class=card-body>
+        <header>
+            <h3 data-test=schedule-name class=card-title>{ui.name}</h3>
+            <span class=right>
+                {#if addScheduleHandler && schedule.editID}
+                    <Button on:click={save} test=save-button style=success>save</Button>
                 {/if}
-                </label>
-            </div>
-            <div>
-                <label><span>Interval:</span>
-                {#if schedule.editID}
-                    <input type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax} on:blur={validateInterval} on:focus={validateInterval}> (1 - {ui.intervalMax})
+                {#if schedule.open}
+                    <Button on:click={close} test=close-button style=secondary>v</Button>
                 {:else}
-                    <span data-test=schedule-interval>{schedule.data.interval}</span>
+                    <Button on:click={open} test=open-button style=secondary>&gt;</Button>
                 {/if}
-                </label>
+            </span>
+        </header>
+        {#if schedule.open}
+            <div class=card-text transition:slide='{{ duration: 100 }}'>
+                <div class='form-group row'>
+                    <div class='custom-control custom-switch'>
+                        {#if schedule.editID}
+                            <input id='schedulePaused' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused}>
+                        {:else}
+                            <input id='schedulePaused' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
+                        {/if}
+                        <label for='schedulePaused' class='custom-control-label'>Pause ({schedule.data.paused ? 'on' : 'off'})</label>
+                    </div>
+                </div>
+                <div class='form-group row'>
+                    {#if schedule.editID}
+                        <label for='scheduleFrequency' class='col-sm-2 col-form-label'>Frequency:</label>
+                        <div class='col-sm-10'><select id='scheduleFrequency' class=form-control data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={validateAll}>
+                            <option value='Hour'>Hour</option>
+                            <option value='Day'>Day</option>
+                            <option value='Week'>Week</option>
+                            <option value='Month'>Month</option>
+                        </select></div>
+                    {:else}
+                        <span class='col-sm-2'>Frequency:</span> <span class='col-sm-10' data-test=schedule-frequency>{schedule.data.frequency}</span>
+                    {/if}
+                </div>
+                <div class='form-group row'>
+                    {#if schedule.editID}
+                        <label for='scheduleInterval' class='col-sm-2 col-form-label'>Interval:</label>
+                        <div class='col-sm-10'>
+                            <input id='scheduleInterval' class=form-control type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax} on:blur={validateInterval} on:focus={validateInterval}>
+                            <small class='form-text text-muted'>(1 - {ui.intervalMax})</small>
+                        </div>
+                    {:else}
+                        <span class='col-sm-2'>Interval:</span> <span class='col-sm-10' data-test=schedule-interval>{schedule.data.interval}</span>
+                    {/if}
+                </div>
+                <div class='form-group row'>
+                    {#if schedule.editID}
+                        <label for='scheduleOffset' class='col-sm-2 col-form-label'>Offset:</label>
+                        <div class='col-sm-10'>
+                            <input id='scheduleOffset' class=form-control type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax} on:blur={validateOffset} on:focus={validateOffset}>
+                            <small class='form-text text-muted'>(0 - {ui.intervalMax})</small>
+                        </div>
+                    {:else}
+                        <span class='col-sm-2'>Offset:</span> <span class='col-sm-10' data-test=schedule-offset>{schedule.data.offset}</span>
+                    {/if}
+                </div>
+                <div class='form-group row'>
+                    {#if schedule.editID}
+                        <label for='scheduleAtMinutes' class='col-sm-2 col-form-label'>At minutes:</label>
+                        <div class='col-sm-10'>
+                            <input id='scheduleAtMinutes' class=form-control type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}>
+                            <small class='form-text text-muted'>(comma-separated, 0 - {ui.minuteMax})</small>
+                        </div>
+                    {:else}
+                        <span class='col-sm-2'>At minutes:</span> <span class='col-sm-10' data-test=schedule-at-minutes>{ui.atMinutes}</span>
+                    {/if}
+                </div>
+                <div>
+                    <div class=clearfix><Button on:click={newTask} test=new-task classes=right style=success>new task</Button></div>
+                    {#if tasks.length === 0}
+                        <p class='emptyMessage'>No recurring tasks</p>
+                    {:else}
+                        <ul>
+                            {#each tasks as task}
+                                <li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTaskHandler}/></li>
+                            {/each}
+                        </ul>
+                    {/if}
+                </div>
+                <Button on:click={deleteSchedule} test=delete-schedule-button style=outline-danger>delete schedule</Button>
             </div>
-            <div>
-                <label><span>Offset:</span>
-                {#if schedule.editID}
-                    <input type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax} on:blur={validateOffset} on:focus={validateOffset}> (0 - {ui.intervalMax})
-                {:else}
-                    <span data-test=schedule-offset>{schedule.data.offset}</span>
-                {/if}
-                </label>
-            </div>
-            <div>
-                <label><span>At minutes:</span>
-                {#if schedule.editID}
-                    <input type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}> (comma-separated, 0 - {ui.minuteMax})
-                {:else}
-                    <span data-test=schedule-at-minutes>{ui.atMinutes}</span>
-                {/if}
-                </label>
-            </div>
-            <div>
-                <label><span>Paused:</span>
-                {#if schedule.editID}
-                    <input type=checkbox data-test=paused-toggle bind:checked={schedule.data.paused}>
-                {:else}
-                    <input type=checkbox data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
-                {/if}
-                </label>
-            </div>
-            <div>
-                <span class='right'><button on:click={newTask} data-test=new-task>new task</button></span>
-                {#if tasks.length === 0}
-                    <p class='emptyMessage'>No recurring tasks</p>
-                {:else}
-                    <ul>
-                        {#each tasks as task}
-                            <li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTaskHandler}/></li>
-                        {/each}
-                    </ul>
-                {/if}
-            </div>
-        </div>
-    {/if}
+        {/if}
+    </div>
 </section>

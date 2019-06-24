@@ -52,7 +52,7 @@ Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, p
 		cy.wrap($s).find('[data-test=schedule-offset-input]').clear().type(offset);
 		cy.wrap($s).find('[data-test=schedule-at-minutes-input]').clear().type(atMinutes).blur();
 		if (paused) {
-			cy.wrap($s).find('[data-test=paused-toggle]').check();
+			cy.wrap($s).find('[data-test=paused-toggle]').check({force: true});
 		}
 		if (tasks) {
 			cy.addRecurringTasks($s, tasks, {save: false});

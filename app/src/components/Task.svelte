@@ -1,5 +1,6 @@
 <script>
     import { slide } from 'svelte/transition';
+	import Button from "./Button.svelte";
 
     export let task = {};
     export let opened = false;
@@ -36,72 +37,65 @@
 </script>
 
 <style>
-    header {
-        background-color: #ddd;
-        padding: 0.4rem 1rem;
-    }
-    header h2 {
+    header h3 {
         display: inline;
     }
-    span.right {
+    .right {
         float: right;
         margin-left: 1rem;
     }
-    span.left {
+    .left {
         float: left;
         margin-right: 1rem;
     }
-    section {
-        background-color: #eee;
-    }
-    .panel {
-        margin: 0;
-        padding: 0.4rem 1rem;
-    }
-    p {
-        margin: 0 0 0.5rem 0;
-    }
-    button {
-        cursor: pointer;
+    header:after {
+        content: "";
+        clear: both;
+        display: table;
     }
     textarea {
         width: 100%;
         height: 100%;
     }
+    .card-text {
+        padding-top: 0.5rem;
+    }
 </style>
 
-<section>
-    <header>
-        <h2 data-test=task-name>
-            {#if editing}
-                <input type=text bind:value={task.name} placeholder='task name' data-test=task-name-input>
-            {:else}
-                {(task.name || 'task')}
+<section class=card>
+    <div class=card-body>
+        <header>
+            {#if !editing && !task.completedTime && completeTaskHandler}
+                <span class=left>
+                    <Button on:click={complete} test=complete-toggle style=outline-primary>done</Button>
+                </span>
             {/if}
-        </h2>
-        {#if !editing && !task.completedTime && completeTaskHandler}
-            <span class='left'>
-                <button on:click={complete} data-test=complete-toggle>done</button>
+            <h3 data-test=task-name class='card-title form-inline'>
+                {#if editing}
+                    <input type=text bind:value={task.name} class=form-control placeholder='task name' data-test=task-name-input>
+                {:else}
+                    {(task.name || 'task')}
+                {/if}
+            </h3>
+            <span class=right>
+                {#if editing && addTaskHandler}
+                    <Button on:click={save} test=save-button style=success>save</Button>
+                {/if}
+                {#if opened}
+                    <Button on:click={close} test=close-button style=secondary>v</Button>
+                {:else}
+                    <Button on:click={open} test=open-button style=secondary>&gt;</Button>
+                {/if}
             </span>
+        </header>
+        {#if opened}
+            <div class=card-text transition:slide='{{ duration: 100 }}'>
+                {#if editing}
+                    <textarea bind:value={task.description} class=form-control placeholder='description' data-test=task-description-input></textarea>
+                {:else}
+                    <span data-test=task-description>{@html (task.description || '')}</span>
+                {/if}
+            </div>
         {/if}
-        <span class=right>
-            {#if editing && addTaskHandler}
-                <button on:click={save} data-test=save-button>save</button>
-            {/if}
-            {#if opened}
-                <button on:click={close} data-test=close-button>v</button>
-            {:else}
-                <button on:click={open} data-test=open-button>&gt;</button>
-            {/if}
-        </span>
-    </header>
-    {#if opened}
-        <div class='panel' transition:slide='{{ duration: 100 }}'>
-            {#if editing}
-                <textarea bind:value={task.description} placeholder='description' data-test=task-description-input></textarea>
-            {:else}
-                <p data-test=task-description>{@html (task.description || '')}</p>
-            {/if}
-        </div>
-    {/if}
+    </div>
 </section>

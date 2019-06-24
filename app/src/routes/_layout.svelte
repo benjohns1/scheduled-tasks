@@ -13,19 +13,10 @@
 
 </script>
 
-<style>
-	main {
-		position: relative;
-		max-width: 56em;
-		background-color: white;
-		padding: 2em;
-		margin: 0 auto;
-		box-sizing: border-box;
-	}
-</style>
+<div class=container>
+	<Nav {segment}/>
 
-<Nav {segment}/>
-
-<main data-test={testID}>
-	<slot></slot>
-</main>
+	<main data-test={testID}>
+		<slot></slot>
+	</main>
+</div>

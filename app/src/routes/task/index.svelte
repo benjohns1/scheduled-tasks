@@ -1,5 +1,6 @@
 <script context="module">
 	import Task from "../../components/Task.svelte"
+	import Button from "../../components/Button.svelte"
 	
 	export function preload({ params, query }) {
 		return this.fetch(`task.json`).then(async r => {
@@ -92,6 +93,8 @@
 <style>
 	ul {
 		list-style: none;
+        margin: 1px 0;
+        padding: 0;
 	}
 	li {
 		padding-bottom: 1px;
@@ -106,11 +109,19 @@
 	.emptyMessage {
 		color: #4d4d4d;
 	}
+	header {
+		margin-bottom: 0.5rem;
+	}
 	header h1 {
         display: inline;
 	}
-	header button {
-		float: right;
+    header:after {
+        content: "";
+        clear: both;
+        display: table;
+	}
+	section {
+		margin-bottom: 1rem;
 	}
 </style>
 
@@ -121,7 +132,7 @@
 <section data-test=tasks>
 	<header>
 		<h1>Tasks</h1>
-		<button on:click={newTask} data-test=new-task-button>new task</button>
+		<Button on:click={newTask} test=new-task-button classes=right style=success>new task</Button>
 	</header>
 	{#if taskError !== undefined}
 		<p class="error">{taskError.message}</p>
@@ -141,7 +152,7 @@
 <section data-test=completed-tasks>
 	<header>
 		<h1>Completed</h1>
-		<button on:click={clearTasks} data-test=clear-tasks-button>clear all completed tasks</button>
+		<Button on:click={clearTasks} test=clear-tasks-button classes=right style=outline-danger>clear all completed tasks</Button>
 	</header>
 	{#if completedSuccessMessage !== undefined}
 		<p class="successMessage" data-test=completed-success-message>{completedSuccessMessage}</p>

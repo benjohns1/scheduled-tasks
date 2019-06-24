@@ -1,5 +1,6 @@
 <script context="module">
 	import Schedule from "../../components/Schedule.svelte"
+	import Button from "../../components/Button.svelte"
 	
 	export function preload({ params, query }) {
 		return this.fetch(`schedule.json`).then(r => {
@@ -88,6 +89,8 @@
 <style>
 	ul {
 		list-style: none;
+        margin: 1px 0;
+        padding: 0;
 	}
 	li {
 		padding-bottom: 1px;
@@ -99,11 +102,16 @@
 	.emptyMessage {
 		color: #4d4d4d;
 	}
+	header {
+		margin-bottom: 0.5rem;
+	}
 	header h1 {
         display: inline;
 	}
-	header button {
-		float: right;
+    header:after {
+        content: "";
+        clear: both;
+        display: table;
 	}
 </style>
 
@@ -114,7 +122,7 @@
 <section data-test=schedules>
 	<header>
 		<h1>Schedules</h1>
-		<button on:click={newSchedule} data-test=new-schedule-button>new schedule</button>
+		<Button on:click={newSchedule} test=new-schedule-button classes=right style=success>new schedule</Button>
 	</header>
 	{#if scheduleError !== undefined}
 		<p class='error'>{scheduleError}</p>
