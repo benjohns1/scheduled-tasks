@@ -1,9 +1,9 @@
 <script>
-    export let test;
+    export let test = undefined;
     export let style = 'primary';
-    export let classes;
+    export let classes = '';
 
-    $: classStr = ` ${classes}`;
+    $: classStr = classes === '' ? '' : ` ${classes}`;
 </script>
 
 <style>
