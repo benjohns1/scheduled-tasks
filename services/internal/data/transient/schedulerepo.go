@@ -27,11 +27,11 @@ func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.E
 	return s, nil
 }
 
-// GetAllUnpaused retrieves all unpaused schedules
-func (r *ScheduleRepo) GetAllUnpaused() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+// GetAllScheduled retrieves all valid, unpaused schedules
+func (r *ScheduleRepo) GetAllScheduled() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
 	scheds := map[usecase.ScheduleID]*schedule.Schedule{}
 	for id, s := range r.schedules {
-		if !s.Paused() {
+		if s.IsValid() && !s.Paused() {
 			scheds[id] = s
 		}
 	}

@@ -17,7 +17,7 @@ type ScheduleData struct {
 type ScheduleRepo interface {
 	Get(ScheduleID) (*schedule.Schedule, Error)
 	GetAll() (map[ScheduleID]*schedule.Schedule, Error)
-	GetAllUnpaused() (map[ScheduleID]*schedule.Schedule, Error)
+	GetAllScheduled() (map[ScheduleID]*schedule.Schedule, Error)
 	Add(*schedule.Schedule) (ScheduleID, Error)
 	Update(ScheduleID, *schedule.Schedule) Error
 }

@@ -10,8 +10,8 @@ import (
 
 // CheckSchedules checks all schedules, determines all recurrences that have occurred, and when the next run is needed
 func CheckSchedules(taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, error) {
-	// Check all unpaused schedules
-	schedules, err := scheduleRepo.GetAllUnpaused()
+	// Check all valid, unpaused schedules
+	schedules, err := scheduleRepo.GetAllScheduled()
 	if err != nil {
 		return time.Time{}, err
 	}

@@ -59,12 +59,12 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 	return r.getAllWhere("")
 }
 
-// GetAllUnpaused retrieves all unpaused schedules
-func (r *ScheduleRepo) GetAllUnpaused() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
-	return r.getAllWhere("paused = FALSE")
+// GetAllScheduled retrieves all unpaused schedules that haven't been removed
+func (r *ScheduleRepo) GetAllScheduled() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+	return r.getAllWhere("paused = FALSE AND removed_time = $1", time.Time{})
 }
 
-func (r *ScheduleRepo) getAllWhere(whereClause string) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+func (r *ScheduleRepo) getAllWhere(whereClause string, params ...interface{}) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
 
 	q := scheduleSelectClause()
 	if whereClause != "" {
@@ -72,7 +72,7 @@ func (r *ScheduleRepo) getAllWhere(whereClause string) (map[usecase.ScheduleID]*
 	}
 
 	// Retrieve from DB
-	rows, err := r.db.Query(q)
+	rows, err := r.db.Query(q, params...)
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all schedules: %v", err)
 	}

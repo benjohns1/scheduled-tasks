@@ -169,32 +169,35 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 }
 
 
-func TestScheduleRepo_GetAllUnpaused(t *testing.T) {
+func TestScheduleRepo_GetAllScheduled(t *testing.T) {
 	conn, err := NewTestDBConn(DBTest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
+	f, err := schedule.NewHourFrequency([]int{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	r, err := NewScheduleRepo(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	f, err := schedule.NewHourFrequency([]int{})
+	sPause := schedule.New(f)
+	sPause.Pause()
+	sRemove := schedule.New(f)
+	sRemove.Remove()
+	sValid := schedule.New(f)
+	_, err = r.Add(sPause)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s1 := schedule.New(f)
-	s1.Pause()
-
-	s2 := schedule.New(f)
-
-	_, err = r.Add(s1)
+	_, err = r.Add(sRemove)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	id2, err := r.Add(s2)
+	validID, err := r.Add(sValid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,25 +209,25 @@ func TestScheduleRepo_GetAllUnpaused(t *testing.T) {
 		wantErr usecase.ErrorCode
 	}{
 		{
-			name:    "should get 1 empty hourly schedule",
+			name:    "should not return paused or removed schedules",
 			r:       r,
-			wantMap: map[usecase.ScheduleID]*schedule.Schedule{id2: s2},
+			wantMap: map[usecase.ScheduleID]*schedule.Schedule{validID: sValid},
 			wantErr: usecase.ErrNone,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.r.GetAllUnpaused()
+			got, err := tt.r.GetAllScheduled()
 			if len(got) != len(tt.wantMap) {
-				t.Errorf("ScheduleRepo.GetAllUnpaused() got = %v, want %v", got, tt.wantMap)
+				t.Errorf("ScheduleRepo.GetAllScheduled() got = %v, want %v", got, tt.wantMap)
 			}
 			for id, schedule := range got {
 				if !reflect.DeepEqual(schedule, tt.wantMap[id]) {
-					t.Errorf("ScheduleRepo.GetAllUnpaused() schedule[%v] got = %v, want %v", id, schedule, tt.wantMap[id])
+					t.Errorf("ScheduleRepo.GetAllScheduled() schedule[%v] got = %v, want %v", id, schedule, tt.wantMap[id])
 				}
 			}
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
-				t.Errorf("ScheduleRepo.GetAllUnpaused() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ScheduleRepo.GetAllScheduled() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
