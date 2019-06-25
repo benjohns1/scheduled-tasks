@@ -20,8 +20,7 @@ func TestRun(t *testing.T) {
 
 	now := time.Now()
 	prevClock := clock.Get()
-	clockMock := clock.NewStaticMock(now)
-	clock.Set(clockMock)
+	clock.Set(clock.NewStaticMock(now))
 	defer clock.Set(prevClock)
 
 	type args struct {
@@ -116,8 +115,7 @@ func TestRun(t *testing.T) {
 				sr.Add(s)
 
 				prevClock := clock.Get()
-				clockMock := clock.NewStaticMock(testNow)
-				clock.Set(clockMock)
+				clock.Set(clock.NewStaticMock(testNow))
 
 				return args{
 					l:            &loggerStub{},
@@ -168,8 +166,7 @@ func TestRun(t *testing.T) {
 				sr.Add(s)
 
 				prevClock := clock.Get()
-				clockMock := clock.NewStaticMock(testNow)
-				clock.Set(clockMock)
+				clock.Set(clock.NewStaticMock(testNow))
 
 				return args{
 					l:            &loggerStub{},
@@ -217,10 +214,10 @@ func TestRun(t *testing.T) {
 			arrange: func(t *testing.T) args {
 
 				prevClock := clock.Get()
-				
+
 				// setup schedule repo
 				sr := transient.NewScheduleRepo()
-				f, err := schedule.NewHourFrequency([]int{5,10,15})
+				f, err := schedule.NewHourFrequency([]int{5, 10, 15})
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
@@ -282,6 +279,202 @@ func TestRun(t *testing.T) {
 				if task.Name() != "t1" || task.Description() != "t1desc" {
 					t.Errorf("scheduler.Run() should have created 1 task, but task values were not correct")
 					return
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := tt.arrange(t)
+			if args.prevClock != nil {
+				defer clock.Set(args.prevClock)
+			}
+			close, check, closed := Run(args.l, args.taskRepo, args.scheduleRepo, args.nextRun)
+			defer func() {
+				close <- true
+			}()
+			tt.assert(t, args, resp{close, check, closed})
+		})
+	}
+}
+
+func TestHourlyFrequencyIntervalOffsets(t *testing.T) {
+
+	timeout := 10 * time.Millisecond
+
+	now := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	prevClock := clock.Get()
+	clock.Set(clock.NewStaticMock(now))
+	defer clock.Set(prevClock)
+
+	type args struct {
+		l            Logger
+		taskRepo     usecase.TaskRepo
+		scheduleRepo usecase.ScheduleRepo
+		nextRun      chan time.Time
+		prevClock    clock.Time
+	}
+	type resp struct {
+		close  chan<- bool
+		check  chan<- bool
+		closed <-chan bool
+	}
+	tests := []struct {
+		name    string
+		arrange func(*testing.T) args
+		assert  func(*testing.T, args, resp)
+	}{
+		{
+			name: "hour frequency with default interval and offset should be scheduled to run at +0:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{5})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := now.Add(5 * time.Minute).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+		{
+			name: "hour frequency with default interval and offset of 1 should be scheduled to run at +1:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{5})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				f.SetOffset(1)
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := now.Add(1*time.Hour + 5*time.Minute).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+		{
+			name: "hour frequency with interval of 2 and default offset should be scheduled to run at +2:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{5})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				f.SetInterval(2)
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				prevClock := clock.Get()
+				checkTime := time.Date(2000, time.January, 1, 0, 10, 0, 0, time.UTC)
+				clock.Set(clock.NewStaticMock(checkTime))
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := now.Add(2*time.Hour + 5*time.Minute).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+		{
+			name: "hour frequency with interval of 2 and offset 1 should be scheduled to run at +3:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewHourFrequency([]int{5})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				prevClock := clock.Get()
+				checkTime := time.Date(2000, time.January, 1, 1, 10, 0, 0, time.UTC)
+				clock.Set(clock.NewStaticMock(checkTime))
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := now.Add(3*time.Hour + 5*time.Minute).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() next run time should be the default wait time plus scheduler.Offset, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
 				}
 			},
 		},

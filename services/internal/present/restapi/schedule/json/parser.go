@@ -29,8 +29,8 @@ func (p *Parser) AddSchedule(b io.Reader) (*schedule.Schedule, error) {
 
 type addSchedule struct {
 	Frequency string             `json:"frequency"`
-	Interval  int                `json:"interval"`
-	Offset    int                `json:"offset"`
+	Interval  *int               `json:"interval"`
+	Offset    *int               `json:"offset"`
 	AtMinutes []int              `json:"atMinutes"`
 	Paused    bool               `json:"paused"`
 	Tasks     []addRecurringTask `json:"tasks"`
@@ -49,11 +49,17 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 	if err != nil {
 		return nil, err
 	}
-	if as.Interval != 1 && as.Interval != 0 {
-		f.SetInterval(as.Interval)
+	if as.Interval != nil {
+		err = f.SetInterval(*as.Interval)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if as.Offset != 0 {
-		f.SetOffset(as.Offset)
+	if as.Offset != nil {
+		err = f.SetOffset(*as.Offset)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	s := schedule.New(f)

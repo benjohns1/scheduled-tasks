@@ -3,16 +3,16 @@
 package restapi_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
-	"fmt"
-	
+
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
-	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 	format "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 )
 
 func TestTransientRESTAPIMulti(t *testing.T) {
@@ -35,7 +35,7 @@ func suiteMulti(t *testing.T, tester test.Tester) {
 }
 
 func addListGetCompleteTasks(t *testing.T, api http.Handler) {
-	
+
 	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 	nowStr := now.Format(format.OutTimeFormat)
 	prevClock := clock.Get()
@@ -49,11 +49,11 @@ func addListGetCompleteTasks(t *testing.T, api http.Handler) {
 		body   string
 	}
 	type asserts struct {
-		statusEquals int
-		bodyEquals   *string
-		bodyContains   *string
+		statusEquals    int
+		bodyEquals      *string
+		bodyContains    *string
 		bodyNotEquals   *string
-		bodyNotContains   *string
+		bodyNotContains *string
 	}
 	tests := []struct {
 		name    string
@@ -144,11 +144,11 @@ func addRemoveListSchedule(t *testing.T, api http.Handler) {
 		body   string
 	}
 	type asserts struct {
-		statusEquals int
-		bodyEquals   *string
-		bodyContains   *string
+		statusEquals    int
+		bodyEquals      *string
+		bodyContains    *string
 		bodyNotEquals   *string
-		bodyNotContains   *string
+		bodyNotContains *string
 	}
 	tests := []struct {
 		name    string
@@ -169,10 +169,16 @@ func addRemoveListSchedule(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
-			name:    "new hourly schedule should return 201 and ID 2",
+			name:    "new hourly schedule with tasks should return 201 and ID 2",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0,15,30], "tasks": [{"name":"rtask1","description":"rtask1 desc"}]}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
+		},
+		{
+			name:    "new hourly schedule with interval and offset should return 201 and ID 3",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0], "interval": 2, "offset": 1}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
 			name:    "get schedule ID 1 should return hourly schedule with no recurring tasks",
@@ -187,9 +193,21 @@ func addRemoveListSchedule(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,15,30],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}`)},
 		},
 		{
+			name:    "get schedule ID 3 should return hourly schedule with no recurring tasks and with interval and offset",
+			h:       api,
+			args:    args{method: "GET", url: "/api/v1/schedule/3"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":3,"frequency":"Hour","interval":2,"offset":1,"atMinutes":[0],"paused":false,"tasks":[]}`)},
+		},
+		{
 			name:    "removing schedule 1 should return 204",
 			h:       api,
 			args:    args{method: "DELETE", url: "/api/v1/schedule/1"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "removing schedule 3 should return 204",
+			h:       api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/3"},
 			asserts: asserts{statusEquals: http.StatusNoContent},
 		},
 		{
@@ -233,11 +251,11 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 		body   string
 	}
 	type asserts struct {
-		statusEquals int
-		bodyEquals   *string
-		bodyContains   *string
+		statusEquals    int
+		bodyEquals      *string
+		bodyContains    *string
 		bodyNotEquals   *string
-		bodyNotContains   *string
+		bodyNotContains *string
 	}
 	tests := []struct {
 		name    string
@@ -276,6 +294,18 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
+			name:    "new hourly schedule with interval and offset should return 201 and ID 4",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0], "interval": 2, "offset": 1}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":4}`)},
+		},
+		{
+			name:    "new hourly schedule with invalid ranges for interval and offset should return 400",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0], "interval": 0, "offset": -1}`},
+			asserts: asserts{statusEquals: http.StatusBadRequest},
+		},
+		{
 			name:    "get schedule ID 1 should return empty schedule with no recurring tasks",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
@@ -294,10 +324,16 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}`)},
 		},
 		{
-			name:    "should return 200 list with 3 schedules",
+			name:    "get schedule ID 4 should return empty schedule with no recurring tasks and interval and offset",
+			h:       api,
+			args:    args{method: "GET", url: "/api/v1/schedule/4"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":4,"frequency":"Hour","interval":2,"offset":1,"atMinutes":[0],"paused":false,"tasks":[]}`)},
+		},
+		{
+			name:    "should return 200 list with 4 schedules",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]},"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[],"paused":false,"tasks":[]},"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]},"4":{"id":4,"frequency":"Hour","interval":2,"offset":1,"atMinutes":[0],"paused":false,"tasks":[]}}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -334,11 +370,11 @@ func addRecurringTasksToEmptySchedule(t *testing.T, api http.Handler) {
 		body   string
 	}
 	type asserts struct {
-		statusEquals int
-		bodyEquals   *string
-		bodyContains   *string
+		statusEquals    int
+		bodyEquals      *string
+		bodyContains    *string
 		bodyNotEquals   *string
-		bodyNotContains   *string
+		bodyNotContains *string
 	}
 	tests := []struct {
 		name    string

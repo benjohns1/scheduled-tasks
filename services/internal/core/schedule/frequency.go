@@ -187,11 +187,12 @@ func (f *Frequency) next(after time.Time) (time.Time, error) {
 }
 
 func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, error) {
+
 	maxHour := (int(end.Sub(start).Hours()) / f.interval) + 1
 	times := []time.Time{}
 
 	// Calculate first hour
-	hour := start.Hour() + (start.Hour() % f.interval)
+	hour := start.Hour() + (start.Hour() % f.interval) + f.offset
 
 	// Add times to the array
 	for hri := 0; hri <= maxHour; hri++ {
@@ -209,10 +210,11 @@ func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, 
 	}
 	return times, nil
 }
+
 func (f *Frequency) calcNextHourTime(after time.Time) (time.Time, error) {
 
 	// Calculate first hour
-	hour := after.Hour() + (after.Hour() % f.interval)
+	hour := after.Hour() + (after.Hour() % f.interval) + f.offset
 
 	// Find next time
 	for hri := 0; hri < maxHrInt; hri++ {

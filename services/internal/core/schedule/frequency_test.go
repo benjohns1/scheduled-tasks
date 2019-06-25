@@ -6,6 +6,127 @@ import (
 	"time"
 )
 
+func emptyFrequencies(t *testing.T) []Frequency {
+	hourF, err := NewHourFrequency([]int{0})
+	if err != nil {
+		t.Fatalf("NewHourFrequency() returned unexpected error = %v", err)
+	}
+	dayF, err := NewDayFrequency([]int{0}, []int{0})
+	if err != nil {
+		t.Fatalf("NewDayFrequency() returned unexpected error = %v", err)
+	}
+	weekF, err := NewWeekFrequency([]int{0}, []int{0}, []time.Weekday{time.Sunday})
+	if err != nil {
+		t.Fatalf("NewWeekFrequency() returned unexpected error = %v", err)
+	}
+	monthF, err := NewMonthFrequency([]int{0}, []int{0}, []int{1})
+	if err != nil {
+		t.Fatalf("NewMonthFrequency() returned unexpected error = %v", err)
+	}
+	return []Frequency{
+		hourF,
+		dayF,
+		weekF,
+		monthF,
+	}
+}
+
+func TestDefaultOffsetInterval(t *testing.T) {
+	frequencies := emptyFrequencies(t)
+
+	defaultInterval := 1
+	defaultOffset := 0
+	for _, f := range frequencies {
+		t.Run("should have default interval and offset values", func(t *testing.T) {
+			if f.Interval() != defaultInterval {
+				t.Errorf("Frequency %v should have default interval %v, but got %v", f, defaultInterval, f.Interval())
+			}
+			if f.Offset() != defaultOffset {
+				t.Errorf("Frequency %v should have default offset %v, but got %v", f, defaultOffset, f.Offset())
+			}
+		})
+	}
+}
+
+func TestOffsetInterval(t *testing.T) {
+	defaultInterval := 1
+	defaultOffset := 0
+
+	type values struct {
+		interval int
+		offset   int
+	}
+	type errors struct {
+		interval bool
+		offset   bool
+	}
+	tests := []struct {
+		name    string
+		args    values
+		want    values
+		wantErr errors
+	}{
+		{
+			name:    "should set interval and offset",
+			args:    values{interval: 2, offset: 1},
+			want:    values{interval: 2, offset: 1},
+			wantErr: errors{interval: false, offset: false},
+		},
+		{
+			name:    "should set interval and offset",
+			args:    values{interval: 1000, offset: 1000},
+			want:    values{interval: 1000, offset: 1000},
+			wantErr: errors{interval: false, offset: false},
+		},
+		{
+			name:    "should return error when setting interval",
+			args:    values{interval: 0, offset: 1},
+			want:    values{interval: defaultInterval, offset: 1},
+			wantErr: errors{interval: true, offset: false},
+		},
+		{
+			name:    "should return error when setting offset",
+			args:    values{interval: 2, offset: -1},
+			want:    values{interval: 2, offset: defaultOffset},
+			wantErr: errors{interval: false, offset: true},
+		},
+		{
+			name:    "should return error when setting both interval and offset",
+			args:    values{interval: 0, offset: -1},
+			want:    values{interval: defaultInterval, offset: defaultOffset},
+			wantErr: errors{interval: true, offset: true},
+		},
+		{
+			name:    "should return error when setting both interval and offset",
+			args:    values{interval: -1000, offset: -1000},
+			want:    values{interval: defaultInterval, offset: defaultOffset},
+			wantErr: errors{interval: true, offset: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			frequencies := emptyFrequencies(t)
+
+			for _, f := range frequencies {
+				err := f.SetInterval(tt.args.interval)
+				if (err != nil) != tt.wantErr.interval {
+					t.Errorf("SetInterval() error = %v, wantErr %v", err, tt.wantErr.interval)
+				}
+				if f.Interval() != tt.want.interval {
+					t.Errorf("Interval() = %v, want %v", f.Interval(), tt.want.interval)
+				}
+				err = f.SetOffset(tt.args.offset)
+				if (err != nil) != tt.wantErr.offset {
+					t.Errorf("SetOffset() error = %v, wantErr %v", err, tt.wantErr.offset)
+				}
+				if f.Offset() != tt.want.offset {
+					t.Errorf("Offset() = %v, want %v", f.Interval(), tt.want.offset)
+				}
+			}
+		})
+	}
+}
+
 func TestNewHourFrequency(t *testing.T) {
 	type args struct {
 		atMinutes []int

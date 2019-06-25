@@ -37,6 +37,75 @@ func TestSchedule_Times(t *testing.T) {
 			want:    []time.Time{},
 			wantErr: false,
 		},
+		{
+			name: "hour schedule should return 1 time",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{30})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(1 * time.Hour)},
+			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute)},
+			wantErr: false,
+		},
+		{
+			name: "hour schedule should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{30})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(2 * time.Hour)},
+			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute), jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute)},
+			wantErr: false,
+		},
+		{
+			name: "hour schedule with interval 2 should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{30})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				f.SetInterval(2)
+				return New(f)
+			})(),
+			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(3 * time.Hour)},
+			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute), jan1st1999Midnight.Add(2*time.Hour + 30*time.Minute)},
+			wantErr: false,
+		},
+		{
+			name: "hour schedule with offset 1 should return 1 time",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{30})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				f.SetOffset(1)
+				return New(f)
+			})(),
+			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(2 * time.Hour)},
+			want:    []time.Time{jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute)},
+			wantErr: false,
+		},
+		{
+			name: "hour schedule with interval 2 and offset 1 should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{30})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				return New(f)
+			})(),
+			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(4 * time.Hour)},
+			want:    []time.Time{jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute), jan1st1999Midnight.Add(3*time.Hour + 30*time.Minute)},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
