@@ -18,6 +18,8 @@
                 editID: schedule.editID,
                 minuteMax: 59,
                 atMinutes: formatAtMinutes(),
+                hourMax: 23,
+                atHours: formatAtHours(),
                 currTaskEditID: 1
             };
             setAddTaskHandler();
@@ -34,12 +36,19 @@
 
         ui.name = (() => {
             let frequency = '[unknown]'
+            
+            const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
+            let times = '';
             switch (schedule.data.frequency) {
                 case 'Hour':
                     frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
+                    times = (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
                     break;
                 case 'Day':
                     frequency = schedule.data.interval === 1 ? 'day' : 'days';
+                    times = schedule.data.atHours ? ` at ${schedule.data.atHours.map(h => {
+                        return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ');
+                    }).join(', ')}` : '';
                     break;
                 case 'Week':
                     frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
@@ -48,9 +57,7 @@
                     frequency = schedule.data.interval === 1 ? 'month' : 'months';
                     break;
             }
-            const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
-            const minutes =  (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
-            return `every ${interval}${frequency}${minutes}`;
+            return `every ${interval}${frequency}${times}`;
         })();
 
         setIntervalMax();
@@ -73,7 +80,15 @@
     }
 
     function formatAtMinutes() {
-        return schedule.data.atMinutes.join(',');
+        return schedule.data.atMinutes ? schedule.data.atMinutes.join(',') : '';
+    }
+
+    function formatAtHours() {
+        return schedule.data.atHours ? schedule.data.atHours.join(',') : '';
+    }
+
+    function frequencyUpdated() {
+        validateAll();
     }
 
     function validateAll() {
@@ -125,6 +140,35 @@
         atMinutes.sort((a, b) => a - b);
         schedule.data.atMinutes = atMinutes;
         ui.atMinutes = formatAtMinutes();
+    }
+
+    function validateHours() {
+        let atHours = (ui.atHours || '').split(',').reduce((arr, val) => {
+            const intVal = parseInt(val);
+            const clampedVal = (() => {
+                if (intVal < 0) {
+                    return 0;
+                }
+                if (intVal > ui.hourMax) {
+                    return intVal % (ui.hourMax + 1);
+                }
+                if (intVal >= 0 && intVal <= ui.hourMax) {
+                    return intVal;
+                }
+                return undefined
+            })();
+
+            if (clampedVal === undefined) {
+                return arr;
+            }
+            if (arr.indexOf(clampedVal) !== -1) {
+                return arr;
+            }
+            return [...arr, clampedVal];
+        }, []);
+        atHours.sort((a, b) => a - b);
+        schedule.data.atHours = atHours;
+        ui.atHours = formatAtHours();
     }
 
     function validateInterval() {
@@ -267,7 +311,7 @@
                 <div class='form-group row'>
                     {#if schedule.editID}
                         <label for='scheduleFrequency' class='col-sm-2 col-form-label'>Frequency:</label>
-                        <div class='col-sm-10'><select id='scheduleFrequency' class=form-control data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={validateAll}>
+                        <div class='col-sm-10'><select id='scheduleFrequency' class=form-control data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={frequencyUpdated}>
                             <option value='Hour'>Hour</option>
                             <option value='Day'>Day</option>
                             <option value='Week'>Week</option>
@@ -299,6 +343,19 @@
                         <span class='col-sm-2'>Offset:</span> <span class='col-sm-10' data-test=schedule-offset>{schedule.data.offset}</span>
                     {/if}
                 </div>
+                {#if schedule.data.frequency === 'Day'}
+                    <div class='form-group row'>
+                        {#if schedule.editID}
+                            <label for='scheduleAtHours' class='col-sm-2 col-form-label'>At hours:</label>
+                            <div class='col-sm-10'>
+                                <input id='scheduleAtHours' class=form-control type=text data-test=schedule-at-hours-input bind:value={ui.atHours} on:blur={validateHours} on:focus={validateHours}>
+                                <small class='form-text text-muted'>(comma-separated, 0 - {ui.minuteMax})</small>
+                            </div>
+                        {:else}
+                            <span class='col-sm-2'>At hours:</span> <span class='col-sm-10' data-test=schedule-at-hours>{ui.atHours}</span>
+                        {/if}
+                    </div>
+                {/if}
                 <div class='form-group row'>
                     {#if schedule.editID}
                         <label for='scheduleAtMinutes' class='col-sm-2 col-form-label'>At minutes:</label>

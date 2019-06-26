@@ -78,6 +78,7 @@
 				interval: 1,
 				offset: 0,
 				atMinutes: [0],
+				atHours: [0],
 				tasks: []
 			},
 			editID: editID++,

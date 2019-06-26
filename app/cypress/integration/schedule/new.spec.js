@@ -91,6 +91,23 @@ describe('new schedule functionality', () => {
 							offset: '24',
 							atMinutes: '0,1,5,30'
 						}
+					},
+					{
+						args: {
+							frequency: 'Day',
+							interval: 2,
+							offset: 0,
+							atMinutes: '0,30',
+							atHours: '2,16',
+						},
+						want: {
+							name: 'every 2 days at 02:00, 02:30, 16:00, 16:30',
+							frequency: 'Day',
+							interval: '2',
+							offset: '0',
+							atMinutes: '0,30',
+							atHours: '2,16',
+						}
 					}
 				];
 
@@ -117,6 +134,9 @@ describe('new schedule functionality', () => {
 						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
 						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
 						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
+						if (s.want.frequency === 'Day') {
+							cy.wrap($s).find('[data-test=schedule-at-hours]').should('have.text', s.want.atHours);
+						}
 					});
 				});
 				
@@ -131,6 +151,9 @@ describe('new schedule functionality', () => {
 						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
 						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
 						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
+						if (s.want.frequency === 'Day') {
+							cy.wrap($s).find('[data-test=schedule-at-hours]').should('have.text', s.want.atHours);
+						}
 					});
 				});
 			});

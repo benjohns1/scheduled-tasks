@@ -32,6 +32,7 @@ type addSchedule struct {
 	Interval  *int               `json:"interval"`
 	Offset    *int               `json:"offset"`
 	AtMinutes []int              `json:"atMinutes"`
+	AtHours   []int              `json:"atHours"`
 	Paused    bool               `json:"paused"`
 	Tasks     []addRecurringTask `json:"tasks"`
 }
@@ -43,6 +44,8 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 	switch as.Frequency {
 	case "Hour":
 		f, err = schedule.NewHourFrequency(as.AtMinutes)
+	case "Day":
+		f, err = schedule.NewDayFrequency(as.AtMinutes, as.AtHours)
 	default:
 		return nil, fmt.Errorf("invalid frequency '%v', should be 'Hour', 'Day', 'Week', or 'Month'", as.Frequency)
 	}

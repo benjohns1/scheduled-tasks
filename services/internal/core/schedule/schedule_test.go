@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestSchedule_Times(t *testing.T) {
+func TestSchedule_Times_EmptySchedule(t *testing.T) {
 
 	jan1st1999Midnight := time.Date(1999, time.January, 1, 0, 0, 0, 0, time.UTC)
 	jan1st2000Midnight := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -37,6 +37,58 @@ func TestSchedule_Times(t *testing.T) {
 			want:    []time.Time{},
 			wantErr: false,
 		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.Times(tt.args.start, tt.args.end)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.Times() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
+			}
+		})
+	}
+}
+
+func TestSchedule_Times_HourlyFrequencyOffsetInterval(t *testing.T) {
+
+	now := time.Date(1999, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	type args struct {
+		start time.Time
+		end   time.Time
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		want    []time.Time
+		wantErr bool
+	}{
+		{
+			name: "empty hour schedule should return empty slice",
+			s: (func() *Schedule {
+				f, err := NewHourFrequency([]int{})
+				if err != nil {
+					t.Fatalf("Error creating hour frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 12, 0)},
+			want:    []time.Time{},
+			wantErr: false,
+		},
 		{
 			name: "hour schedule should return 1 time",
 			s: (func() *Schedule {
@@ -46,8 +98,8 @@ func TestSchedule_Times(t *testing.T) {
 				}
 				return New(f)
 			})(),
-			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(1 * time.Hour)},
-			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute)},
+			args:    args{now, now.Add(1 * time.Hour)},
+			want:    []time.Time{now.Add(30 * time.Minute)},
 			wantErr: false,
 		},
 		{
@@ -59,8 +111,8 @@ func TestSchedule_Times(t *testing.T) {
 				}
 				return New(f)
 			})(),
-			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(2 * time.Hour)},
-			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute), jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute)},
+			args:    args{now, now.Add(2 * time.Hour)},
+			want:    []time.Time{now.Add(30 * time.Minute), now.Add(1*time.Hour + 30*time.Minute)},
 			wantErr: false,
 		},
 		{
@@ -73,8 +125,8 @@ func TestSchedule_Times(t *testing.T) {
 				f.SetInterval(2)
 				return New(f)
 			})(),
-			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(3 * time.Hour)},
-			want:    []time.Time{jan1st1999Midnight.Add(30 * time.Minute), jan1st1999Midnight.Add(2*time.Hour + 30*time.Minute)},
+			args:    args{now, now.Add(3 * time.Hour)},
+			want:    []time.Time{now.Add(30 * time.Minute), now.Add(2*time.Hour + 30*time.Minute)},
 			wantErr: false,
 		},
 		{
@@ -87,8 +139,8 @@ func TestSchedule_Times(t *testing.T) {
 				f.SetOffset(1)
 				return New(f)
 			})(),
-			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(2 * time.Hour)},
-			want:    []time.Time{jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute)},
+			args:    args{now, now.Add(2 * time.Hour)},
+			want:    []time.Time{now.Add(1*time.Hour + 30*time.Minute)},
 			wantErr: false,
 		},
 		{
@@ -102,8 +154,8 @@ func TestSchedule_Times(t *testing.T) {
 				f.SetOffset(1)
 				return New(f)
 			})(),
-			args:    args{jan1st1999Midnight, jan1st1999Midnight.Add(4 * time.Hour)},
-			want:    []time.Time{jan1st1999Midnight.Add(1*time.Hour + 30*time.Minute), jan1st1999Midnight.Add(3*time.Hour + 30*time.Minute)},
+			args:    args{now, now.Add(4 * time.Hour)},
+			want:    []time.Time{now.Add(1*time.Hour + 30*time.Minute), now.Add(3*time.Hour + 30*time.Minute)},
 			wantErr: false,
 		},
 	}
@@ -116,6 +168,15 @@ func TestSchedule_Times(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
 			}
 		})
 	}
@@ -219,6 +280,15 @@ func TestSchedule_Times_HourlyFrequencyEveryHour(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
 			}
 		})
 	}
@@ -334,6 +404,111 @@ func TestSchedule_Times_HourlyFrequencyEvenHour(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
+			}
+		})
+	}
+}
+
+func TestSchedule_Times_DailyFrequency(t *testing.T) {
+
+	now := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dec31st := time.Date(2000, time.December, 31, 0, 0, 0, 0, time.UTC)
+
+	type args struct {
+		start time.Time
+		end   time.Time
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		want    []time.Time
+		wantErr bool
+	}{
+		{
+			name: "empty day schedule should return empty slice",
+			s: (func() *Schedule {
+				f, err := NewDayFrequency([]int{}, []int{})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 12, 0)},
+			want:    []time.Time{},
+			wantErr: false,
+		},
+		{
+			name: "day schedule should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewDayFrequency([]int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 0, 2)},
+			want:    []time.Time{now.Add(1 * time.Hour), now.AddDate(0, 0, 1).Add(1 * time.Hour)},
+			wantErr: false,
+		},
+		{
+			name: "day schedule with interval 2 and offset 1 should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewDayFrequency([]int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 0, 4)},
+			want:    []time.Time{now.AddDate(0, 0, 1).Add(1 * time.Hour), now.AddDate(0, 0, 3).Add(1 * time.Hour)},
+			wantErr: false,
+		},
+		{
+			name: "day schedule with interval 3 and offset 2 should return 4 times",
+			s: (func() *Schedule {
+				f, err := NewDayFrequency([]int{0}, []int{6, 12})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				f.SetInterval(3)
+				f.SetOffset(2)
+				return New(f)
+			})(),
+			args:    args{dec31st, dec31st.AddDate(0, 0, 8)},
+			want:    []time.Time{dec31st.AddDate(0, 0, 4).Add(6 * time.Hour), dec31st.AddDate(0, 0, 4).Add(12 * time.Hour), dec31st.AddDate(0, 0, 7).Add(6 * time.Hour), dec31st.AddDate(0, 0, 7).Add(12 * time.Hour)},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.Times(tt.args.start, tt.args.end)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.Times() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
 			}
 		})
 	}

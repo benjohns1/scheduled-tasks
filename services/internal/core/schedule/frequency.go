@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// maximum number of hours to search when trying to find next hourly time
-const maxHrInt = 365 * 24 // (search up to an entire year)
-
 // Frequency defines how often an event occurs
 type Frequency struct {
 	offset        int
@@ -171,7 +168,9 @@ func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 	case TimePeriodNone:
 		return []time.Time{}, nil
 	case TimePeriodHour:
-		return f.calcHourTimes(start, end)
+		return f.calcHourTimes(start, &end)
+	case TimePeriodDay:
+		return f.calcDayTimes(start, &end)
 	}
 	return nil, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
@@ -181,27 +180,82 @@ func (f *Frequency) next(after time.Time) (time.Time, error) {
 	case TimePeriodNone:
 		return time.Time{}, nil
 	case TimePeriodHour:
-		return f.calcNextHourTime(after)
+		return getNextTime(f.calcHourTimes(after, nil))
+	case TimePeriodDay:
+		return getNextTime(f.calcDayTimes(after, nil))
 	}
 	return time.Time{}, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
 
-func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, error) {
+func getNextTime(times []time.Time, err error) (time.Time, error) {
+	if err != nil {
+		return time.Time{}, err
+	}
+	if len(times) > 0 {
+		return times[0], nil
+	}
+	return time.Time{}, nil
+}
 
-	maxHour := (int(end.Sub(start).Hours()) / f.interval) + 1
+func (f *Frequency) calcDayTimes(start time.Time, end *time.Time) ([]time.Time, error) {
+
+	var max int
+	if end == nil {
+		max = 365
+	} else {
+		max = (int(end.Sub(start).Hours()/24) / f.interval) + 1
+	}
+	times := []time.Time{}
+
+	// Calculate first day
+	day := start.YearDay() + ((start.YearDay() - 1) % f.interval) + f.offset
+
+	// Add times to the array
+	for d := 0; d <= max; d++ {
+		for _, hour := range f.atHours {
+			for _, min := range f.atMinutes {
+				t := time.Date(start.Year(), 1, day, hour, min, 0, 0, start.Location())
+				if t.Before(start) {
+					continue
+				}
+				if end == nil {
+					return append(times, t), nil
+				}
+				if t.After(*end) {
+					return times, nil
+				}
+				times = append(times, t)
+			}
+		}
+		day += f.interval
+	}
+	return times, nil
+}
+
+func (f *Frequency) calcHourTimes(start time.Time, end *time.Time) ([]time.Time, error) {
+
+	var max int
+	if end == nil {
+		max = 365 * 24 // search up to 1 year
+	} else {
+		max = (int(end.Sub(start).Hours()) / f.interval) + 1
+	}
 	times := []time.Time{}
 
 	// Calculate first hour
 	hour := start.Hour() + (start.Hour() % f.interval) + f.offset
 
 	// Add times to the array
-	for hri := 0; hri <= maxHour; hri++ {
+	for h := 0; h <= max; h++ {
 		for _, min := range f.atMinutes {
 			t := time.Date(start.Year(), start.Month(), start.Day(), hour, min, 0, 0, start.Location())
 			if t.Before(start) {
 				continue
 			}
-			if t.After(end) {
+			if end == nil {
+				return append(times, t), nil
+			}
+			if t.After(*end) {
 				return times, nil
 			}
 			times = append(times, t)
@@ -209,25 +263,6 @@ func (f *Frequency) calcHourTimes(start time.Time, end time.Time) ([]time.Time, 
 		hour += f.interval
 	}
 	return times, nil
-}
-
-func (f *Frequency) calcNextHourTime(after time.Time) (time.Time, error) {
-
-	// Calculate first hour
-	hour := after.Hour() + (after.Hour() % f.interval) + f.offset
-
-	// Find next time
-	for hri := 0; hri < maxHrInt; hri++ {
-		for _, min := range f.atMinutes {
-			t := time.Date(after.Year(), after.Month(), after.Day(), hour, min, 0, 0, after.Location())
-			if t.Before(after) {
-				continue
-			}
-			return t, nil
-		}
-		hour += f.interval
-	}
-	return time.Time{}, fmt.Errorf("could not find next time")
 }
 
 func validateMinutes(mins []int) error {

@@ -23,7 +23,8 @@ type outSchedule struct {
 	Frequency string             `json:"frequency"`
 	Interval  int                `json:"interval"`
 	Offset    int                `json:"offset"`
-	AtMinutes []int              `json:"atMinutes"`
+	AtMinutes []int              `json:"atMinutes,omitempty"`
+	AtHours   []int              `json:"atHours,omitempty"`
 	Paused    bool               `json:"paused"`
 	Tasks     []outRecurringTask `json:"tasks"`
 }
@@ -72,6 +73,9 @@ func scheduleToOut(id usecase.ScheduleID, s *schedule.Schedule) *outSchedule {
 	case schedule.TimePeriodHour:
 		outS.AtMinutes = f.AtMinutes()
 		break
+	case schedule.TimePeriodDay:
+		outS.AtMinutes = f.AtMinutes()
+		outS.AtHours = f.AtHours()
 	}
 	for _, rt := range s.Tasks() {
 		oRt := outRecurringTask{Name: rt.Name(), Description: rt.Description()}
