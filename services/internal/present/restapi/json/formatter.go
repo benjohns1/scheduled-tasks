@@ -33,20 +33,6 @@ func NewFormatter(l Logger) *Formatter {
 	return &Formatter{l}
 }
 
-// Time provides a format wrapper for time fields
-type Time time.Time
-
-// MarshalJSON formats a time field
-func (ft *Time) MarshalJSON() ([]byte, error) {
-	var timeStr string
-	t := time.Time(*ft)
-	if t.IsZero() {
-		return []byte("null"), nil
-	}
-	timeStr = t.Format(OutTimeFormat)
-	return []byte(fmt.Sprintf("\"%s\"", timeStr)), nil
-}
-
 type outError struct {
 	Error string `json:"error"`
 }

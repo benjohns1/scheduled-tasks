@@ -67,14 +67,14 @@ describe('new schedule functionality', () => {
 							frequency: 'Hour',
 							interval: 2,
 							offset: 1,
-							atMinutes: '0,15',
+							atMinutes: '0, 15',
 						},
 						want: {
 							name: 'every 2 hours at 00, 15 minutes',
 							frequency: 'Hour',
 							interval: '2',
 							offset: '1',
-							atMinutes: '0,15'
+							atMinutes: '0, 15'
 						}
 					},
 					{
@@ -82,14 +82,14 @@ describe('new schedule functionality', () => {
 							frequency: 'Hour',
 							interval: 25,
 							offset: 25,
-							atMinutes: '30,0,61,5',
+							atMinutes: '30, 0, 61, 5',
 						},
 						want: {
 							name: 'every 24 hours at 00, 01, 05, 30 minutes',
 							frequency: 'Hour',
 							interval: '24',
 							offset: '24',
-							atMinutes: '0,1,5,30'
+							atMinutes: '0, 1, 5, 30'
 						}
 					},
 					{
@@ -97,16 +97,35 @@ describe('new schedule functionality', () => {
 							frequency: 'Day',
 							interval: 2,
 							offset: 0,
-							atMinutes: '0,30',
-							atHours: '2,16',
+							atMinutes: '0, 30',
+							atHours: '2, 16',
 						},
 						want: {
 							name: 'every 2 days at 02:00, 02:30, 16:00, 16:30',
 							frequency: 'Day',
 							interval: '2',
 							offset: '0',
-							atMinutes: '0,30',
-							atHours: '2,16',
+							atMinutes: '0, 30',
+							atHours: '2, 16',
+						}
+					},
+					{
+						args: {
+							frequency: 'Week',
+							interval: 4,
+							offset: 1,
+							atMinutes: '30',
+							atHours: '16',
+							onDaysOfWeek: ['Sunday','Wednesday']
+						},
+						want: {
+							name: 'every 4 weeks on Sunday, Wednesday at 16:30',
+							frequency: 'Week',
+							interval: '4',
+							offset: '1',
+							atMinutes: '30',
+							atHours: '16',
+							onDaysOfWeek: ['Sunday','Wednesday']
 						}
 					}
 				];
@@ -134,8 +153,11 @@ describe('new schedule functionality', () => {
 						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
 						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
 						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
-						if (s.want.frequency === 'Day') {
+						if (s.want.frequency !== 'Hour') {
 							cy.wrap($s).find('[data-test=schedule-at-hours]').should('have.text', s.want.atHours);
+						}
+						if (s.want.frequency == 'Week') {
+							cy.wrap($s).find('[data-test=schedule-on-days-of-week]').should('have.text', s.want.onDaysOfWeek.join(', '));
 						}
 					});
 				});
@@ -151,8 +173,11 @@ describe('new schedule functionality', () => {
 						cy.wrap($s).find('[data-test=schedule-interval]').should('have.text', s.want.interval);
 						cy.wrap($s).find('[data-test=schedule-offset]').should('have.text', s.want.offset);
 						cy.wrap($s).find('[data-test=schedule-at-minutes]').should('have.text', s.want.atMinutes);
-						if (s.want.frequency === 'Day') {
+						if (s.want.frequency !== 'Hour') {
 							cy.wrap($s).find('[data-test=schedule-at-hours]').should('have.text', s.want.atHours);
+						}
+						if (s.want.frequency == 'Week') {
+							cy.wrap($s).find('[data-test=schedule-on-days-of-week]').should('have.text', s.want.onDaysOfWeek.join(', '));
 						}
 					});
 				});

@@ -20,6 +20,8 @@
                 atMinutes: formatAtMinutes(),
                 hourMax: 23,
                 atHours: formatAtHours(),
+                weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+                onDaysOfWeek: formatOnDaysOfWeek(),
                 currTaskEditID: 1
             };
             setAddTaskHandler();
@@ -36,22 +38,46 @@
 
         ui.name = (() => {
             let frequency = '[unknown]'
+
+            const formatHoursAndMinutes = () => {
+                return schedule.data.atHours ? ` at ${schedule.data.atHours.map(h => {
+                    return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ');
+                }).join(', ')}` : '';
+            }
             
             const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
             let times = '';
+            let isValid = (() => {
+                switch (schedule.data.frequency) {
+                    case 'Hour':
+                        return  schedule.data.atMinutes && schedule.data.atMinutes.length > 0;
+                    case 'Day':
+                        return (schedule.data.atMinutes && schedule.data.atHours) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0);
+                    case 'Week':
+                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0);
+                    case 'Month':
+                        return true;
+                }
+                return false;
+            })();
+            if (!isValid) {
+                return 'no recurrences scheduled';
+            }
             switch (schedule.data.frequency) {
                 case 'Hour':
+                    isValid =  schedule.data.atMinutes && schedule.data.atMinutes.length > 0;
                     frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
                     times = (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
                     break;
                 case 'Day':
+                    isValid = (schedule.data.atMinutes && schedule.data.atHours) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0);
                     frequency = schedule.data.interval === 1 ? 'day' : 'days';
-                    times = schedule.data.atHours ? ` at ${schedule.data.atHours.map(h => {
-                        return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ');
-                    }).join(', ')}` : '';
+                    times = formatHoursAndMinutes();
                     break;
                 case 'Week':
+                    isValid = (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0);
                     frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
+                    times = ` on ${schedule.data.onDaysOfWeek.join(', ')}${formatHoursAndMinutes()}`;
                     break;
                 case 'Month':
                     frequency = schedule.data.interval === 1 ? 'month' : 'months';
@@ -80,14 +106,28 @@
     }
 
     function formatAtMinutes() {
-        return schedule.data.atMinutes ? schedule.data.atMinutes.join(',') : '';
+        return schedule.data.atMinutes ? schedule.data.atMinutes.join(', ') : '';
     }
 
     function formatAtHours() {
-        return schedule.data.atHours ? schedule.data.atHours.join(',') : '';
+        return schedule.data.atHours ? schedule.data.atHours.join(', ') : '';
+    }
+
+    function formatOnDaysOfWeek() {
+        if (!ui.weekdays || !schedule.data.onDaysOfWeek) {
+            return;
+        }
+        return ui.weekdays.reduce((acc, day) => {
+            acc[day] = schedule.data.onDaysOfWeek.includes(day);
+            return acc;
+        }, {});
     }
 
     function frequencyUpdated() {
+        validateAll();
+    }
+
+    function daysOfWeekUpdated() {
         validateAll();
     }
 
@@ -97,6 +137,8 @@
         validateInterval();
         validateOffset();
         validateMinutes();
+        validateHours();
+        validateDays();
         validateTasks();
     }
 
@@ -114,46 +156,27 @@
     }
     
     function validateMinutes() {
-        let atMinutes = (ui.atMinutes || '').split(',').reduce((arr, val) => {
-            const intVal = parseInt(val);
-            const clampedVal = (() => {
-                if (intVal < 0) {
-                    return 0;
-                }
-                if (intVal > ui.minuteMax) {
-                    return intVal % (ui.minuteMax + 1);
-                }
-                if (intVal >= 0 && intVal <= ui.minuteMax) {
-                    return intVal;
-                }
-                return undefined
-            })();
-
-            if (clampedVal === undefined) {
-                return arr;
-            }
-            if (arr.indexOf(clampedVal) !== -1) {
-                return arr;
-            }
-            return [...arr, clampedVal];
-        }, []);
-        atMinutes.sort((a, b) => a - b);
-        schedule.data.atMinutes = atMinutes;
+        schedule.data.atMinutes = commaListToArray(ui.atMinutes, 0, ui.minuteMax);
         ui.atMinutes = formatAtMinutes();
     }
 
     function validateHours() {
-        let atHours = (ui.atHours || '').split(',').reduce((arr, val) => {
+        schedule.data.atHours = commaListToArray(ui.atHours, 0, ui.hourMax);
+        ui.atHours = formatAtHours();
+    }
+
+    function commaListToArray(commaList, min, max) {
+        let values = (commaList || '').split(',').reduce((arr, val) => {
             const intVal = parseInt(val);
             const clampedVal = (() => {
+                if (intVal >= 0 && intVal <= max) {
+                    return intVal;
+                }
                 if (intVal < 0) {
                     return 0;
                 }
-                if (intVal > ui.hourMax) {
-                    return intVal % (ui.hourMax + 1);
-                }
-                if (intVal >= 0 && intVal <= ui.hourMax) {
-                    return intVal;
+                if (intVal > max) {
+                    return intVal % (max + 1);
                 }
                 return undefined
             })();
@@ -166,9 +189,21 @@
             }
             return [...arr, clampedVal];
         }, []);
-        atHours.sort((a, b) => a - b);
-        schedule.data.atHours = atHours;
-        ui.atHours = formatAtHours();
+        values.sort((a, b) => a - b);
+        return values;
+    }
+
+    function validateDays() {
+        if (!ui.onDaysOfWeek) {
+            return;
+        }
+        schedule.data.onDaysOfWeek = Object.keys(ui.onDaysOfWeek).reduce((acc, day) => {
+            if (ui.onDaysOfWeek[day]) {
+                acc.push(day);
+            }
+            return acc;
+        }, []);
+        ui.onDaysOfWeek = formatOnDaysOfWeek();
     }
 
     function validateInterval() {
@@ -343,13 +378,28 @@
                         <span class='col-sm-2'>Offset:</span> <span class='col-sm-10' data-test=schedule-offset>{schedule.data.offset}</span>
                     {/if}
                 </div>
-                {#if schedule.data.frequency === 'Day'}
+                {#if schedule.data.frequency === 'Week'}
+                    <div class='form-group row'>
+                        <span class='col-sm-2'>On Days:</span>
+                        {#if schedule.editID}
+                            {#each ui.weekdays as day}
+                                <div class="form-check form-check-inline">
+                                    <input class=form-check-input data-test='schedule-on-days-of-week-input-{day}' type=checkbox id='dayOfWeek{day}' bind:checked={ui.onDaysOfWeek[day]} on:change={daysOfWeekUpdated}>
+                                    <label class=form-check-label for='dayOfWeek{day}'>{day}</label>
+                                </div>
+                            {/each}
+                        {:else}
+                            <span class='col-sm-10' data-test=schedule-on-days-of-week>{schedule.data.onDaysOfWeek ? schedule.data.onDaysOfWeek.join(', ') : '[none]'}</span>
+                        {/if}
+                    </div>
+                {/if}
+                {#if schedule.data.frequency !== 'Hour'}
                     <div class='form-group row'>
                         {#if schedule.editID}
                             <label for='scheduleAtHours' class='col-sm-2 col-form-label'>At hours:</label>
                             <div class='col-sm-10'>
                                 <input id='scheduleAtHours' class=form-control type=text data-test=schedule-at-hours-input bind:value={ui.atHours} on:blur={validateHours} on:focus={validateHours}>
-                                <small class='form-text text-muted'>(comma-separated, 0 - {ui.minuteMax})</small>
+                                <small class='form-text text-muted'>(comma-separated, 0 - {ui.hourMax})</small>
                             </div>
                         {:else}
                             <span class='col-sm-2'>At hours:</span> <span class='col-sm-10' data-test=schedule-at-hours>{ui.atHours}</span>

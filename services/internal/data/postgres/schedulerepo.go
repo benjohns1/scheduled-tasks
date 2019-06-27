@@ -105,7 +105,7 @@ func (r *ScheduleRepo) getAllWhere(whereClause string, params ...interface{}) (m
 }
 
 func scheduleSelectClause() (selectClause string) {
-	return "SELECT id, paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes, frequency_at_hours FROM schedule"
+	return "SELECT id, paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes, frequency_at_hours, frequency_on_days_of_week FROM schedule"
 }
 
 func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
@@ -114,23 +114,24 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 
 	// Scan into row data structure
 	var row struct {
-		id          int64
-		fOffset     int
-		fInterval   int
-		fTimePeriod schedule.TimePeriod
-		fAtMinutes  []sql.NullInt64
-		fAtHours    []sql.NullInt64
-		paused      bool
-		lastChecked *string
-		removed     *string
+		id            int64
+		fOffset       int
+		fInterval     int
+		fTimePeriod   schedule.TimePeriod
+		fAtMinutes    []sql.NullInt64
+		fAtHours      []sql.NullInt64
+		fOnDaysOfWeek []sql.NullInt64
+		paused        bool
+		lastChecked   *string
+		removed       *string
 	}
-	err = r.Scan(&row.id, &row.paused, &row.lastChecked, &row.removed, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes), pq.Array(&row.fAtHours))
+	err = r.Scan(&row.id, &row.paused, &row.lastChecked, &row.removed, &row.fOffset, &row.fInterval, &row.fTimePeriod, pq.Array(&row.fAtMinutes), pq.Array(&row.fAtHours), pq.Array(&row.fOnDaysOfWeek))
 	if err != nil {
 		return
 	}
 
 	// Construct frequency value
-	f, err := schedule.NewRawFrequency(row.fOffset, row.fInterval, row.fTimePeriod, toIntSlice(row.fAtMinutes), toIntSlice(row.fAtHours), nil, nil)
+	f, err := schedule.NewRawFrequency(row.fOffset, row.fInterval, row.fTimePeriod, toIntSlice(row.fAtMinutes), toIntSlice(row.fAtHours), toWeekdaySlice(row.fOnDaysOfWeek), nil)
 	if err != nil {
 		return
 	}
@@ -165,12 +166,26 @@ func toIntSlice(sqlSlice []sql.NullInt64) []int {
 	return intSlice
 }
 
+func toWeekdaySlice(sqlSlice []sql.NullInt64) []time.Weekday {
+	if sqlSlice == nil {
+		return nil
+	}
+	days := make([]time.Weekday, len(sqlSlice))
+	for i, item := range sqlSlice {
+		if !item.Valid {
+			continue
+		}
+		days[i] = time.Weekday(item.Int64)
+	}
+	return days
+}
+
 // Add adds a schedule to the persisence layer
 func (r *ScheduleRepo) Add(s *schedule.Schedule) (usecase.ScheduleID, usecase.Error) {
-	q := "INSERT INTO schedule (paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes, frequency_at_hours) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	q := "INSERT INTO schedule (paused, last_checked, removed_time, frequency_offset, frequency_interval, frequency_time_period, frequency_at_minutes, frequency_at_hours, frequency_on_days_of_week) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
 	var id usecase.ScheduleID
 	f := s.Frequency()
-	err := r.db.QueryRow(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), pq.Array(f.AtHours())).Scan(&id)
+	err := r.db.QueryRow(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), pq.Array(f.AtHours()), pq.Array(f.OnDaysOfWeek())).Scan(&id)
 	if err != nil {
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new schedule: %v", err)
 	}
@@ -258,9 +273,9 @@ func (r *ScheduleRepo) clearTasks(sid usecase.ScheduleID) error {
 func (r *ScheduleRepo) Update(id usecase.ScheduleID, s *schedule.Schedule) usecase.Error {
 
 	// Update schedule row
-	q := "UPDATE schedule SET paused = $1, last_checked = $2, removed_time = $3, frequency_offset = $4, frequency_interval = $5, frequency_time_period = $6, frequency_at_minutes = $7, frequency_at_hours = $8 WHERE id = $9 RETURNING id"
+	q := "UPDATE schedule SET paused = $1, last_checked = $2, removed_time = $3, frequency_offset = $4, frequency_interval = $5, frequency_time_period = $6, frequency_at_minutes = $7, frequency_at_hours = $8, frequency_on_days_of_week = $9 WHERE id = $10 RETURNING id"
 	f := s.Frequency()
-	rows, err := r.db.Query(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), pq.Array(f.AtHours()), id)
+	rows, err := r.db.Query(q, s.Paused(), s.LastChecked(), s.RemovedTime(), f.Offset(), f.Interval(), f.TimePeriod(), pq.Array(f.AtMinutes()), pq.Array(f.AtHours()), pq.Array(f.OnDaysOfWeek()), id)
 	if err != nil {
 		return usecase.NewError(usecase.ErrUnknown, "error updating schedule id %d: %v", id, err)
 	}

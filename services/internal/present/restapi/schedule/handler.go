@@ -119,7 +119,7 @@ func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httpr
 		o, err := f.Schedule(sd)
 		if err != nil {
 			l.Printf("error encoding schedule map: %v", err)
-			f.WriteResponse(w, f.Error("Error encoding task data"), 500)
+			f.WriteResponse(w, f.Error("Error encoding schedule data"), 500)
 		}
 		f.WriteResponse(w, o, 200)
 	}

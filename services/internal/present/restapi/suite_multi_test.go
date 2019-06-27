@@ -306,6 +306,12 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":5}`)},
 		},
 		{
+			name:    "week schedule should return 201 and ID 6",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"Week", "atMinutes":[0,30], "atHours":[3,6], "onDaysOfWeek":["Wednesday","Thursday"]}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":6}`)},
+		},
+		{
 			name:    "new hourly schedule with invalid ranges for interval and offset should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour", "atMinutes": [0], "interval": 0, "offset": -1}`},
@@ -342,10 +348,16 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":5,"frequency":"Day","interval":1,"offset":0,"atMinutes":[0,30],"atHours":[3,6],"paused":false,"tasks":[]}`)},
 		},
 		{
-			name:    "should return 200 list with 5 schedules",
+			name:    "get schedule ID 6 should return week schedule with no recurring tasks",
+			h:       api,
+			args:    args{method: "GET", url: "/api/v1/schedule/6"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":6,"frequency":"Week","interval":1,"offset":0,"atMinutes":[0,30],"atHours":[3,6],"onDaysOfWeek":["Wednesday","Thursday"],"paused":false,"tasks":[]}`)},
+		},
+		{
+			name:    "should return 200 list with 6 schedules",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
-			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"paused":false,"tasks":[]},"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]},"4":{"id":4,"frequency":"Hour","interval":2,"offset":1,"atMinutes":[0],"paused":false,"tasks":[]},"5":{"id":5,"frequency":"Day","interval":1,"offset":0,"atMinutes":[0,30],"atHours":[3,6],"paused":false,"tasks":[]}}`)},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"1":{"id":1,"frequency":"Hour","interval":1,"offset":0,"paused":false,"tasks":[]},"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":true,"tasks":[]},"3":{"id":3,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30,59],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]},"4":{"id":4,"frequency":"Hour","interval":2,"offset":1,"atMinutes":[0],"paused":false,"tasks":[]},"5":{"id":5,"frequency":"Day","interval":1,"offset":0,"atMinutes":[0,30],"atHours":[3,6],"paused":false,"tasks":[]},"6":{"id":6,"frequency":"Week","interval":1,"offset":0,"atMinutes":[0,30],"atHours":[3,6],"onDaysOfWeek":["Wednesday","Thursday"],"paused":false,"tasks":[]}}`)},
 		},
 	}
 	for _, tt := range tests {

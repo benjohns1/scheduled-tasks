@@ -171,6 +171,8 @@ func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 		return f.calcHourTimes(start, &end)
 	case TimePeriodDay:
 		return f.calcDayTimes(start, &end)
+	case TimePeriodWeek:
+		return f.calcWeekTimes(start, &end)
 	}
 	return nil, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
@@ -183,6 +185,8 @@ func (f *Frequency) next(after time.Time) (time.Time, error) {
 		return getNextTime(f.calcHourTimes(after, nil))
 	case TimePeriodDay:
 		return getNextTime(f.calcDayTimes(after, nil))
+	case TimePeriodWeek:
+		return getNextTime(f.calcWeekTimes(after, nil))
 	}
 	return time.Time{}, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
@@ -195,6 +199,27 @@ func getNextTime(times []time.Time, err error) (time.Time, error) {
 		return times[0], nil
 	}
 	return time.Time{}, nil
+}
+
+func (f *Frequency) calcWeekTimes(start time.Time, end *time.Time) ([]time.Time, error) {
+	/*
+		var max int
+		if end == nil {
+			max = 52
+		} else {
+			max = (int(end.Sub(start).Hours()/(24*7)) / f.interval) + 1
+		}
+		times := []time.Time{}
+		if len(f.onDaysOfWeek) == 0 {
+			return times, nil
+		}
+		dayOffset = f.offset * 7
+	*/
+
+	// Calculate first week
+
+	// @TODO: finish week times calculation
+	return []time.Time{}, fmt.Errorf("NOT IMPLEMENTED")
 }
 
 func (f *Frequency) calcDayTimes(start time.Time, end *time.Time) ([]time.Time, error) {

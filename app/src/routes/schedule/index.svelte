@@ -79,6 +79,7 @@
 				offset: 0,
 				atMinutes: [0],
 				atHours: [0],
+				onDaysOfWeek: ['Monday'],
 				tasks: []
 			},
 			editID: editID++,

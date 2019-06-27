@@ -19,14 +19,15 @@ func NewFormatter(rf format.ResponseFormatter) *Formatter {
 }
 
 type outSchedule struct {
-	ID        usecase.ScheduleID `json:"id"`
-	Frequency string             `json:"frequency"`
-	Interval  int                `json:"interval"`
-	Offset    int                `json:"offset"`
-	AtMinutes []int              `json:"atMinutes,omitempty"`
-	AtHours   []int              `json:"atHours,omitempty"`
-	Paused    bool               `json:"paused"`
-	Tasks     []outRecurringTask `json:"tasks"`
+	ID           usecase.ScheduleID `json:"id"`
+	Frequency    string             `json:"frequency"`
+	Interval     int                `json:"interval"`
+	Offset       int                `json:"offset"`
+	AtMinutes    []int              `json:"atMinutes,omitempty"`
+	AtHours      []int              `json:"atHours,omitempty"`
+	OnDaysOfWeek []format.Weekday   `json:"onDaysOfWeek,omitempty"`
+	Paused       bool               `json:"paused"`
+	Tasks        []outRecurringTask `json:"tasks"`
 }
 
 type outRecurringTask struct {
@@ -72,10 +73,17 @@ func scheduleToOut(id usecase.ScheduleID, s *schedule.Schedule) *outSchedule {
 	switch f.TimePeriod() {
 	case schedule.TimePeriodHour:
 		outS.AtMinutes = f.AtMinutes()
-		break
 	case schedule.TimePeriodDay:
-		outS.AtMinutes = f.AtMinutes()
 		outS.AtHours = f.AtHours()
+		outS.AtMinutes = f.AtMinutes()
+	case schedule.TimePeriodWeek:
+		var onDaysOfWeek []format.Weekday
+		for _, day := range f.OnDaysOfWeek() {
+			onDaysOfWeek = append(onDaysOfWeek, format.Weekday(day))
+		}
+		outS.OnDaysOfWeek = onDaysOfWeek
+		outS.AtHours = f.AtHours()
+		outS.AtMinutes = f.AtMinutes()
 	}
 	for _, rt := range s.Tasks() {
 		oRt := outRecurringTask{Name: rt.Name(), Description: rt.Description()}

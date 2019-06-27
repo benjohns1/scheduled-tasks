@@ -41,7 +41,7 @@ Cypress.Commands.add("addTask", (name, description) => {
 	});
 });
 
-Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, atHours, paused, tasks}, { save = true, visit = true } = {}) => {
+Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, atHours, onDaysOfWeek, paused, tasks}, { save = true, visit = true } = {}) => {
 	if (visit) {
 		cy.visitWait('/schedule');
 	}
@@ -51,8 +51,17 @@ Cypress.Commands.add("addSchedule", ({ frequency, interval, offset, atMinutes, a
 		cy.wrap($s).find('[data-test=schedule-interval-input]').clear().type(interval);
 		cy.wrap($s).find('[data-test=schedule-offset-input]').clear().type(offset);
 		cy.wrap($s).find('[data-test=schedule-at-minutes-input]').clear().type(atMinutes).blur();
-		if (frequency === 'Day') {
+		if (frequency !== 'Hour') {
 			cy.wrap($s).find('[data-test=schedule-at-hours-input]').clear().type(atHours).blur();
+		}
+		if (frequency === 'Week') {
+			['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => {
+				if (onDaysOfWeek.includes(d)) {
+					cy.wrap($s).find(`[data-test=schedule-on-days-of-week-input-${d}]`).check();
+				} else {
+					cy.wrap($s).find(`[data-test=schedule-on-days-of-week-input-${d}]`).uncheck();
+				}
+			});
 		}
 		if (paused) {
 			cy.wrap($s).find('[data-test=paused-toggle]').check({force: true});
