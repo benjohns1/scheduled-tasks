@@ -37,8 +37,7 @@ func Run(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo,
 			l.Printf("checking schedules")
 			nextRecurrence, err := usecase.CheckSchedules(taskRepo, scheduleRepo)
 			if err != nil {
-				l.Printf("halting scheduler: %v", err)
-				break
+				l.Printf("error checking schedules: %v", err)
 			}
 			if nextRecurrence.IsZero() {
 				l.Printf("no upcoming schedules, setting default wait to check schedule in %v from now", DefaultWait)

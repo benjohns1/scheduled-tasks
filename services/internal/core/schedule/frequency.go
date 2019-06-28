@@ -202,31 +202,69 @@ func getNextTime(times []time.Time, err error) (time.Time, error) {
 }
 
 func (f *Frequency) calcWeekTimes(start time.Time, end *time.Time) ([]time.Time, error) {
-	/*
-		var max int
-		if end == nil {
-			max = 52
-		} else {
-			max = (int(end.Sub(start).Hours()/(24*7)) / f.interval) + 1
+	var max int
+	if end == nil {
+		max = 104
+	} else {
+		max = (int(end.Sub(start).Hours()/(24*7)) / f.interval) + 2
+	}
+	times := []time.Time{}
+	if len(f.onDaysOfWeek) == 0 {
+		return times, nil
+	}
+
+	startYear, startWeek := start.ISOWeek()
+
+	// Calculate offset between Jan 1st and Week 1 of the start year
+	// @TODO: cache this in a domain service
+	weekOneOffset := 0
+	for i := -20; i < 20; i++ {
+		testTime := time.Date(startYear, time.January, 1, 0, 0, 0, 0, start.Location()).AddDate(0, 0, i)
+		year, _ := testTime.ISOWeek()
+		if year == startYear {
+			weekOneOffset = i
+			break
 		}
-		times := []time.Time{}
-		if len(f.onDaysOfWeek) == 0 {
-			return times, nil
-		}
-		dayOffset = f.offset * 7
-	*/
+	}
 
 	// Calculate first week
+	week := startWeek + ((startWeek - 1) % f.interval) + f.offset
 
-	// @TODO: finish week times calculation
-	return []time.Time{}, fmt.Errorf("NOT IMPLEMENTED")
+	// Add times to the array
+	for i := 0; i <= max; i++ {
+		for _, dayOfWeek := range f.OnDaysOfWeek() {
+			day := 0
+			if dayOfWeek == time.Sunday {
+				// Handle the difference between ISO week starting on Monday and go Weekday starting on Sunday
+				day = ((week - 2 + f.interval) * 7) + weekOneOffset
+			} else {
+				day = ((week - 1) * 7) + int(dayOfWeek) + weekOneOffset
+			}
+			for _, hour := range f.atHours {
+				for _, min := range f.atMinutes {
+					t := time.Date(startYear, 1, day, hour, min, 0, 0, start.Location())
+					if t.Before(start) {
+						continue
+					}
+					if end == nil {
+						return append(times, t), nil
+					}
+					if t.After(*end) {
+						return times, nil
+					}
+					times = append(times, t)
+				}
+			}
+		}
+		week += f.interval
+	}
+	return times, nil
 }
 
 func (f *Frequency) calcDayTimes(start time.Time, end *time.Time) ([]time.Time, error) {
-
 	var max int
 	if end == nil {
-		max = 365
+		max = 365 // search up to 1 year
 	} else {
 		max = (int(end.Sub(start).Hours()/24) / f.interval) + 1
 	}
@@ -236,7 +274,7 @@ func (f *Frequency) calcDayTimes(start time.Time, end *time.Time) ([]time.Time, 
 	day := start.YearDay() + ((start.YearDay() - 1) % f.interval) + f.offset
 
 	// Add times to the array
-	for d := 0; d <= max; d++ {
+	for i := 0; i <= max; i++ {
 		for _, hour := range f.atHours {
 			for _, min := range f.atMinutes {
 				t := time.Date(start.Year(), 1, day, hour, min, 0, 0, start.Location())
@@ -258,7 +296,6 @@ func (f *Frequency) calcDayTimes(start time.Time, end *time.Time) ([]time.Time, 
 }
 
 func (f *Frequency) calcHourTimes(start time.Time, end *time.Time) ([]time.Time, error) {
-
 	var max int
 	if end == nil {
 		max = 365 * 24 // search up to 1 year
@@ -271,7 +308,7 @@ func (f *Frequency) calcHourTimes(start time.Time, end *time.Time) ([]time.Time,
 	hour := start.Hour() + (start.Hour() % f.interval) + f.offset
 
 	// Add times to the array
-	for h := 0; h <= max; h++ {
+	for i := 0; i <= max; i++ {
 		for _, min := range f.atMinutes {
 			t := time.Date(start.Year(), start.Month(), start.Day(), hour, min, 0, 0, start.Location())
 			if t.Before(start) {
