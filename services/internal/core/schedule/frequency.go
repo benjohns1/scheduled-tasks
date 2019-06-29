@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -173,6 +174,8 @@ func (f *Frequency) times(start time.Time, end time.Time) ([]time.Time, error) {
 		return f.calcDayTimes(start, &end)
 	case TimePeriodWeek:
 		return f.calcWeekTimes(start, &end)
+	case TimePeriodMonth:
+		return f.calcMonthTimes(start, &end)
 	}
 	return nil, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
@@ -187,6 +190,8 @@ func (f *Frequency) next(after time.Time) (time.Time, error) {
 		return getNextTime(f.calcDayTimes(after, nil))
 	case TimePeriodWeek:
 		return getNextTime(f.calcWeekTimes(after, nil))
+	case TimePeriodMonth:
+		return getNextTime(f.calcMonthTimes(after, nil))
 	}
 	return time.Time{}, fmt.Errorf("timePeriod %v not implemented yet", f.timePeriod)
 }
@@ -201,6 +206,53 @@ func getNextTime(times []time.Time, err error) (time.Time, error) {
 	return time.Time{}, nil
 }
 
+func (f *Frequency) calcMonthTimes(start time.Time, end *time.Time) ([]time.Time, error) {
+	var max int
+	if end == nil {
+		max = 24
+	} else {
+		max = (int(end.Sub(start).Hours()/(24*28)) / f.interval) + 1
+	}
+	times := []time.Time{}
+
+	// Calculate first month
+	startMonth := int(start.Month())
+	startYear := start.Year()
+	var month int
+	for month = f.offset + 1; month < startMonth; month += f.interval {
+		if month > 12 {
+			month = f.offset + 1
+			startYear++
+		}
+	}
+	if month > 12 {
+		return times, nil
+	}
+
+	// Add times to the array
+	for i := 0; i <= max; i++ {
+		for _, day := range f.onDaysOfMonth {
+			for _, hour := range f.atHours {
+				for _, min := range f.atMinutes {
+					t := time.Date(startYear, time.Month(month), day, hour, min, 0, 0, start.Location())
+					if t.Before(start) {
+						continue
+					}
+					if end == nil {
+						return append(times, t), nil
+					}
+					if t.After(*end) {
+						return times, nil
+					}
+					times = append(times, t)
+				}
+			}
+		}
+		month += f.interval
+	}
+	return times, nil
+}
+
 func (f *Frequency) calcWeekTimes(start time.Time, end *time.Time) ([]time.Time, error) {
 	var max int
 	if end == nil {
@@ -212,6 +264,11 @@ func (f *Frequency) calcWeekTimes(start time.Time, end *time.Time) ([]time.Time,
 	if len(f.onDaysOfWeek) == 0 {
 		return times, nil
 	}
+	defer func() {
+		sort.Slice(times, func(i, j int) bool {
+			return times[i].Before(times[j])
+		})
+	}()
 
 	startYear, startWeek := start.ISOWeek()
 
@@ -246,11 +303,8 @@ func (f *Frequency) calcWeekTimes(start time.Time, end *time.Time) ([]time.Time,
 					if t.Before(start) {
 						continue
 					}
-					if end == nil {
-						return append(times, t), nil
-					}
-					if t.After(*end) {
-						return times, nil
+					if end != nil && t.After(*end) {
+						continue
 					}
 					times = append(times, t)
 				}

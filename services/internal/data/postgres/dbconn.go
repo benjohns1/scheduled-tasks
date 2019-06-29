@@ -140,9 +140,10 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			frequency_offset integer NOT NULL,
 			frequency_interval integer NOT NULL,
 			frequency_time_period smallint NOT NULL,
-			frequency_at_minutes int[],
-			frequency_at_hours int[],
-			frequency_on_days_of_week smallint[]
+			frequency_at_minutes smallint[],
+			frequency_at_hours smallint[],
+			frequency_on_days_of_week smallint[],
+			frequency_on_days_of_month smallint[]
 			);
 		CREATE TABLE recurring_task (
 			id SERIAL PRIMARY KEY,

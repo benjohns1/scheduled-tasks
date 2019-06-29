@@ -80,6 +80,7 @@
 				atMinutes: [0],
 				atHours: [0],
 				onDaysOfWeek: ['Monday'],
+				onDaysOfMonth: [1],
 				tasks: []
 			},
 			editID: editID++,

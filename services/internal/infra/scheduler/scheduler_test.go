@@ -903,3 +903,157 @@ func TestWeekFrequency(t *testing.T) {
 		})
 	}
 }
+
+func TestMonthFrequency(t *testing.T) {
+
+	timeout := 10 * time.Millisecond
+
+	now := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	prevClock := clock.Get()
+	clock.Set(clock.NewStaticMock(now))
+	defer clock.Set(prevClock)
+
+	type args struct {
+		l            Logger
+		taskRepo     usecase.TaskRepo
+		scheduleRepo usecase.ScheduleRepo
+		nextRun      chan time.Time
+		prevClock    clock.Time
+	}
+	type resp struct {
+		close  chan<- bool
+		check  chan<- bool
+		closed <-chan bool
+	}
+	tests := []struct {
+		name    string
+		arrange func(*testing.T) args
+		assert  func(*testing.T, args, resp)
+	}{
+		{
+			name: "month frequency should be scheduled to run at 2000-01-01 00:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewMonthFrequency([]int{5}, []int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := now.Add(5 * time.Minute).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() unexpected next run time, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+		{
+			name: "month frequency with interval of 2 and offset 1 should be scheduled to run at 2000-04-01 00:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewMonthFrequency([]int{5}, []int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				prevClock := clock.Get()
+				checkTime := time.Date(2000, time.February, 1, 0, 10, 0, 0, time.UTC)
+				clock.Set(clock.NewStaticMock(checkTime))
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+					prevClock:    prevClock,
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := time.Date(2000, time.April, 1, 0, 5, 0, 0, time.UTC).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() unexpected next run time, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+		{
+			name: "month frequency with offset 1 and February month day overrun should be scheduled to run at 2000-03-02 00:05",
+			arrange: func(t *testing.T) args {
+				sr := transient.NewScheduleRepo()
+				f, err := schedule.NewMonthFrequency([]int{5}, []int{0}, []int{31})
+				if err != nil {
+					t.Fatalf("error creating frequency: %v", err)
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				s := schedule.New(f)
+				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
+				sr.Add(s)
+
+				return args{
+					l:            &loggerStub{},
+					taskRepo:     transient.NewTaskRepo(),
+					scheduleRepo: sr,
+					nextRun:      make(chan time.Time),
+				}
+			},
+			assert: func(t *testing.T, a args, r resp) {
+				select {
+				case <-r.closed:
+					t.Errorf("scheduler.Run() should not have closed")
+					return
+				case next := <-a.nextRun:
+					want := time.Date(2000, time.March, 2, 0, 5, 0, 0, time.UTC).Add(Offset)
+					if !next.Equal(want) {
+						t.Errorf("scheduler.Run() unexpected next run time, got = %v, want = %v", next, want)
+						return
+					}
+				case <-time.After(timeout):
+					t.Errorf("scheduler.Run() should have scheduled next run before %v timeout", timeout)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := tt.arrange(t)
+			if args.prevClock != nil {
+				defer clock.Set(args.prevClock)
+			}
+			close, check, closed := Run(args.l, args.taskRepo, args.scheduleRepo, args.nextRun)
+			defer closeNonBlocking(close)
+			tt.assert(t, args, resp{close, check, closed})
+		})
+	}
+}

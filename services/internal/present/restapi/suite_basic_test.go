@@ -414,6 +414,12 @@ func addSchedule(t *testing.T, api http.Handler) {
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
+			name:    "empty month schedule should return 201 and ID",
+			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Month"}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":4}`)},
+		},
+		{
 			name:    "empty/invalid schedule should return 400",
 			h:       api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{}`},

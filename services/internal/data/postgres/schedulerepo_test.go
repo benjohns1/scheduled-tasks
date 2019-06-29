@@ -84,6 +84,16 @@ func addWeekSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []i
 	return f, s, id
 }
 
+func addMonthSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, onDaysOfMonth []int) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
+
+	f, err := schedule.NewMonthFrequency(atMinutes, atHours, onDaysOfMonth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, id = addSchedule(t, r, f)
+	return f, s, id
+}
+
 func addSchedule(t *testing.T, r *ScheduleRepo, f schedule.Frequency) (s *schedule.Schedule, id usecase.ScheduleID) {
 	s = schedule.New(f)
 	id, err := r.Add(s)
@@ -107,6 +117,7 @@ func TestScheduleRepo_Get(t *testing.T) {
 	_, hs, hsID := addHourSchedule(t, r, []int{0})
 	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0})
 	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday})
+	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1})
 
 	type args struct {
 		id usecase.ScheduleID
@@ -137,6 +148,13 @@ func TestScheduleRepo_Get(t *testing.T) {
 			r:       r,
 			args:    args{id: wsID},
 			want:    ws,
+			wantErr: usecase.ErrNone,
+		},
+		{
+			name:    "should get month schedule",
+			r:       r,
+			args:    args{id: msID},
+			want:    ms,
 			wantErr: usecase.ErrNone,
 		},
 	}
@@ -180,6 +198,7 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 	_, hs, hsID := addHourSchedule(t, r, []int{0})
 	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0})
 	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday})
+	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1})
 
 	tests := []struct {
 		name    string
@@ -190,7 +209,7 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 		{
 			name:    "should get all schedules",
 			r:       r,
-			wantMap: map[usecase.ScheduleID]*schedule.Schedule{id1: s1, id2: s2, hsID: hs, dsID: ds, wsID: ws},
+			wantMap: map[usecase.ScheduleID]*schedule.Schedule{id1: s1, id2: s2, hsID: hs, dsID: ds, wsID: ws, msID: ms},
 			wantErr: usecase.ErrNone,
 		},
 	}
@@ -301,6 +320,10 @@ func TestScheduleRepo_Add(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mf, err := schedule.NewMonthFrequency([]int{0}, []int{0}, []int{1})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type args struct {
 		s *schedule.Schedule
@@ -331,6 +354,13 @@ func TestScheduleRepo_Add(t *testing.T) {
 			r:       r,
 			args:    args{s: schedule.New(wf)},
 			want:    3,
+			wantErr: usecase.ErrNone,
+		},
+		{
+			name:    "should add month schedule",
+			r:       r,
+			args:    args{s: schedule.New(mf)},
+			want:    4,
 			wantErr: usecase.ErrNone,
 		},
 	}

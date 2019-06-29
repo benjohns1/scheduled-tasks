@@ -85,11 +85,11 @@ describe('new schedule functionality', () => {
 							atMinutes: '30, 0, 61, 5',
 						},
 						want: {
-							name: 'every 24 hours at 00, 01, 05, 30 minutes',
+							name: 'every 24 hours at 00, 05, 30, 59 minutes',
 							frequency: 'Hour',
 							interval: '24',
 							offset: '24',
-							atMinutes: '0, 1, 5, 30'
+							atMinutes: '0, 5, 30, 59'
 						}
 					},
 					{
@@ -127,6 +127,25 @@ describe('new schedule functionality', () => {
 							atHours: '16',
 							onDaysOfWeek: ['Sunday','Wednesday']
 						}
+					},
+					{
+						args: {
+							frequency: 'Month',
+							interval: 2,
+							offset: 1,
+							atMinutes: '30',
+							atHours: '8',
+							onDaysOfMonth: '0, 1, 15, 32, 2'
+						},
+						want: {
+							name: 'every 2 months on the 1st, 2nd, 15th, 31st at 08:30',
+							frequency: 'Month',
+							interval: '2',
+							offset: '1',
+							atMinutes: '30',
+							atHours: '8',
+							onDaysOfMonth: '1, 2, 15, 31'
+						}
 					}
 				];
 
@@ -159,6 +178,9 @@ describe('new schedule functionality', () => {
 						if (s.want.frequency == 'Week') {
 							cy.wrap($s).find('[data-test=schedule-on-days-of-week]').should('have.text', s.want.onDaysOfWeek.join(', '));
 						}
+						if (s.want.frequency == 'Month') {
+							cy.wrap($s).find('[data-test=schedule-on-days-of-month]').should('have.text', s.want.onDaysOfMonth);
+						}
 					});
 				});
 				
@@ -178,6 +200,9 @@ describe('new schedule functionality', () => {
 						}
 						if (s.want.frequency == 'Week') {
 							cy.wrap($s).find('[data-test=schedule-on-days-of-week]').should('have.text', s.want.onDaysOfWeek.join(', '));
+						}
+						if (s.want.frequency == 'Month') {
+							cy.wrap($s).find('[data-test=schedule-on-days-of-month]').should('have.text', s.want.onDaysOfMonth);
 						}
 					});
 				});

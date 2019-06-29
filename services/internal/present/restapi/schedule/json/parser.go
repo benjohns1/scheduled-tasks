@@ -30,14 +30,15 @@ func (p *Parser) AddSchedule(b io.Reader) (*schedule.Schedule, error) {
 }
 
 type addSchedule struct {
-	Frequency    string             `json:"frequency"`
-	Interval     *int               `json:"interval"`
-	Offset       *int               `json:"offset"`
-	AtMinutes    []int              `json:"atMinutes"`
-	AtHours      []int              `json:"atHours"`
-	OnDaysOfWeek []parse.Weekday    `json:"onDaysOfWeek"`
-	Paused       bool               `json:"paused"`
-	Tasks        []addRecurringTask `json:"tasks"`
+	Frequency     string             `json:"frequency"`
+	Interval      *int               `json:"interval"`
+	Offset        *int               `json:"offset"`
+	AtMinutes     []int              `json:"atMinutes"`
+	AtHours       []int              `json:"atHours"`
+	OnDaysOfWeek  []parse.Weekday    `json:"onDaysOfWeek"`
+	OnDaysOfMonth []int              `json:"onDaysOfMonth"`
+	Paused        bool               `json:"paused"`
+	Tasks         []addRecurringTask `json:"tasks"`
 }
 
 func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
@@ -55,6 +56,8 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 			onDaysOfWeek = append(onDaysOfWeek, time.Weekday(d))
 		}
 		f, err = schedule.NewWeekFrequency(as.AtMinutes, as.AtHours, onDaysOfWeek)
+	case "Month":
+		f, err = schedule.NewMonthFrequency(as.AtMinutes, as.AtHours, as.OnDaysOfMonth)
 	default:
 		return nil, fmt.Errorf("invalid frequency '%v', should be 'Hour', 'Day', 'Week', or 'Month'", as.Frequency)
 	}

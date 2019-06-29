@@ -514,6 +514,194 @@ func TestSchedule_Times_DailyFrequency(t *testing.T) {
 	}
 }
 
+func TestSchedule_Times_WeeklyFrequency(t *testing.T) {
+
+	now := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	type args struct {
+		start time.Time
+		end   time.Time
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		want    []time.Time
+		wantErr bool
+	}{
+		{
+			name: "empty week schedule should return empty slice",
+			s: (func() *Schedule {
+				f, err := NewWeekFrequency([]int{}, []int{}, []time.Weekday{})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 12, 0)},
+			want:    []time.Time{},
+			wantErr: false,
+		},
+		{
+			name: "week schedule should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewWeekFrequency([]int{0}, []int{1}, []time.Weekday{time.Saturday})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 0, 8)},
+			want:    []time.Time{now.Add(1 * time.Hour), now.AddDate(0, 0, 7).Add(1 * time.Hour)},
+			wantErr: false,
+		},
+		{
+			name: "week schedule with interval 2 and offset 1 should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewWeekFrequency([]int{0}, []int{1}, []time.Weekday{time.Saturday})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				return New(f)
+			})(),
+			args:    args{now, time.Date(2000, time.February, 1, 0, 0, 0, 0, time.UTC)},
+			want:    []time.Time{time.Date(2000, time.January, 15, 1, 0, 0, 0, time.UTC), time.Date(2000, time.January, 29, 1, 0, 0, 0, time.UTC)},
+			wantErr: false,
+		},
+		{
+			name: "week schedule should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewWeekFrequency([]int{0}, []int{0}, []time.Weekday{time.Saturday, time.Sunday, time.Wednesday})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{time.Date(1999, time.December, 19, 0, 0, 0, 0, time.UTC), time.Date(2000, time.January, 7, 0, 0, 0, 0, time.UTC)},
+			want:    []time.Time{time.Date(1999, time.December, 19, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 22, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 25, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 26, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 29, 0, 0, 0, 0, time.UTC), time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.January, 2, 0, 0, 0, 0, time.UTC), time.Date(2000, time.January, 5, 0, 0, 0, 0, time.UTC)},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.Times(tt.args.start, tt.args.end)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.Times() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
+			}
+		})
+	}
+}
+
+func TestSchedule_Times_MonthlyFrequency(t *testing.T) {
+
+	now := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	type args struct {
+		start time.Time
+		end   time.Time
+	}
+	tests := []struct {
+		name    string
+		s       *Schedule
+		args    args
+		want    []time.Time
+		wantErr bool
+	}{
+		{
+			name: "empty month schedule should return empty slice",
+			s: (func() *Schedule {
+				f, err := NewMonthFrequency([]int{}, []int{}, []int{})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{now, now.AddDate(0, 12, 0)},
+			want:    []time.Time{},
+			wantErr: false,
+		},
+		{
+			name: "month schedule should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewMonthFrequency([]int{0}, []int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				return New(f)
+			})(),
+			args:    args{time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.February, 1, 0, 0, 0, 0, time.UTC)},
+			want:    []time.Time{time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.February, 1, 0, 0, 0, 0, time.UTC)},
+			wantErr: false,
+		},
+		{
+			name: "month schedule with interval 2 and offset 1 should return 2 times",
+			s: (func() *Schedule {
+				f, err := NewMonthFrequency([]int{0}, []int{0}, []int{1})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				f.SetInterval(2)
+				f.SetOffset(1)
+				return New(f)
+			})(),
+			args:    args{time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.May, 1, 0, 0, 0, 0, time.UTC)},
+			want:    []time.Time{time.Date(2000, time.February, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.April, 1, 0, 0, 0, 0, time.UTC)},
+			wantErr: false,
+		},
+		{
+			name: "month schedule with interval 3 and offset 2 should return 4 times",
+			s: (func() *Schedule {
+				f, err := NewMonthFrequency([]int{0}, []int{0}, []int{1, 15, 31})
+				if err != nil {
+					t.Fatalf("Error creating frequency")
+				}
+				f.SetInterval(3)
+				f.SetOffset(2)
+				return New(f)
+			})(),
+			args:    args{time.Date(1999, time.November, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.March, 20, 0, 0, 0, 0, time.UTC)},
+			want:    []time.Time{time.Date(1999, time.December, 1, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 15, 0, 0, 0, 0, time.UTC), time.Date(1999, time.December, 31, 0, 0, 0, 0, time.UTC), time.Date(2000, time.March, 1, 0, 0, 0, 0, time.UTC), time.Date(2000, time.March, 15, 0, 0, 0, 0, time.UTC)},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.Times(tt.args.start, tt.args.end)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Schedule.Times() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Schedule.Times() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				nextTime, err := tt.s.NextTime(tt.args.start)
+				if err != nil {
+					t.Errorf("Schedule.NextTime() error = %v", err)
+				}
+				if len(got) > 0 && got[0] != nextTime {
+					t.Errorf("Schedule.NextTime() = %v, want %v", nextTime, got[0])
+				}
+			}
+		})
+	}
+}
+
 func TestSchedule_AddTask(t *testing.T) {
 
 	f, _ := NewHourFrequency([]int{0})

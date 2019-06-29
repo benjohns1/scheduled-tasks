@@ -67,7 +67,6 @@ func Run(l Logger, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo,
 			case <-clock.After(wait):
 			}
 		}
-		l.Printf("scheduler process complete")
 	}()
 
 	return closeSignal, checkSignal, onClosed

@@ -22,6 +22,8 @@
                 atHours: formatAtHours(),
                 weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
                 onDaysOfWeek: formatOnDaysOfWeek(),
+                dayMax: 31,
+                onDaysOfMonth: formatOnDaysOfMonth(),
                 currTaskEditID: 1
             };
             setAddTaskHandler();
@@ -44,6 +46,20 @@
                     return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ');
                 }).join(', ')}` : '';
             }
+
+            const addOrdinalSuffix = (num) => {
+                if (![11,12,13].includes(num % 100)) {
+                    switch (num % 10) {
+                        case 1:
+                            return `${num}st`;
+                        case 2:
+                            return `${num}nd`;
+                        case 3:
+                            return `${num}rd`;
+                    }
+                }
+                return `${num}th`;
+            }
             
             const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
             let times = '';
@@ -56,7 +72,7 @@
                     case 'Week':
                         return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0);
                     case 'Month':
-                        return true;
+                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfMonth) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfMonth.length > 0);
                 }
                 return false;
             })();
@@ -65,22 +81,20 @@
             }
             switch (schedule.data.frequency) {
                 case 'Hour':
-                    isValid =  schedule.data.atMinutes && schedule.data.atMinutes.length > 0;
                     frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
                     times = (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
                     break;
                 case 'Day':
-                    isValid = (schedule.data.atMinutes && schedule.data.atHours) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0);
                     frequency = schedule.data.interval === 1 ? 'day' : 'days';
                     times = formatHoursAndMinutes();
                     break;
                 case 'Week':
-                    isValid = (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0);
                     frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
                     times = ` on ${schedule.data.onDaysOfWeek.join(', ')}${formatHoursAndMinutes()}`;
                     break;
                 case 'Month':
                     frequency = schedule.data.interval === 1 ? 'month' : 'months';
+                    times = ` on the ${schedule.data.onDaysOfMonth.map(d => addOrdinalSuffix(d)).join(', ')}${formatHoursAndMinutes()}`;
                     break;
             }
             return `every ${interval}${frequency}${times}`;
@@ -123,6 +137,10 @@
         }, {});
     }
 
+    function formatOnDaysOfMonth() {
+        return schedule.data.onDaysOfMonth ? schedule.data.onDaysOfMonth.join(', ') : '';
+    }
+
     function frequencyUpdated() {
         validateAll();
     }
@@ -138,7 +156,8 @@
         validateOffset();
         validateMinutes();
         validateHours();
-        validateDays();
+        validateWeekDays();
+        validateMonthDays();
         validateTasks();
     }
 
@@ -165,21 +184,28 @@
         ui.atHours = formatAtHours();
     }
 
+    function validateWeekDays() {
+        if (!ui.onDaysOfWeek) {
+            return;
+        }
+        schedule.data.onDaysOfWeek = Object.keys(ui.onDaysOfWeek).reduce((acc, day) => {
+            if (ui.onDaysOfWeek[day]) {
+                acc.push(day);
+            }
+            return acc;
+        }, []);
+        ui.onDaysOfWeek = formatOnDaysOfWeek();
+    }
+
+    function validateMonthDays() {
+        schedule.data.onDaysOfMonth = commaListToArray(ui.onDaysOfMonth, 1, ui.dayMax);
+        ui.onDaysOfMonth = formatOnDaysOfMonth();
+    }
+
     function commaListToArray(commaList, min, max) {
         let values = (commaList || '').split(',').reduce((arr, val) => {
             const intVal = parseInt(val);
-            const clampedVal = (() => {
-                if (intVal >= 0 && intVal <= max) {
-                    return intVal;
-                }
-                if (intVal < 0) {
-                    return 0;
-                }
-                if (intVal > max) {
-                    return intVal % (max + 1);
-                }
-                return undefined
-            })();
+            const clampedVal = Math.min(Math.max(intVal, min), max);
 
             if (clampedVal === undefined) {
                 return arr;
@@ -191,19 +217,6 @@
         }, []);
         values.sort((a, b) => a - b);
         return values;
-    }
-
-    function validateDays() {
-        if (!ui.onDaysOfWeek) {
-            return;
-        }
-        schedule.data.onDaysOfWeek = Object.keys(ui.onDaysOfWeek).reduce((acc, day) => {
-            if (ui.onDaysOfWeek[day]) {
-                acc.push(day);
-            }
-            return acc;
-        }, []);
-        ui.onDaysOfWeek = formatOnDaysOfWeek();
     }
 
     function validateInterval() {
@@ -378,9 +391,22 @@
                         <span class='col-sm-2'>Offset:</span> <span class='col-sm-10' data-test=schedule-offset>{schedule.data.offset}</span>
                     {/if}
                 </div>
+                {#if schedule.data.frequency === 'Month'}
+                    <div class='form-group row'>
+                        {#if schedule.editID}
+                            <label for='scheduleOnDaysOfMonth' class='col-sm-2 col-form-label'>On days:</label>
+                            <div class='col-sm-10'>
+                                <input id='scheduleOnDaysOfMonth' class=form-control type=text data-test=schedule-on-days-of-month-input bind:value={ui.onDaysOfMonth} on:blur={validateMonthDays} on:focus={validateMonthDays}>
+                                <small class='form-text text-muted'>(comma-separated, 1 - {ui.dayMax})</small>
+                            </div>
+                        {:else}
+                            <span class='col-sm-2'>On days:</span> <span class='col-sm-10' data-test=schedule-on-days-of-month>{ui.onDaysOfMonth}</span>
+                        {/if}
+                    </div>
+                {/if}
                 {#if schedule.data.frequency === 'Week'}
                     <div class='form-group row'>
-                        <span class='col-sm-2'>On Days:</span>
+                        <span class='col-sm-2'>On days:</span>
                         {#if schedule.editID}
                             {#each ui.weekdays as day}
                                 <div class="form-check form-check-inline">
