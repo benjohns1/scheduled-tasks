@@ -5,12 +5,12 @@
 	export function preload({ params, query }) {
 		return this.fetch(`task.json`).then(async r => {
 			if (r.status === 200) {
-				return r.json();
+				return r.json()
 			} else {
 				throw {
 					message: "Sorry, there was a problem retrieving tasks",
 					r: await r.json()
-				};
+				}
 			}
 		}).then(tasks => {
 			const allTasks = Object.values(tasks).reverse().map(t => {
@@ -18,51 +18,51 @@
 					data: t,
 					open: false
 				}
-			});
-			return { tasks: allTasks.filter(t => !t.data.completedTime), completedTasks: allTasks.filter(t => t.data.completedTime) };
+			})
+			return { tasks: allTasks.filter(t => !t.data.completedTime), completedTasks: allTasks.filter(t => t.data.completedTime) }
 		}).catch(taskError => {
 			return { taskError }
-		});
+		})
 	}
 </script>
 
 <script>
-	export let taskError = undefined;
-	export let tasks = [];
-	export let completedTasks = [];
-	export let completedSuccessMessage = undefined;
+	export let taskError = undefined
+	export let tasks = []
+	export let completedTasks = []
+	export let completedSuccessMessage = undefined
 
-	let editID = 1;
+	let editID = 1
 
 	const addTask = (taskEditID, taskData) => {
 		return fetch(`task.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(taskData)}).then(r => {
 			r.json().then(({ id }) => {
-				taskData.id = id;
+				taskData.id = id
 				tasks = [{
 					data: taskData,
 					open: true
-				}, ...(tasks.filter(t => t.editID !== taskEditID))];
-			});
+				}, ...(tasks.filter(t => t.editID !== taskEditID))]
+			})
 		}).catch(err => {
-			console.error(err);
-		});
+			console.error(err)
+		})
 	}
 
 	const completeTask = taskID => {
 		return fetch(`task/${taskID}/complete.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
 			completedTasks = [...(tasks.filter(t => t.data.id === taskID).map(t => {
-				t.data.completedTime = 'just now';
-				t.open = false;
-				return t;
-			})), ...completedTasks];
-			tasks = [...(tasks.filter(t => t.data.id !== taskID))];
+				t.data.completedTime = 'just now'
+				t.open = false
+				return t
+			})), ...completedTasks]
+			tasks = [...(tasks.filter(t => t.data.id !== taskID))]
 		}).catch(err => {
-			console.error(err);
-		});
+			console.error(err)
+		})
 	}
 	
 	if (taskError !== undefined) {
-		console.error(taskError);
+		console.error(taskError)
 	}
 
 	function newTask() {
@@ -73,20 +73,20 @@
 			},
 			editID: editID++,
 			open: true
-		}, ...tasks];
+		}, ...tasks]
 	}
 
 	function clearTasks() {
-		const prevCompletedTasks = completedTasks.slice(0);
-		completedTasks = [];
+		const prevCompletedTasks = completedTasks.slice(0)
+		completedTasks = []
 		return fetch(`task/clear.json`, { method: "POST", headers: {'Content-Type': 'application/json'} }).then(r => {
 			r.json().then(({ count, message }) => {
-				completedSuccessMessage = `${message}${count ? ` (${count})` : ''}`;
-			});
+				completedSuccessMessage = `${message}${count ? ` (${count})` : ''}`
+			})
 		}).catch(err => {
-			completedTasks = prevCompletedTasks;
-			console.error(err);
-		});
+			completedTasks = prevCompletedTasks
+			console.error(err)
+		})
 	}
 </script>
 

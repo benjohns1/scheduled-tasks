@@ -6,7 +6,7 @@
 		return this.fetch(`schedule.json`).then(r => {
 			return r.json().then(data => {
 				if (r.status !== 200) {
-					console.error(data, r);
+					console.error(data, r)
 					return { scheduleError: 'Sorry, there was a problem retrieving schedules' + data.error ? `: ${data.error}` : ''}
 				}
 
@@ -15,60 +15,63 @@
 						data: s,
 						open: false
 					}
-				});
+				})
 				return { schedules }
-			});
+			})
 		}).catch(err => {
-			console.error(err);
+			console.error(err)
 			return { scheduleError: `Sorry, there was a problem retrieving schedules: ${err.message}` }
-		});
+		})
 	}
 </script>
 
 <script>
-	export let scheduleError = undefined;
-	export let schedules = [];
+	export let scheduleError = undefined
+	export let schedules = []
 
-	let editID = 1;
+	let editID = 1
 
 	const addSchedule = schedule => {
-		const editID = schedule.editID;
-		return fetch(`schedule.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(schedule.data)}).then(r => {
+		const editID = schedule.editID
+		const postData = (() => {
+			return JSON.stringify(schedule.data)
+		})()
+		return fetch(`schedule.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: postData}).then(r => {
 			r.json().then(data => {
 				if (r.status !== 201) {
-					console.error(data, r);
-					return;
+					console.error(data, r)
+					return
 				}
-				schedule.data.id = data.id;
-				schedules = [schedule, ...(schedules.filter(s => s.editID !== editID))];
-				schedule.editID = undefined;
-			});
+				schedule.data.id = data.id
+				schedules = [schedule, ...(schedules.filter(s => s.editID !== editID))]
+				schedule.editID = undefined
+			})
 		}).catch(err => {
-			console.error(err);
-		});
+			console.error(err)
+		})
 	}
 
     const deleteSchedule = schedule => {
 		if (schedule.data.id !== undefined) {
-			const id = schedule.data.id;
+			const id = schedule.data.id
 			return fetch(`schedule/${id}.json`, { method: "DELETE", headers: {'Content-Type': 'application/json'} }).then(r => {
 				if (r.status !== 204) {
-					console.error(r);
-					return;
+					console.error(r)
+					return
 				}
-				schedules = schedules.filter(s => s.data.id !== id);
+				schedules = schedules.filter(s => s.data.id !== id)
 			}).catch(err => {
-				console.error(err);
-			});
+				console.error(err)
+			})
 		}
 
 		if (schedule.editID !== undefined) {
-			const editID = schedule.editID;
-			schedules = schedules.filter(s => s.editID !== editID);
-			return;
+			const editID = schedule.editID
+			schedules = schedules.filter(s => s.editID !== editID)
+			return
 		}
 
-		console.error('error deleting schedule, no valid ID', schedule);
+		console.error('error deleting schedule, no valid ID', schedule)
     }
 
 	function newSchedule() {
@@ -85,7 +88,7 @@
 			},
 			editID: editID++,
 			open: true
-		}, ...schedules];
+		}, ...schedules]
 	}
 </script>
 

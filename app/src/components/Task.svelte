@@ -1,37 +1,37 @@
 <script>
-    import { slide } from 'svelte/transition';
-	import Button from "./Button.svelte";
+    import { slide } from 'svelte/transition'
+	import Button from "./Button.svelte"
 
-    export let task = {};
-    export let opened = false;
-    export let editing = undefined;
-    export let addTaskHandler = undefined;
-    export let completeTaskHandler = undefined;
+    export let task = {}
+    export let opened = false
+    export let editing = undefined
+    export let addTaskHandler = undefined
+    export let completeTaskHandler = undefined
 
     if (!task.name) {
-        task.name = '';
+        task.name = ''
     }
     if (!task.description) {
-        task.description = '';
+        task.description = ''
     }
     
     function open() {
-        opened = true;
+        opened = true
     }
 
     function close() {
-        opened = false;
+        opened = false
     }
 
     function save() {
         if (addTaskHandler) {
-            addTaskHandler(editing, task);
+            addTaskHandler(editing, task)
         }
     }
 
     function complete() {
         if (completeTaskHandler && task.id) {
-            completeTaskHandler(task.id);
+            completeTaskHandler(task.id)
         }
     }
 </script>

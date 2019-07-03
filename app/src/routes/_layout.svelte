@@ -1,15 +1,15 @@
 <script>
-	import Nav from '../components/Nav.svelte';
-	import { onMount, tick } from 'svelte';
+	import Nav from '../components/Nav.svelte'
+	import { onMount, tick } from 'svelte'
 
-	export let segment;
+	export let segment
 
-	let testID = 'loading';
+	let testID = 'loading'
 	onMount(() => {
 		tick().then(() => {
-			testID = 'loaded';
-		});
-	});
+			testID = 'loaded'
+		})
+	})
 
 </script>
 

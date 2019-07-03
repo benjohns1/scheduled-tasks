@@ -1,15 +1,15 @@
 <script>
-    import { slide } from 'svelte/transition';
-	import Task from "./Task.svelte";
-	import Button from "./Button.svelte";
+    import { slide } from 'svelte/transition'
+	import Task from "./Task.svelte"
+	import Button from "./Button.svelte"
 
-    export let schedule = {};
-    export let addScheduleHandler = undefined;
-    export let deleteScheduleHandler = undefined;
+    export let schedule = {}
+    export let addScheduleHandler = undefined
+    export let deleteScheduleHandler = undefined
 
-    let tasks = [];
+    let tasks = []
 
-    let ui = {};
+    let ui = {}
 
     $: {
         if (schedule.data.id !== ui.id || schedule.editID !== ui.editID) {
@@ -25,16 +25,16 @@
                 dayMax: 31,
                 onDaysOfMonth: formatOnDaysOfMonth(),
                 currTaskEditID: 1
-            };
-            setAddTaskHandler();
+            }
+            setAddTaskHandler()
 
             if (schedule.data.tasks) {
                 tasks = schedule.data.tasks.map(t => {
                     return {
                         data: t,
                         open: false
-                    };
-                });
+                    }
+                })
             }
         }
 
@@ -43,122 +43,122 @@
 
             const formatHoursAndMinutes = () => {
                 return schedule.data.atHours ? ` at ${schedule.data.atHours.map(h => {
-                    return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ');
-                }).join(', ')}` : '';
+                    return schedule.data.atMinutes.map(m => `${h > 9 ? h : '0' + h}:${m > 9 ? m : '0' + m}`).join(', ')
+                }).join(', ')}` : ''
             }
 
             const addOrdinalSuffix = (num) => {
                 if (![11,12,13].includes(num % 100)) {
                     switch (num % 10) {
                         case 1:
-                            return `${num}st`;
+                            return `${num}st`
                         case 2:
-                            return `${num}nd`;
+                            return `${num}nd`
                         case 3:
-                            return `${num}rd`;
+                            return `${num}rd`
                     }
                 }
-                return `${num}th`;
+                return `${num}th`
             }
             
-            const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : '';
-            let times = '';
+            const interval = schedule.data.interval !== 1 ? `${schedule.data.interval} ` : ''
+            let times = ''
             let isValid = (() => {
                 switch (schedule.data.frequency) {
                     case 'Hour':
-                        return  schedule.data.atMinutes && schedule.data.atMinutes.length > 0;
+                        return  schedule.data.atMinutes && schedule.data.atMinutes.length > 0
                     case 'Day':
-                        return (schedule.data.atMinutes && schedule.data.atHours) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0);
+                        return (schedule.data.atMinutes && schedule.data.atHours) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0)
                     case 'Week':
-                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0);
+                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfWeek) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfWeek.length > 0)
                     case 'Month':
-                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfMonth) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfMonth.length > 0);
+                        return (schedule.data.atMinutes && schedule.data.atHours && schedule.data.onDaysOfMonth) && (schedule.data.atMinutes.length > 0 && schedule.data.atHours.length > 0 && schedule.data.onDaysOfMonth.length > 0)
                 }
-                return false;
-            })();
+                return false
+            })()
             if (!isValid) {
-                return 'no recurrences scheduled';
+                return 'no recurrences scheduled'
             }
             switch (schedule.data.frequency) {
                 case 'Hour':
-                    frequency = schedule.data.interval === 1 ? 'hour' : 'hours';
-                    times = (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`;
-                    break;
+                    frequency = schedule.data.interval === 1 ? 'hour' : 'hours'
+                    times = (schedule.data.atMinutes.length === 1 && schedule.data.atMinutes[0] === 0) ? '' : ` at ${schedule.data.atMinutes.map(m => `${m > 9 ? m : '0' + m}`).join(', ')} minutes`
+                    break
                 case 'Day':
-                    frequency = schedule.data.interval === 1 ? 'day' : 'days';
-                    times = formatHoursAndMinutes();
-                    break;
+                    frequency = schedule.data.interval === 1 ? 'day' : 'days'
+                    times = formatHoursAndMinutes()
+                    break
                 case 'Week':
-                    frequency = schedule.data.interval === 1 ? 'week' : 'weeks';
-                    times = ` on ${schedule.data.onDaysOfWeek.join(', ')}${formatHoursAndMinutes()}`;
-                    break;
+                    frequency = schedule.data.interval === 1 ? 'week' : 'weeks'
+                    times = ` on ${schedule.data.onDaysOfWeek.join(', ')}${formatHoursAndMinutes()}`
+                    break
                 case 'Month':
-                    frequency = schedule.data.interval === 1 ? 'month' : 'months';
-                    times = ` on the ${schedule.data.onDaysOfMonth.map(d => addOrdinalSuffix(d)).join(', ')}${formatHoursAndMinutes()}`;
-                    break;
+                    frequency = schedule.data.interval === 1 ? 'month' : 'months'
+                    times = ` on the ${schedule.data.onDaysOfMonth.map(d => addOrdinalSuffix(d)).join(', ')}${formatHoursAndMinutes()}`
+                    break
             }
-            return `every ${interval}${frequency}${times}`;
-        })();
+            return `every ${interval}${frequency}${times}`
+        })()
 
-        setIntervalMax();
+        setIntervalMax()
     }
 
     function setIntervalMax() {
         ui.intervalMax = (() => {
             switch (schedule.data.frequency) {
                 case 'Hour':
-                    return 24;
+                    return 24
                 case 'Day':
-                    return 365;
+                    return 365
                 case 'Week':
-                    return 52;
+                    return 52
                 case 'Month':
-                    return 12;
+                    return 12
             }
-            return undefined;
-        })();
+            return undefined
+        })()
     }
 
     function formatAtMinutes() {
-        return schedule.data.atMinutes ? schedule.data.atMinutes.join(', ') : '';
+        return schedule.data.atMinutes ? schedule.data.atMinutes.join(', ') : ''
     }
 
     function formatAtHours() {
-        return schedule.data.atHours ? schedule.data.atHours.join(', ') : '';
+        return schedule.data.atHours ? schedule.data.atHours.join(', ') : ''
     }
 
     function formatOnDaysOfWeek() {
         if (!ui.weekdays || !schedule.data.onDaysOfWeek) {
-            return;
+            return
         }
         return ui.weekdays.reduce((acc, day) => {
-            acc[day] = schedule.data.onDaysOfWeek.includes(day);
-            return acc;
-        }, {});
+            acc[day] = schedule.data.onDaysOfWeek.includes(day)
+            return acc
+        }, {})
     }
 
     function formatOnDaysOfMonth() {
-        return schedule.data.onDaysOfMonth ? schedule.data.onDaysOfMonth.join(', ') : '';
+        return schedule.data.onDaysOfMonth ? schedule.data.onDaysOfMonth.join(', ') : ''
     }
 
     function frequencyUpdated() {
-        validateAll();
+        validateAll()
     }
 
     function daysOfWeekUpdated() {
-        validateAll();
+        validateAll()
     }
 
     function validateAll() {
-        setIntervalMax();
+        setIntervalMax()
 
-        validateInterval();
-        validateOffset();
-        validateMinutes();
-        validateHours();
-        validateWeekDays();
-        validateMonthDays();
-        validateTasks();
+        validateInterval()
+        validateOffset()
+        validateMinutes()
+        validateHours()
+        validateWeekDays()
+        validateMonthDays()
+        validateTasks()
     }
 
     function validateTasks() {
@@ -167,79 +167,79 @@
             for (let j = i + 1; j < tasks.length; j++) {
                 if (t.data.name === tasks[j].data.name
                     && t.data.description === tasks[j].data.description) {
-                    return false;
+                    return false
                 }
             }
-            return true;
-        });
+            return true
+        })
     }
     
     function validateMinutes() {
-        schedule.data.atMinutes = commaListToArray(ui.atMinutes, 0, ui.minuteMax);
-        ui.atMinutes = formatAtMinutes();
+        schedule.data.atMinutes = commaListToArray(ui.atMinutes, 0, ui.minuteMax)
+        ui.atMinutes = formatAtMinutes()
     }
 
     function validateHours() {
-        schedule.data.atHours = commaListToArray(ui.atHours, 0, ui.hourMax);
-        ui.atHours = formatAtHours();
+        schedule.data.atHours = commaListToArray(ui.atHours, 0, ui.hourMax)
+        ui.atHours = formatAtHours()
     }
 
     function validateWeekDays() {
         if (!ui.onDaysOfWeek) {
-            return;
+            return
         }
         schedule.data.onDaysOfWeek = Object.keys(ui.onDaysOfWeek).reduce((acc, day) => {
             if (ui.onDaysOfWeek[day]) {
-                acc.push(day);
+                acc.push(day)
             }
-            return acc;
-        }, []);
-        ui.onDaysOfWeek = formatOnDaysOfWeek();
+            return acc
+        }, [])
+        ui.onDaysOfWeek = formatOnDaysOfWeek()
     }
 
     function validateMonthDays() {
-        schedule.data.onDaysOfMonth = commaListToArray(ui.onDaysOfMonth, 1, ui.dayMax);
-        ui.onDaysOfMonth = formatOnDaysOfMonth();
+        schedule.data.onDaysOfMonth = commaListToArray(ui.onDaysOfMonth, 1, ui.dayMax)
+        ui.onDaysOfMonth = formatOnDaysOfMonth()
     }
 
     function commaListToArray(commaList, min, max) {
         let values = (commaList || '').split(',').reduce((arr, val) => {
-            const intVal = parseInt(val);
-            const clampedVal = Math.min(Math.max(intVal, min), max);
+            const intVal = parseInt(val)
+            const clampedVal = Math.min(Math.max(intVal, min), max)
 
             if (clampedVal === undefined) {
-                return arr;
+                return arr
             }
             if (arr.indexOf(clampedVal) !== -1) {
-                return arr;
+                return arr
             }
-            return [...arr, clampedVal];
-        }, []);
-        values.sort((a, b) => a - b);
-        return values;
+            return [...arr, clampedVal]
+        }, [])
+        values.sort((a, b) => a - b)
+        return values
     }
 
     function validateInterval() {
-        schedule.data.interval = Math.max(1, Math.min(ui.intervalMax, parseInt(schedule.data.interval)));
+        schedule.data.interval = Math.max(1, Math.min(ui.intervalMax, parseInt(schedule.data.interval)))
     }
 
     function validateOffset() {
-        schedule.data.offset = Math.max(0, Math.min(ui.intervalMax, parseInt(schedule.data.offset)));
+        schedule.data.offset = Math.max(0, Math.min(ui.intervalMax, parseInt(schedule.data.offset)))
     }
     
     function open() {
-        schedule.open = true;
+        schedule.open = true
     }
 
     function close() {
-        schedule.open = false;
+        schedule.open = false
     }
 
     function save() {
-        validateAll();
+        validateAll()
         if (addScheduleHandler) {
-            schedule.data.tasks = tasks.map(t => t.data);
-            addScheduleHandler(schedule);
+            schedule.data.tasks = tasks.map(t => t.data)
+            addScheduleHandler(schedule)
         }
     }
 
@@ -251,10 +251,10 @@
 			},
 			editID: ui.currTaskEditID++,
 			open: true
-		}, ...tasks];
+		}, ...tasks]
     }
 
-    let addTaskHandler = undefined;
+    let addTaskHandler = undefined
     
 	function addTask(taskEditID, taskData) {
 		return fetch(`schedule/${schedule.data.id}/task.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(taskData)}).then(r => {
@@ -262,34 +262,34 @@
 				tasks = [{
 					data: taskData,
 					open: true
-				}, ...(tasks.filter(t => t.editID !== taskEditID))];
+				}, ...(tasks.filter(t => t.editID !== taskEditID))]
             } else {
-                console.error(r);
+                console.error(r)
             }
 		}).catch(err => {
-			console.error(err);
-		});
+			console.error(err)
+		})
     }
 
     function setAddTaskHandler() {
-        addTaskHandler = schedule.editID ? undefined : addTask;
+        addTaskHandler = schedule.editID ? undefined : addTask
     }
-    setAddTaskHandler();
+    setAddTaskHandler()
 
     function togglePause() {
-        const pause = schedule.data.paused ? 'pause' : 'unpause';
+        const pause = schedule.data.paused ? 'pause' : 'unpause'
 		return fetch(`schedule/${schedule.data.id}/${pause}.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
             if (r.status !== 204) {
-                console.error(r);
+                console.error(r)
             }
 		}).catch(err => {
-			console.error(err);
-        });
+			console.error(err)
+        })
     }
 
     function deleteSchedule() {
         if (deleteScheduleHandler) {
-            deleteScheduleHandler(schedule);
+            deleteScheduleHandler(schedule)
         }
     }
 
