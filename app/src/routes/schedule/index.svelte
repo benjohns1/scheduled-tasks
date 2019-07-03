@@ -34,9 +34,30 @@
 	const addSchedule = schedule => {
 		const editID = schedule.editID
 		const postData = (() => {
-			return JSON.stringify(schedule.data)
+			const ignoreProps = (() => {
+				switch (schedule.data.frequency) {
+					case 'Hour':
+						return ['atHours', 'onDaysOfMonth', 'onDaysOfWeek']
+					case 'Day':
+						return ['onDaysOfMonth', 'onDaysOfWeek']
+					case 'Week':
+						return ['onDaysOfMonth']
+					case 'Month':
+						return ['onDaysOfWeek']
+				}
+				return []
+			})()
+			if (!schedule.data.tasks || schedule.data.tasks.length <= 0) {
+				ignoreProps.push('tasks')
+			}
+			return Object.keys(schedule.data).reduce((acc, key) => {
+				if (schedule.data.hasOwnProperty(key) && !ignoreProps.includes(key)) {
+					acc[key] = schedule.data[key]
+				}
+				return acc
+			}, {})
 		})()
-		return fetch(`schedule.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: postData}).then(r => {
+		return fetch(`schedule.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(postData)}).then(r => {
 			r.json().then(data => {
 				if (r.status !== 201) {
 					console.error(data, r)
