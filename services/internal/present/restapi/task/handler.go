@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	responseMapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/task/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -39,12 +40,12 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	f := mapper.NewFormatter(rf)
 
 	tPre := prefix + "/task"
-	r.GET(tPre+"/", listTasks(l, f, taskRepo))
-	r.GET(tPre+"/:taskID", getTask(l, f, taskRepo))
-	r.POST(tPre+"/", addTask(l, f, p, taskRepo))
-	r.PUT(tPre+"/:taskID/complete", completeTask(l, f, taskRepo))
-	r.DELETE(tPre+"/:taskID", clearTask(l, f, taskRepo))
-	r.POST(tPre+"/clear", clearCompletedTasks(l, f, taskRepo))
+	r.GET(tPre+"/", auth.Handler(listTasks(l, f, taskRepo)))
+	r.GET(tPre+"/:taskID", auth.Handler(getTask(l, f, taskRepo)))
+	r.POST(tPre+"/", auth.Handler(addTask(l, f, p, taskRepo)))
+	r.PUT(tPre+"/:taskID/complete", auth.Handler(completeTask(l, f, taskRepo)))
+	r.DELETE(tPre+"/:taskID", auth.Handler(clearTask(l, f, taskRepo)))
+	r.POST(tPre+"/clear", auth.Handler(clearCompletedTasks(l, f, taskRepo)))
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {

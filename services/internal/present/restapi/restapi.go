@@ -8,9 +8,10 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
+	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	scheduleapi "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/schedule"
 	taskapi "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/task"
-	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -25,6 +26,7 @@ func New(l Logger, checkSchedule chan<- bool, taskRepo usecase.TaskRepo, schedul
 	r := httprouter.New()
 	f := mapper.NewFormatter(l)
 	prefix := "/api/v1"
+	r.GET(prefix+"/auth/token", auth.GetToken(l))
 	taskapi.Handle(r, prefix, l, f, taskRepo)
 	scheduleapi.Handle(r, prefix, l, f, checkSchedule, scheduleRepo)
 

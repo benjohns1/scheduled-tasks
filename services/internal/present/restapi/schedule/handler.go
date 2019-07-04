@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	responseMapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/schedule/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -42,15 +43,15 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	f := mapper.NewFormatter(rf)
 
 	sPre := prefix + "/schedule"
-	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
-	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
-	r.DELETE(sPre+"/:scheduleID", removeSchedule(l, f, checkSchedule, scheduleRepo))
-	r.POST(sPre+"/", addSchedule(l, f, p, checkSchedule, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, checkSchedule, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, checkSchedule, scheduleRepo))
+	r.GET(sPre+"/", auth.Handler(listSchedules(l, f, scheduleRepo)))
+	r.GET(sPre+"/:scheduleID", auth.Handler(getSchedule(l, f, scheduleRepo)))
+	r.DELETE(sPre+"/:scheduleID", auth.Handler(removeSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.POST(sPre+"/", auth.Handler(addSchedule(l, f, p, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/pause", auth.Handler(pauseSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/unpause", auth.Handler(unpauseSchedule(l, f, checkSchedule, scheduleRepo)))
 
 	rtPre := sPre + "/:scheduleID/task"
-	r.POST(rtPre+"/", addRecurringTask(l, f, p, scheduleRepo))
+	r.POST(rtPre+"/", auth.Handler(addRecurringTask(l, f, p, scheduleRepo)))
 }
 
 func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
