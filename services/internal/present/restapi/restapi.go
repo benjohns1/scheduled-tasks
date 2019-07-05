@@ -21,14 +21,14 @@ type Logger interface {
 }
 
 // New creates a REST API server
-func New(l Logger, checkSchedule chan<- bool, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
+func New(l Logger, a auth.Authorizer, checkSchedule chan<- bool, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
 
 	r := httprouter.New()
 	f := mapper.NewFormatter(l)
+	a.SetFormatter(f)
 	prefix := "/api/v1"
-	r.GET(prefix+"/auth/token", auth.GetToken(l))
-	taskapi.Handle(r, prefix, l, f, taskRepo)
-	scheduleapi.Handle(r, prefix, l, f, checkSchedule, scheduleRepo)
+	taskapi.Handle(r, a, prefix, l, f, taskRepo)
+	scheduleapi.Handle(r, a, prefix, l, f, checkSchedule, scheduleRepo)
 
 	return r
 }

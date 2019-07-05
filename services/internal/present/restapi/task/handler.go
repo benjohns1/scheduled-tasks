@@ -8,7 +8,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
-	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	responseMapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/task/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -33,19 +32,24 @@ type Parser interface {
 	AddTask(b io.Reader) (*task.Task, error)
 }
 
+// Auth defines the auth interface for auth middleware
+type Auth interface {
+	Handle(next httprouter.Handle) httprouter.Handle
+}
+
 // Handle adds task handling endpoints
-func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.ResponseFormatter, taskRepo usecase.TaskRepo) {
+func Handle(r *httprouter.Router, a Auth, prefix string, l Logger, rf responseMapper.ResponseFormatter, taskRepo usecase.TaskRepo) {
 
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(rf)
 
 	tPre := prefix + "/task"
-	r.GET(tPre+"/", auth.Handler(listTasks(l, f, taskRepo)))
-	r.GET(tPre+"/:taskID", auth.Handler(getTask(l, f, taskRepo)))
-	r.POST(tPre+"/", auth.Handler(addTask(l, f, p, taskRepo)))
-	r.PUT(tPre+"/:taskID/complete", auth.Handler(completeTask(l, f, taskRepo)))
-	r.DELETE(tPre+"/:taskID", auth.Handler(clearTask(l, f, taskRepo)))
-	r.POST(tPre+"/clear", auth.Handler(clearCompletedTasks(l, f, taskRepo)))
+	r.GET(tPre+"/", a.Handle(listTasks(l, f, taskRepo)))
+	r.GET(tPre+"/:taskID", a.Handle(getTask(l, f, taskRepo)))
+	r.POST(tPre+"/", a.Handle(addTask(l, f, p, taskRepo)))
+	r.PUT(tPre+"/:taskID/complete", a.Handle(completeTask(l, f, taskRepo)))
+	r.DELETE(tPre+"/:taskID", a.Handle(clearTask(l, f, taskRepo)))
+	r.POST(tPre+"/clear", a.Handle(clearCompletedTasks(l, f, taskRepo)))
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {

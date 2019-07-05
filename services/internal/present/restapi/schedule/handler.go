@@ -8,7 +8,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
-	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	responseMapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/schedule/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -36,22 +35,27 @@ type Parser interface {
 	AddRecurringTask(b io.Reader) (schedule.RecurringTask, error)
 }
 
+// Auth defines the auth interface for auth middleware
+type Auth interface {
+	Handle(next httprouter.Handle) httprouter.Handle
+}
+
 // Handle adds schedule handling endpoints
-func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.ResponseFormatter, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) {
+func Handle(r *httprouter.Router, a Auth, prefix string, l Logger, rf responseMapper.ResponseFormatter, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) {
 
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(rf)
 
 	sPre := prefix + "/schedule"
-	r.GET(sPre+"/", auth.Handler(listSchedules(l, f, scheduleRepo)))
-	r.GET(sPre+"/:scheduleID", auth.Handler(getSchedule(l, f, scheduleRepo)))
-	r.DELETE(sPre+"/:scheduleID", auth.Handler(removeSchedule(l, f, checkSchedule, scheduleRepo)))
-	r.POST(sPre+"/", auth.Handler(addSchedule(l, f, p, checkSchedule, scheduleRepo)))
-	r.PUT(sPre+"/:scheduleID/pause", auth.Handler(pauseSchedule(l, f, checkSchedule, scheduleRepo)))
-	r.PUT(sPre+"/:scheduleID/unpause", auth.Handler(unpauseSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.GET(sPre+"/", a.Handle(listSchedules(l, f, scheduleRepo)))
+	r.GET(sPre+"/:scheduleID", a.Handle(getSchedule(l, f, scheduleRepo)))
+	r.DELETE(sPre+"/:scheduleID", a.Handle(removeSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.POST(sPre+"/", a.Handle(addSchedule(l, f, p, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/pause", a.Handle(pauseSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/unpause", a.Handle(unpauseSchedule(l, f, checkSchedule, scheduleRepo)))
 
 	rtPre := sPre + "/:scheduleID/task"
-	r.POST(rtPre+"/", auth.Handler(addRecurringTask(l, f, p, scheduleRepo)))
+	r.POST(rtPre+"/", a.Handle(addRecurringTask(l, f, p, scheduleRepo)))
 }
 
 func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {

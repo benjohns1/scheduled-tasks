@@ -7,6 +7,7 @@ import (
 	postgres_test "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/services/internal/data/transient"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 )
 
 // Tester describes an API struct used to create new test API instances
@@ -31,7 +32,8 @@ func (m *transientTester) NewAPI() http.Handler {
 	taskRepo := transient.NewTaskRepo()
 	scheduleRepo := transient.NewScheduleRepo()
 	c := make(chan<- bool)
-	return restapi.New(l, c, taskRepo, scheduleRepo)
+	authStub := auth.New(l)
+	return restapi.New(l, authStub, c, taskRepo, scheduleRepo)
 }
 
 func (m *transientTester) Close() error {
@@ -64,7 +66,8 @@ func (m *postgresTester) NewAPI() http.Handler {
 	}
 	l := &loggerStub{}
 	c := make(chan<- bool)
-	return restapi.New(l, c, taskRepo, scheduleRepo)
+	authStub := auth.New(l)
+	return restapi.New(l, authStub, c, taskRepo, scheduleRepo)
 }
 
 func (m *postgresTester) Close() error {

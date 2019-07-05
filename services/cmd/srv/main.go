@@ -7,6 +7,7 @@ import (
 	data "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres"
 	"github.com/benjohns1/scheduled-tasks/services/internal/infra/scheduler"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	"github.com/joho/godotenv"
 )
 
@@ -22,7 +23,6 @@ func main() {
 		l.Panic(err)
 	}
 	defer scConn.Close()
-
 
 	// API DB connection
 	acConn := data.NewDBConn(l, "api")
@@ -72,8 +72,15 @@ func startAPIServer(dbconn data.DBConn, check chan<- bool) (closed <-chan bool) 
 		l.Panic(err)
 	}
 
+	// Instantiate authorization handler
+	a := auth.NewAuth0(l, auth.Auth0Config{
+		Secret:   []byte(os.Getenv("AUTH0_API_SECRET")),
+		Audience: []string{os.Getenv("AUTH0_API_IDENTIFIER")},
+		Domain:   os.Getenv("AUTH0_DOMAIN"),
+	})
+
 	// Serve REST API
-	api := restapi.New(l, check, taskRepo, scheduleRepo)
+	api := restapi.New(l, a, check, taskRepo, scheduleRepo)
 	return restapi.Serve(l, api)
 }
 

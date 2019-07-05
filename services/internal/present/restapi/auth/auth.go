@@ -2,55 +2,44 @@ package auth
 
 import (
 	"net/http"
-	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
 )
-
-/*
-	@TODO: implement Auth0
-	"gopkg.in/square/go-jose.v2"
-	"github.com/auth0-community/go-auth0"
-*/
 
 // Logger interface needed for log messages
 type Logger interface {
 	Printf(format string, v ...interface{})
 }
 
-var signingKey = []byte("asdfasdfasdf")
-
-// GetToken returns a JWT token
-func GetToken(l Logger) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-		claims := &jwt.StandardClaims{
-			Subject:   "lando.calrissian@email.com.invalid",
-			Issuer:    "Scheduled Tasks Test App",
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-
-		tokenString, err := token.SignedString(signingKey)
-		if err != nil {
-			l.Printf("error signing token: %v", err)
-			return
-		}
-
-		w.Write([]byte(tokenString))
-	}
+// Formatter defines the formatter interface for output responses
+type Formatter interface {
+	WriteResponse(w http.ResponseWriter, res []byte, statusCode int)
+	Error(a interface{}) []byte
 }
 
-var jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
-	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-		return signingKey, nil
-	},
-	SigningMethod: jwt.SigningMethodHS512,
-})
+// Auth base struct for auth implementations
+type Auth struct {
+	l Logger
+	f Formatter
+	Authorizer
+}
 
-// Handler httprouter middleware that handles JWT request auth
-func Handler(next httprouter.Handle) httprouter.Handle {
+func New(l Logger) *Auth {
+	return &Auth{l: l}
+}
+
+// SetFormatter sets the formatter on the Auth struct
+func (a *Auth) SetFormatter(f Formatter) {
+	a.f = f
+}
+
+// Handle dummy method for auth handler
+func (a *Auth) Handle(next httprouter.Handle) httprouter.Handle {
 	return next
-	//return httprouterwrap.Wrap(jwtMiddleware.Handler(httprouterwrap.Unwrap(next)))
+}
+
+// Authorizer interface for authorization
+type Authorizer interface {
+	SetFormatter(f Formatter)
+	Handle(next httprouter.Handle) httprouter.Handle
 }
