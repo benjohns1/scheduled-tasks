@@ -1,10 +1,10 @@
 <script context="module">
-    import { onMount } from 'svelte'
+    import { onMount, tick } from 'svelte'
     import createAuth0Client from '@auth0/auth0-spa-js'
     import Button from './Button.svelte'
 
     const loadConfig = async () => {
-		return await fetch(`auth.config.json`).then(async r => {
+		return await fetch(`auth/config.json`).then(async r => {
 			if (r.status === 200) {
 				return { cfg: await r.json() }
 			} else {
@@ -35,6 +35,7 @@
 </script>
 
 <script>
+	import { loader, addLoader } from './../loader'
     import { stores } from '@sapper/app'
     const { session } = stores()
     if (!$session) {
@@ -42,6 +43,8 @@
             isAuthenticated: undefined,
         }
     }
+    
+	const loaded = addLoader()
     
 	let auth0 = undefined
     let errorMsg = undefined
@@ -69,6 +72,9 @@
             const expireDays = 30
             document.cookie = `token=${$session.token}; expires=${(new Date()).getTime() + (expireDays*24*60*60*1000)}; path=/;`
         }
+
+        await tick()
+        loaded()
     })
 
 	const login = async () => {

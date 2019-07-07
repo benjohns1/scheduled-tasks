@@ -1,4 +1,4 @@
-import { config } from '../auth/auth0'
+import { config } from '../../auth/auth0'
 
 export function get(_, res) {
   res.writeHead(200, {

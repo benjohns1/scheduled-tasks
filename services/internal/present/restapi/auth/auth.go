@@ -24,6 +24,7 @@ type Auth struct {
 	Authorizer
 }
 
+// New creates a new base Auth struct (useful for test stubbing)
 func New(l Logger) *Auth {
 	return &Auth{l: l}
 }

@@ -2,14 +2,19 @@
 	import Login from '../components/Login.svelte'
 	import Nav from '../components/Nav.svelte'
 	import { onMount, tick } from 'svelte'
+	import { loader, addLoader, onFinishedLoading } from './../loader'
 
 	export let segment
 
 	let testID = 'loading'
-	onMount(() => {
-		tick().then(() => {
-			testID = 'loaded'
-		})
+	onFinishedLoading(() => {
+		testID = 'loaded'
+	})
+	const loaded = addLoader()
+
+	onMount(async () => {
+		await tick()
+		loaded()
 	})
 
 </script>
