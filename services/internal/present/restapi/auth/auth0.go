@@ -30,7 +30,7 @@ func NewAuth0(l Logger, c Auth0Config) *Auth0 {
 func (a *Auth0) Handle(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		secretProvider := auth0.NewKeyProvider(a.c.Secret)
-		configuration := auth0.NewConfiguration(secretProvider, a.c.Audience, a.c.Domain, jose.HS256)
+		configuration := auth0.NewConfiguration(secretProvider, a.c.Audience, "https://"+a.c.Domain+"/", jose.HS256)
 		validator := auth0.NewValidator(configuration, nil)
 
 		token, err := validator.ValidateRequest(r)

@@ -1,9 +1,10 @@
 <script context="module">
 	import Schedule from "../../components/Schedule.svelte"
 	import Button from "../../components/Button.svelte"
+	import { withJsonAndAuth } from "../../api/default.headers"
 	
-	export function preload({ params, query }) {
-		return this.fetch(`schedule.json`).then(r => {
+	export function preload(page, session) {
+		return this.fetch(`schedule.json`, withJsonAndAuth(session ? session.token : null)).then(r => {
 			return r.json().then(data => {
 				if (r.status !== 200) {
 					console.error(data, r)
@@ -26,6 +27,9 @@
 </script>
 
 <script>
+    import { stores } from '@sapper/app'
+	const { session } = stores()
+
 	export let scheduleError = undefined
 	export let schedules = []
 
@@ -57,7 +61,7 @@
 				return acc
 			}, {})
 		})()
-		return fetch(`schedule.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(postData)}).then(r => {
+		return fetch(`schedule.json`, withJsonAndAuth($session.token, { method: "POST", body: JSON.stringify(postData)})).then(r => {
 			r.json().then(data => {
 				if (r.status !== 201) {
 					console.error(data, r)
@@ -75,7 +79,7 @@
     const deleteSchedule = schedule => {
 		if (schedule.data.id !== undefined) {
 			const id = schedule.data.id
-			return fetch(`schedule/${id}.json`, { method: "DELETE", headers: {'Content-Type': 'application/json'} }).then(r => {
+			return fetch(`schedule/${id}.json`, withJsonAndAuth($session.token, { method: "DELETE" })).then(r => {
 				if (r.status !== 204) {
 					console.error(r)
 					return

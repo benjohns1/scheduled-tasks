@@ -1,9 +1,10 @@
 <script context="module">
 	import Task from "../../components/Task.svelte"
 	import Button from "../../components/Button.svelte"
+	import { withJsonAndAuth } from "../../api/default.headers"
 	
-	export function preload({ params, query }) {
-		return this.fetch(`task.json`).then(async r => {
+	export function preload(page, session ) {
+		return this.fetch(`task.json`, withJsonAndAuth(session ? session.token : null)).then(async r => {
 			if (r.status === 200) {
 				return r.json()
 			} else {
@@ -27,6 +28,9 @@
 </script>
 
 <script>
+    import { stores } from '@sapper/app'
+	const { session } = stores()
+	
 	export let taskError = undefined
 	export let tasks = []
 	export let completedTasks = []
@@ -35,7 +39,7 @@
 	let editID = 1
 
 	const addTask = (taskEditID, taskData) => {
-		return fetch(`task.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(taskData)}).then(r => {
+		return fetch(`task.json`, withJsonAndAuth($session.token, { method: "POST", body: JSON.stringify(taskData)})).then(r => {
 			r.json().then(({ id }) => {
 				taskData.id = id
 				tasks = [{
@@ -49,7 +53,7 @@
 	}
 
 	const completeTask = taskID => {
-		return fetch(`task/${taskID}/complete.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
+		return fetch(`task/${taskID}/complete.json`, withJsonAndAuth($session.token, { method: "PUT" })).then(r => {
 			completedTasks = [...(tasks.filter(t => t.data.id === taskID).map(t => {
 				t.data.completedTime = 'just now'
 				t.open = false
@@ -79,7 +83,7 @@
 	function clearTasks() {
 		const prevCompletedTasks = completedTasks.slice(0)
 		completedTasks = []
-		return fetch(`task/clear.json`, { method: "POST", headers: {'Content-Type': 'application/json'} }).then(r => {
+		return fetch(`task/clear.json`, withJsonAndAuth($session.token, { method: "POST" } )).then(r => {
 			r.json().then(({ count, message }) => {
 				completedSuccessMessage = `${message}${count ? ` (${count})` : ''}`
 			})

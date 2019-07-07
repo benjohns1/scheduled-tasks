@@ -2,6 +2,7 @@
     export let test = undefined
     export let style = 'primary'
     export let classes = ''
+    export let disabled = false
 
     $: classStr = classes === '' ? '' : ` ${classes}`
 </script>
@@ -16,7 +17,7 @@
 </style>
 
 {#if test !== undefined}
-    <button on:click data-test={test} class='btn btn-{style}{classStr}'><slot/></button>
+    <button type=button {disabled} on:click data-test={test} class='btn btn-{style}{classStr}'><slot/></button>
 {:else}
-    <button on:click class='btn btn-{style}'><slot/></button>
+    <button type=button {disabled} on:click class='btn btn-{style}{classStr}'><slot/></button>
 {/if}
