@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -98,7 +99,7 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 		createdTime = time.Time{}
 	}
 
-	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime, createdTime)
+	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime, createdTime, user.ID{})
 	td.TaskID = usecase.TaskID(row.id)
 
 	return

@@ -7,6 +7,7 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	data "github.com/benjohns1/scheduled-tasks/services/internal/data/transient"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
@@ -14,11 +15,11 @@ import (
 func TestGetTask(t *testing.T) {
 	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
-	task1 := task.New("task1", "")
+	task1 := task.New("task1", "", user.ID{})
 	taskID, _ := taskRepo.Add(task1)
-	task2 := task.NewRaw("task2", "", now, time.Time{}, now)
+	task2 := task.NewRaw("task2", "", now, time.Time{}, now, user.ID{})
 	completedTaskID, _ := taskRepo.Add(task2)
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now, user.ID{}))
 
 	type args struct {
 		r  TaskRepo
@@ -71,8 +72,8 @@ func TestGetTask(t *testing.T) {
 
 func TestAddTask(t *testing.T) {
 	taskRepo := data.NewTaskRepo()
-	emptyTask := task.New("", "")
-	basicTask := task.New("task with data", "task description")
+	emptyTask := task.New("", "", user.ID{})
+	basicTask := task.New("task with data", "task description", user.ID{})
 
 	type args struct {
 		r TaskRepo
@@ -114,9 +115,9 @@ func TestAddTask(t *testing.T) {
 func TestCompleteTask(t *testing.T) {
 	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
-	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
+	taskID, _ := taskRepo.Add(task.New("task1", "", user.ID{}))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now, user.ID{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now, user.ID{}))
 
 	type args struct {
 		r  TaskRepo
@@ -170,9 +171,9 @@ func TestCompleteTask(t *testing.T) {
 func TestClearTask(t *testing.T) {
 	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
-	taskID, _ := taskRepo.Add(task.New("task1", ""))
-	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
-	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now))
+	taskID, _ := taskRepo.Add(task.New("task1", "", user.ID{}))
+	completedTaskID, _ := taskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now, user.ID{}))
+	clearedTaskID, _ := taskRepo.Add(task.NewRaw("task3", "", now, now, now, user.ID{}))
 
 	type args struct {
 		r  TaskRepo
@@ -228,13 +229,13 @@ func TestClearCompletedTasks(t *testing.T) {
 	emptyRepo := data.NewTaskRepo()
 
 	singleCompletedTaskRepo := data.NewTaskRepo()
-	singleCompletedTaskRepo.Add(task.New("task1", ""))
-	singleCompletedTaskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now))
-	singleCompletedTaskRepo.Add(task.NewRaw("task3", "", now, now, now))
+	singleCompletedTaskRepo.Add(task.New("task1", "", user.ID{}))
+	singleCompletedTaskRepo.Add(task.NewRaw("task2", "", now, time.Time{}, now, user.ID{}))
+	singleCompletedTaskRepo.Add(task.NewRaw("task3", "", now, now, now, user.ID{}))
 
 	thousandCompletedTasksRepo := data.NewTaskRepo()
 	for i := 0; i < 1000; i++ {
-		_, err := thousandCompletedTasksRepo.Add(task.NewRaw("", "", now, time.Time{}, now))
+		_, err := thousandCompletedTasksRepo.Add(task.NewRaw("", "", now, time.Time{}, now, user.ID{}))
 		if err != nil {
 			t.Errorf("error setting up task repo: %v", err)
 		}
@@ -285,11 +286,11 @@ func TestClearCompletedTasks(t *testing.T) {
 func TestListTasks(t *testing.T) {
 	now := clock.Now()
 	taskRepo := data.NewTaskRepo()
-	task1 := task.New("task1", "")
+	task1 := task.New("task1", "", user.ID{})
 	id1, _ := taskRepo.Add(task1)
-	task2 := task.NewRaw("task2", "", now, time.Time{}, now)
+	task2 := task.NewRaw("task2", "", now, time.Time{}, now, user.ID{})
 	id2, _ := taskRepo.Add(task2)
-	taskRepo.Add(task.NewRaw("task3", "", now, now, now))
+	taskRepo.Add(task.NewRaw("task3", "", now, now, now, user.ID{}))
 
 	type args struct {
 		r TaskRepo

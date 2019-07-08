@@ -3,14 +3,16 @@
 package postgres_test
 
 import (
-	"time"
-	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
+
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/test"
-	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -65,7 +67,7 @@ func TestTaskRepo_Get(t *testing.T) {
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
-	newTask := task.New("t1", "t1desc")
+	newTask := task.New("t1", "t1desc", user.ID{})
 	id, err := r.Add(newTask)
 	if err != nil {
 		t.Fatal(err)
@@ -116,8 +118,8 @@ func TestTaskRepo_GetAll(t *testing.T) {
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
-	newTask1 := task.New("", "")
-	newTask2 := task.New("", "")
+	newTask1 := task.New("", "", user.ID{})
+	newTask2 := task.New("", "", user.ID{})
 	id1, _ := r.Add(newTask1)
 	id2, _ := r.Add(newTask2)
 
@@ -155,7 +157,7 @@ func TestTaskRepo_Add(t *testing.T) {
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
-	newTask := task.New("", "")
+	newTask := task.New("", "", user.ID{})
 
 	type args struct {
 		t *task.Task
@@ -196,7 +198,7 @@ func TestTaskRepo_Update(t *testing.T) {
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
 
-	newTask := task.New("", "")
+	newTask := task.New("", "", user.ID{})
 	id1, _ := r.Add(newTask)
 	newTask.CompleteNow()
 

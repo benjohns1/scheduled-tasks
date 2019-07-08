@@ -6,6 +6,7 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 // CheckSchedules checks all schedules, determines all recurrences that have occurred, and when the next run is needed
@@ -30,7 +31,7 @@ func CheckSchedules(taskRepo TaskRepo, scheduleRepo ScheduleRepo) (time.Time, er
 			// Create tasks for all scheduled recurrences
 			for _, rt := range sched.Tasks() {
 				for i := 0; i < len(times); i++ {
-					t := task.New(rt.Name(), rt.Description())
+					t := task.New(rt.Name(), rt.Description(), user.ID{})
 					_, err := taskRepo.Add(t)
 					if err != nil {
 						return time.Time{}, fmt.Errorf("error adding task to repo: %v", err)

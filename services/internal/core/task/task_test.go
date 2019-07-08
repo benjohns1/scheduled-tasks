@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 func TestNew(t *testing.T) {
@@ -15,9 +16,12 @@ func TestNew(t *testing.T) {
 	clock.Set(clockMock)
 	defer clock.Set(prevClock)
 
+	testuser := user.New("testuser").ID()
+
 	type args struct {
 		name        string
 		description string
+		createdBy   user.ID
 	}
 	tests := []struct {
 		name string
@@ -26,18 +30,18 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name: "create new task",
-			args: args{name: "task name", description: "task description"},
-			want: &Task{name: "task name", description: "task description", completedTime: time.Time{}, clearedTime: time.Time{}, createdTime: testNow},
+			args: args{name: "task name", description: "task description", createdBy: testuser},
+			want: &Task{name: "task name", description: "task description", completedTime: time.Time{}, clearedTime: time.Time{}, createdTime: testNow, createdBy: testuser},
 		},
 		{
 			name: "create new empty task",
-			args: args{name: "", description: ""},
+			args: args{name: "", description: "", createdBy: user.ID{}},
 			want: &Task{name: "", description: "", completedTime: time.Time{}, clearedTime: time.Time{}, createdTime: testNow},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.name, tt.args.description); !reflect.DeepEqual(got, tt.want) {
+			if got := New(tt.args.name, tt.args.description, tt.args.createdBy); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
@@ -45,12 +49,14 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewRaw(t *testing.T) {
+	testuser := user.New("testuser").ID()
 	type args struct {
 		name        string
 		description string
 		complete    time.Time
 		cleared     time.Time
 		created     time.Time
+		createdBy   user.ID
 	}
 	now := time.Now()
 	tests := []struct {
@@ -60,18 +66,18 @@ func TestNewRaw(t *testing.T) {
 	}{
 		{
 			name: "create new task with all params",
-			args: args{name: "task name", description: "task description", complete: now, cleared: now, created: now},
-			want: &Task{name: "task name", description: "task description", completedTime: now, clearedTime: now, createdTime: now},
+			args: args{name: "task name", description: "task description", complete: now, cleared: now, created: now, createdBy: testuser},
+			want: &Task{name: "task name", description: "task description", completedTime: now, clearedTime: now, createdTime: now, createdBy: testuser},
 		},
 		{
 			name: "create new empty task with all params",
-			args: args{name: "", description: "", complete: time.Time{}, cleared: time.Time{}, created: time.Time{}},
+			args: args{name: "", description: "", complete: time.Time{}, cleared: time.Time{}, created: time.Time{}, createdBy: user.ID{}},
 			want: &Task{name: "", description: "", completedTime: time.Time{}, clearedTime: time.Time{}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewRaw(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared, tt.args.created); !reflect.DeepEqual(got, tt.want) {
+			if got := NewRaw(tt.args.name, tt.args.description, tt.args.complete, tt.args.cleared, tt.args.created, tt.args.createdBy); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewRaw() = %v, want %v", got, tt.want)
 			}
 		})

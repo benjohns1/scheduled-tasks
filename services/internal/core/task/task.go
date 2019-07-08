@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 // Task is a single task struct
@@ -15,25 +16,28 @@ type Task struct {
 	completedTime time.Time
 	clearedTime   time.Time
 	createdTime   time.Time
+	createdBy     user.ID
 }
 
 // New instantiates a new task entity
-func New(name string, description string) *Task {
+func New(name string, description string, createdBy user.ID) *Task {
 	return &Task{
 		name:        name,
 		description: description,
 		createdTime: clock.Now(),
+		createdBy:   createdBy,
 	}
 }
 
 // NewRaw instantiates a new task entity with all available fields
-func NewRaw(name string, description string, complete time.Time, cleared time.Time, created time.Time) *Task {
+func NewRaw(name string, description string, complete time.Time, cleared time.Time, created time.Time, createdBy user.ID) *Task {
 	return &Task{
 		name:          name,
 		description:   description,
 		completedTime: complete,
 		clearedTime:   cleared,
 		createdTime:   created,
+		createdBy:     createdBy,
 	}
 }
 

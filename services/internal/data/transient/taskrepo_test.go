@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -29,7 +30,7 @@ func TestNewTaskRepo(t *testing.T) {
 
 func TestTaskRepo_Get(t *testing.T) {
 	r := NewTaskRepo()
-	newTask := task.New("", "")
+	newTask := task.New("", "", user.ID{})
 	id, _ := r.Add(newTask)
 
 	type args struct {
@@ -66,8 +67,8 @@ func TestTaskRepo_Get(t *testing.T) {
 
 func TestTaskRepo_GetAll(t *testing.T) {
 	r := NewTaskRepo()
-	newTask1 := task.New("", "")
-	newTask2 := task.New("", "")
+	newTask1 := task.New("", "", user.ID{})
+	newTask2 := task.New("", "", user.ID{})
 	id1, _ := r.Add(newTask1)
 	id2, _ := r.Add(newTask2)
 
@@ -100,7 +101,7 @@ func TestTaskRepo_GetAll(t *testing.T) {
 
 func TestTaskRepo_Add(t *testing.T) {
 	r := NewTaskRepo()
-	newTask := task.New("", "")
+	newTask := task.New("", "", user.ID{})
 
 	type args struct {
 		t *task.Task
@@ -136,7 +137,7 @@ func TestTaskRepo_Add(t *testing.T) {
 
 func TestTaskRepo_Update(t *testing.T) {
 	r := NewTaskRepo()
-	newTask := task.New("", "")
+	newTask := task.New("", "", user.ID{})
 	id1, _ := r.Add(newTask)
 	newTask.CompleteNow()
 
