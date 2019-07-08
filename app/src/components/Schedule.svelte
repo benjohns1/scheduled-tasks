@@ -16,6 +16,7 @@
             ui = {
                 id: schedule.data.id,
                 editID: schedule.editID,
+                key: schedule.data.id !== undefined ? `id-${schedule.data.id}` : `edit-${schedule.editID}`,
                 minuteMax: 59,
                 atMinutes: formatAtMinutes(),
                 hourMax: 23,
@@ -349,17 +350,17 @@
                 <div class='form-group row'>
                     <div class='custom-control custom-switch'>
                         {#if schedule.editID}
-                            <input id='schedulePaused' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused}>
+                            <input id='schedulePaused-{ui.key}' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused}>
                         {:else}
-                            <input id='schedulePaused' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
+                            <input id='schedulePaused-{ui.key}' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
                         {/if}
-                        <label for='schedulePaused' class='custom-control-label'>Pause ({schedule.data.paused ? 'on' : 'off'})</label>
+                        <label for='schedulePaused-{ui.key}' class='custom-control-label'>Pause ({schedule.data.paused ? 'on' : 'off'})</label>
                     </div>
                 </div>
                 <div class='form-group row'>
                     {#if schedule.editID}
-                        <label for='scheduleFrequency' class='col-sm-2 col-form-label'>Frequency:</label>
-                        <div class='col-sm-10'><select id='scheduleFrequency' class=form-control data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={frequencyUpdated}>
+                        <label for='scheduleFrequency-{ui.key}' class='col-sm-2 col-form-label'>Frequency:</label>
+                        <div class='col-sm-10'><select id='scheduleFrequency-{ui.key}' class=form-control data-test=schedule-frequency-input bind:value={schedule.data.frequency} on:change={frequencyUpdated}>
                             <option value='Hour'>Hour</option>
                             <option value='Day'>Day</option>
                             <option value='Week'>Week</option>
@@ -371,9 +372,9 @@
                 </div>
                 <div class='form-group row'>
                     {#if schedule.editID}
-                        <label for='scheduleInterval' class='col-sm-2 col-form-label'>Interval:</label>
+                        <label for='scheduleInterval-{ui.key}' class='col-sm-2 col-form-label'>Interval:</label>
                         <div class='col-sm-10'>
-                            <input id='scheduleInterval' class=form-control type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax} on:blur={validateInterval} on:focus={validateInterval}>
+                            <input id='scheduleInterval-{ui.key}' class=form-control type=number data-test=schedule-interval-input bind:value={schedule.data.interval} min=1 max={ui.intervalMax} on:blur={validateInterval} on:focus={validateInterval}>
                             <small class='form-text text-muted'>(1 - {ui.intervalMax})</small>
                         </div>
                     {:else}
@@ -382,9 +383,9 @@
                 </div>
                 <div class='form-group row'>
                     {#if schedule.editID}
-                        <label for='scheduleOffset' class='col-sm-2 col-form-label'>Offset:</label>
+                        <label for='scheduleOffset-{ui.key}' class='col-sm-2 col-form-label'>Offset:</label>
                         <div class='col-sm-10'>
-                            <input id='scheduleOffset' class=form-control type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax} on:blur={validateOffset} on:focus={validateOffset}>
+                            <input id='scheduleOffset-{ui.key}' class=form-control type=number data-test=schedule-offset-input bind:value={schedule.data.offset} min=0 max={ui.intervalMax} on:blur={validateOffset} on:focus={validateOffset}>
                             <small class='form-text text-muted'>(0 - {ui.intervalMax})</small>
                         </div>
                     {:else}
@@ -394,9 +395,9 @@
                 {#if schedule.data.frequency === 'Month'}
                     <div class='form-group row'>
                         {#if schedule.editID}
-                            <label for='scheduleOnDaysOfMonth' class='col-sm-2 col-form-label'>On days:</label>
+                            <label for='scheduleOnDaysOfMonth-{ui.key}' class='col-sm-2 col-form-label'>On days:</label>
                             <div class='col-sm-10'>
-                                <input id='scheduleOnDaysOfMonth' class=form-control type=text data-test=schedule-on-days-of-month-input bind:value={ui.onDaysOfMonth} on:blur={validateMonthDays} on:focus={validateMonthDays}>
+                                <input id='scheduleOnDaysOfMonth-{ui.key}' class=form-control type=text data-test=schedule-on-days-of-month-input bind:value={ui.onDaysOfMonth} on:blur={validateMonthDays} on:focus={validateMonthDays}>
                                 <small class='form-text text-muted'>(comma-separated, 1 - {ui.dayMax})</small>
                             </div>
                         {:else}
@@ -410,8 +411,8 @@
                         {#if schedule.editID}
                             {#each ui.weekdays as day}
                                 <div class="form-check form-check-inline">
-                                    <input class=form-check-input data-test='schedule-on-days-of-week-input-{day}' type=checkbox id='dayOfWeek{day}' bind:checked={ui.onDaysOfWeek[day]} on:change={daysOfWeekUpdated}>
-                                    <label class=form-check-label for='dayOfWeek{day}'>{day}</label>
+                                    <input class=form-check-input data-test='schedule-on-days-of-week-input-{day}' type=checkbox id='dayOfWeek{day}-{ui.key}' bind:checked={ui.onDaysOfWeek[day]} on:change={daysOfWeekUpdated}>
+                                    <label class=form-check-label for='dayOfWeek{day}-{ui.key}'>{day}</label>
                                 </div>
                             {/each}
                         {:else}
@@ -422,9 +423,9 @@
                 {#if schedule.data.frequency !== 'Hour'}
                     <div class='form-group row'>
                         {#if schedule.editID}
-                            <label for='scheduleAtHours' class='col-sm-2 col-form-label'>At hours:</label>
+                            <label for='scheduleAtHours-{ui.key}' class='col-sm-2 col-form-label'>At hours:</label>
                             <div class='col-sm-10'>
-                                <input id='scheduleAtHours' class=form-control type=text data-test=schedule-at-hours-input bind:value={ui.atHours} on:blur={validateHours} on:focus={validateHours}>
+                                <input id='scheduleAtHours-{ui.key}' class=form-control type=text data-test=schedule-at-hours-input bind:value={ui.atHours} on:blur={validateHours} on:focus={validateHours}>
                                 <small class='form-text text-muted'>(comma-separated, 0 - {ui.hourMax})</small>
                             </div>
                         {:else}
@@ -434,9 +435,9 @@
                 {/if}
                 <div class='form-group row'>
                     {#if schedule.editID}
-                        <label for='scheduleAtMinutes' class='col-sm-2 col-form-label'>At minutes:</label>
+                        <label for='scheduleAtMinutes-{ui.key}' class='col-sm-2 col-form-label'>At minutes:</label>
                         <div class='col-sm-10'>
-                            <input id='scheduleAtMinutes' class=form-control type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}>
+                            <input id='scheduleAtMinutes-{ui.key}' class=form-control type=text data-test=schedule-at-minutes-input bind:value={ui.atMinutes} on:blur={validateMinutes} on:focus={validateMinutes}>
                             <small class='form-text text-muted'>(comma-separated, 0 - {ui.minuteMax})</small>
                         </div>
                     {:else}

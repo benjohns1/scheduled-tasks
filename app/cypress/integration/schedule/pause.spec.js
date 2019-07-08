@@ -17,10 +17,11 @@ describe('edit schedule functionality', () => {
 			cy.get('[data-test=schedule-item]:nth-child(1) [data-test=paused-toggle]').should('exist').should('not.be.checked')
 
 			cy.addSchedule({
-				frequency: 'Hour',
+				frequency: 'Day',
 				interval: 1,
 				offset: 0,
 				atMinutes: '0,30',
+				atHours: 6,
 				paused: true
 			}, {visit: false})
 			cy.get('[data-test=schedule-item]:nth-child(1) [data-test=paused-toggle]').should('be.checked')
