@@ -2,9 +2,12 @@
 	import Schedule from "../../components/Schedule.svelte"
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
+	import { loading } from './../../loading-monitor'
+
+	const loaded = loading()
 	
-	export function preload(page, session) {
-		return this.fetch(`schedule.json`, withJsonAndAuth(session ? session.token : null)).then(r => {
+	export async function preload(page, session) {
+		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session ? session.token : null)).then(r => {
 			return r.json().then(data => {
 				if (r.status !== 200) {
 					console.error(data, r)
@@ -23,6 +26,8 @@
 			console.error(err)
 			return { scheduleError: `Sorry, there was a problem retrieving schedules: ${err.message}` }
 		})
+		loaded()
+		return result
 	}
 </script>
 

@@ -35,7 +35,7 @@
 </script>
 
 <script>
-	import { loader, addLoader } from './../loader'
+	import { loading } from './../loading-monitor'
     import { stores } from '@sapper/app'
     const { session } = stores()
     if (!$session) {
@@ -44,7 +44,7 @@
         }
     }
     
-	const loaded = addLoader()
+	const loaded = loading()
     
 	let auth0 = undefined
     let errorMsg = undefined
@@ -54,6 +54,7 @@
         if (error) {
             console.error(error)
             errorMsg = error.message || 'login error'
+            loaded()
             return
         }
 

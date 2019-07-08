@@ -2,9 +2,12 @@
 	import Task from "../../components/Task.svelte"
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
+	import { loading } from './../../loading-monitor'
+
+	const loaded = loading()
 	
-	export function preload(page, session ) {
-		return this.fetch(`task.json`, withJsonAndAuth(session ? session.token : null)).then(async r => {
+	export async function preload(page, session ) {
+		const result = await this.fetch(`task.json`, withJsonAndAuth(session ? session.token : null)).then(async r => {
 			if (r.status === 200) {
 				return r.json()
 			} else {
@@ -24,6 +27,9 @@
 		}).catch(taskError => {
 			return { taskError }
 		})
+	
+		loaded()
+		return result
 	}
 </script>
 
