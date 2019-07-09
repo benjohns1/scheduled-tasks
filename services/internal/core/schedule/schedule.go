@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 // Schedule represents a collection of tasks that recur at some frequency
@@ -14,16 +15,17 @@ type Schedule struct {
 	lastChecked time.Time
 	tasks       []RecurringTask
 	removedTime time.Time
+	createdBy   user.ID
 }
 
 // New instantiates a new schedule entity
-func New(f Frequency) *Schedule {
-	return &Schedule{frequency: f, paused: false, tasks: []RecurringTask{}}
+func New(f Frequency, createdBy user.ID) *Schedule {
+	return &Schedule{frequency: f, paused: false, tasks: []RecurringTask{}, createdBy: createdBy}
 }
 
 // NewRaw creates a new schedule entity from raw data
-func NewRaw(frequency Frequency, paused bool, lastChecked time.Time, tasks []RecurringTask, removedTime time.Time) *Schedule {
-	return &Schedule{frequency, paused, lastChecked, tasks, removedTime}
+func NewRaw(frequency Frequency, paused bool, lastChecked time.Time, tasks []RecurringTask, removedTime time.Time, createdBy user.ID) *Schedule {
+	return &Schedule{frequency, paused, lastChecked, tasks, removedTime, createdBy}
 }
 
 // Pause pauses a schedule

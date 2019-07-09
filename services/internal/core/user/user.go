@@ -30,3 +30,8 @@ func (u *User) ID() ID {
 func (u *User) DisplayName() string {
 	return u.displayname
 }
+
+// UpdateDisplayName updates the user's display name
+func (u *User) UpdateDisplayName(displayname string) {
+	u.displayname = displayname
+}

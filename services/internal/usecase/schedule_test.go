@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	data "github.com/benjohns1/scheduled-tasks/services/internal/data/transient"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
@@ -12,12 +13,12 @@ import (
 func TestGetSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
+	hourSched := schedule.New(hourFreq, user.ID{})
 	hourSchedID, _ := r.Add(hourSched)
 
 	r2 := data.NewScheduleRepo()
 	f, _ := schedule.NewHourFrequency([]int{0})
-	s1 := schedule.New(f)
+	s1 := schedule.New(f, user.ID{})
 	s1.Remove()
 	sID1, _ := r2.Add(s1)
 
@@ -67,14 +68,14 @@ func TestListSchedules(t *testing.T) {
 
 	r2 := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
+	hourSched := schedule.New(hourFreq, user.ID{})
 	hourSchedID1, _ := r2.Add(hourSched)
 	hourSchedID2, _ := r2.Add(hourSched)
-	
+
 	r3 := data.NewScheduleRepo()
 	f, _ := schedule.NewHourFrequency([]int{0})
-	s1 := schedule.New(f)
-	s2 := schedule.New(f)
+	s1 := schedule.New(f, user.ID{})
+	s2 := schedule.New(f, user.ID{})
 	s2.Remove()
 	sID1, _ := r3.Add(s1)
 	r3.Add(s2)
@@ -124,7 +125,7 @@ func TestListSchedules(t *testing.T) {
 func TestAddSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSchedule := schedule.New(hourFreq)
+	hourSchedule := schedule.New(hourFreq, user.ID{})
 	c := make(chan<- bool)
 
 	type args struct {
@@ -161,8 +162,8 @@ func TestAddSchedule(t *testing.T) {
 func TestPauseSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	f, _ := schedule.NewHourFrequency([]int{0})
-	s1 := schedule.New(f)
-	s2 := schedule.New(f)
+	s1 := schedule.New(f, user.ID{})
+	s2 := schedule.New(f, user.ID{})
 	s2.Remove()
 	sID1, _ := r.Add(s1)
 	sID2, _ := r.Add(s2)
@@ -207,8 +208,8 @@ func TestPauseSchedule(t *testing.T) {
 func TestUnpauseSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	f, _ := schedule.NewHourFrequency([]int{0})
-	s1 := schedule.New(f)
-	s2 := schedule.New(f)
+	s1 := schedule.New(f, user.ID{})
+	s2 := schedule.New(f, user.ID{})
 	s1.Pause()
 	s2.Remove()
 	sID1, _ := r.Add(s1)
@@ -255,12 +256,12 @@ func TestRemoveSchedule(t *testing.T) {
 	r := data.NewScheduleRepo()
 	f, err := schedule.NewHourFrequency([]int{0})
 	if err != nil {
-		t.Fatal(err);
+		t.Fatal(err)
 	}
-	s := schedule.New(f)
+	s := schedule.New(f, user.ID{})
 	sID, err := r.Add(s)
 	if err != nil {
-		t.Fatal(err);
+		t.Fatal(err)
 	}
 	c := make(chan<- bool)
 
@@ -281,7 +282,7 @@ func TestRemoveSchedule(t *testing.T) {
 func TestAddRecurringTask(t *testing.T) {
 	r := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
+	hourSched := schedule.New(hourFreq, user.ID{})
 	hourSchedID, _ := r.Add(hourSched)
 	rt1 := schedule.NewRecurringTask("task 1", "")
 	rt2 := schedule.NewRecurringTask("task 2", "")
@@ -332,7 +333,7 @@ func TestAddRecurringTask(t *testing.T) {
 func TestRemoveRecurringTask(t *testing.T) {
 	r := data.NewScheduleRepo()
 	hourFreq, _ := schedule.NewHourFrequency([]int{0})
-	hourSched := schedule.New(hourFreq)
+	hourSched := schedule.New(hourFreq, user.ID{})
 	rt1 := schedule.NewRecurringTask("task 1", "")
 	rt2 := schedule.NewRecurringTask("task 2", "")
 	rt2remove := schedule.NewRecurringTask("task 2", "")

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 
 	"github.com/lib/pq"
@@ -147,7 +148,7 @@ func parseScheduleRow(r scannable) (sd usecase.ScheduleData, err error) {
 	}
 
 	// Construct schedule entity
-	sd.Schedule = schedule.NewRaw(f, row.paused, lastChecked, []schedule.RecurringTask{}, removed)
+	sd.Schedule = schedule.NewRaw(f, row.paused, lastChecked, []schedule.RecurringTask{}, removed, user.ID{})
 	sd.ScheduleID = usecase.ScheduleID(row.id)
 
 	return

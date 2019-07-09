@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres"
 	. "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -95,7 +96,7 @@ func addMonthSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []
 }
 
 func addSchedule(t *testing.T, r *ScheduleRepo, f schedule.Frequency) (s *schedule.Schedule, id usecase.ScheduleID) {
-	s = schedule.New(f)
+	s = schedule.New(f, user.ID{})
 	id, err := r.Add(s)
 	if err != nil {
 		t.Fatal(err)
@@ -247,11 +248,11 @@ func TestScheduleRepo_GetAllScheduled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sPause := schedule.New(f)
+	sPause := schedule.New(f, user.ID{})
 	sPause.Pause()
-	sRemove := schedule.New(f)
+	sRemove := schedule.New(f, user.ID{})
 	sRemove.Remove()
-	sValid := schedule.New(f)
+	sValid := schedule.New(f, user.ID{})
 	_, err = r.Add(sPause)
 	if err != nil {
 		t.Fatal(err)
@@ -338,28 +339,28 @@ func TestScheduleRepo_Add(t *testing.T) {
 		{
 			name:    "should add hour schedule",
 			r:       r,
-			args:    args{s: schedule.New(hf)},
+			args:    args{s: schedule.New(hf, user.ID{})},
 			want:    1,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add day schedule",
 			r:       r,
-			args:    args{s: schedule.New(df)},
+			args:    args{s: schedule.New(df, user.ID{})},
 			want:    2,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add week schedule",
 			r:       r,
-			args:    args{s: schedule.New(wf)},
+			args:    args{s: schedule.New(wf, user.ID{})},
 			want:    3,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add month schedule",
 			r:       r,
-			args:    args{s: schedule.New(mf)},
+			args:    args{s: schedule.New(mf, user.ID{})},
 			want:    4,
 			wantErr: usecase.ErrNone,
 		},
@@ -390,7 +391,7 @@ func TestScheduleRepo_Update(t *testing.T) {
 	}
 
 	hf, _ := schedule.NewHourFrequency([]int{0})
-	hs := schedule.New(hf)
+	hs := schedule.New(hf, user.ID{})
 	hsID, err := r.Add(hs)
 	if err != nil {
 		t.Fatal(err)
@@ -398,7 +399,7 @@ func TestScheduleRepo_Update(t *testing.T) {
 	hs.Pause()
 
 	df, _ := schedule.NewDayFrequency([]int{0}, []int{0})
-	ds := schedule.New(df)
+	ds := schedule.New(df, user.ID{})
 	dsID, err := r.Add(ds)
 	if err != nil {
 		t.Fatal(err)
@@ -406,7 +407,7 @@ func TestScheduleRepo_Update(t *testing.T) {
 	ds.Pause()
 
 	wf, _ := schedule.NewWeekFrequency([]int{0}, []int{0}, []time.Weekday{time.Sunday})
-	ws := schedule.New(wf)
+	ws := schedule.New(wf, user.ID{})
 	wsID, err := r.Add(ws)
 	if err != nil {
 		t.Fatal(err)

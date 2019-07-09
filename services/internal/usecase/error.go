@@ -33,7 +33,7 @@ func (e *errorData) Code() ErrorCode {
 
 // Error returns the error text
 func (e *errorData) Error() string {
-	return e.text
+	return fmt.Sprintf("%v: %v", e.code, e.text)
 }
 
 // ErrorCode use case error type
@@ -45,6 +45,7 @@ const (
 	ErrUnknown ErrorCode = 1 << iota
 	ErrRecordNotFound
 	ErrDuplicateRecord
+	ErrInvalidID
 )
 
 func (ec ErrorCode) String() string {
@@ -55,6 +56,10 @@ func (ec ErrorCode) String() string {
 		return "Unknown"
 	case ErrRecordNotFound:
 		return "Record not found"
+	case ErrDuplicateRecord:
+		return "Duplicate record"
+	case ErrInvalidID:
+		return "Invalid ID"
 	}
 	return "[Invalid error code]"
 }

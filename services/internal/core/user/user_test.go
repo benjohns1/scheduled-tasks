@@ -77,7 +77,6 @@ func TestNewRaw(t *testing.T) {
 }
 
 func TestUser_ID(t *testing.T) {
-
 	t.Run("should return a valid non-empty ID", func(t *testing.T) {
 		u := New("display name")
 		id := u.ID()
@@ -103,7 +102,6 @@ func TestUser_ID(t *testing.T) {
 }
 
 func TestUser_DisplayName(t *testing.T) {
-
 	t.Run("should return the same display name when creating user", func(t *testing.T) {
 		initialDN := "display name"
 		u, err := NewRaw("123e4567-e89b-12d3-a456-426655440000", "display name")
@@ -115,4 +113,32 @@ func TestUser_DisplayName(t *testing.T) {
 			t.Errorf("User.ID() = '%v', should equal '%v'", dn, initialDN)
 		}
 	})
+}
+
+func TestUser_UpdateDisplayName(t *testing.T) {
+	type args struct {
+		displayname string
+	}
+	tests := []struct {
+		name string
+		u    *User
+		args args
+		want string
+	}{
+		{
+			name: "should update display name",
+			u:    New("old name"),
+			args: args{"new name"},
+			want: "new name",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.u.UpdateDisplayName(tt.args.displayname)
+			got := tt.u.DisplayName()
+			if got != tt.want {
+				t.Errorf("User.UpdateDisplayName() updated to '%v', want '%v'", got, tt.want)
+			}
+		})
+	}
 }

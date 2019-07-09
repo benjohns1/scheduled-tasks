@@ -7,6 +7,7 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/data/transient"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
@@ -86,7 +87,7 @@ func TestRun(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 				return args{
@@ -122,7 +123,7 @@ func TestRun(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -173,7 +174,7 @@ func TestRun(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -233,7 +234,7 @@ func TestRun(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -342,7 +343,7 @@ func TestHourFrequencyIntervalOffsets(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -378,7 +379,7 @@ func TestHourFrequencyIntervalOffsets(t *testing.T) {
 					t.Fatalf("error creating frequency: %v", err)
 				}
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -414,7 +415,7 @@ func TestHourFrequencyIntervalOffsets(t *testing.T) {
 					t.Fatalf("error creating frequency: %v", err)
 				}
 				f.SetInterval(2)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -456,7 +457,7 @@ func TestHourFrequencyIntervalOffsets(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -536,7 +537,7 @@ func TestDayFrequency(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -573,7 +574,7 @@ func TestDayFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -653,7 +654,7 @@ func TestWeekFrequency(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -690,7 +691,7 @@ func TestWeekFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -732,7 +733,7 @@ func TestWeekFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -774,7 +775,7 @@ func TestWeekFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -816,7 +817,7 @@ func TestWeekFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -858,7 +859,7 @@ func TestWeekFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -938,7 +939,7 @@ func TestMonthFrequency(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating frequency: %v", err)
 				}
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -975,7 +976,7 @@ func TestMonthFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 
@@ -1017,7 +1018,7 @@ func TestMonthFrequency(t *testing.T) {
 				}
 				f.SetInterval(2)
 				f.SetOffset(1)
-				s := schedule.New(f)
+				s := schedule.New(f, user.ID{})
 				s.AddTask(schedule.NewRecurringTask("t1", "t1desc"))
 				sr.Add(s)
 

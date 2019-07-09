@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	parse "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 )
 
@@ -77,7 +78,7 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 		}
 	}
 
-	s := schedule.New(f)
+	s := schedule.New(f, user.ID{})
 	if as.Paused {
 		s.Pause()
 	}

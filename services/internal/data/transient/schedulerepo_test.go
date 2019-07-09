@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -30,7 +31,7 @@ func TestNewScheduleRepo(t *testing.T) {
 func TestScheduleRepo_Get(t *testing.T) {
 	r := NewScheduleRepo()
 	emptyHourlyFreq, _ := schedule.NewHourFrequency([]int{0})
-	emptyHourlySched := schedule.New(emptyHourlyFreq)
+	emptyHourlySched := schedule.New(emptyHourlyFreq, user.ID{})
 	emptyID, _ := r.Add(emptyHourlySched)
 
 	type args struct {
@@ -68,9 +69,9 @@ func TestScheduleRepo_Get(t *testing.T) {
 func TestScheduleRepo_GetAll(t *testing.T) {
 	r := NewScheduleRepo()
 	emptyHourlyFreq1, _ := schedule.NewHourFrequency([]int{0})
-	emptyHourlySched1 := schedule.New(emptyHourlyFreq1)
+	emptyHourlySched1 := schedule.New(emptyHourlyFreq1, user.ID{})
 	emptyHourlyFreq2, _ := schedule.NewHourFrequency([]int{0})
-	emptyHourlySched2 := schedule.New(emptyHourlyFreq2)
+	emptyHourlySched2 := schedule.New(emptyHourlyFreq2, user.ID{})
 	id1, _ := r.Add(emptyHourlySched1)
 	id2, _ := r.Add(emptyHourlySched2)
 
@@ -104,7 +105,7 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 func TestScheduleRepo_Add(t *testing.T) {
 	r := NewScheduleRepo()
 	emptyHourlyFreq1, _ := schedule.NewHourFrequency([]int{0})
-	emptyHourlySched1 := schedule.New(emptyHourlyFreq1)
+	emptyHourlySched1 := schedule.New(emptyHourlyFreq1, user.ID{})
 
 	type args struct {
 		s *schedule.Schedule
@@ -141,7 +142,7 @@ func TestScheduleRepo_Add(t *testing.T) {
 func TestScheduleRepo_Update(t *testing.T) {
 	r := NewScheduleRepo()
 	hourlyFreq1, _ := schedule.NewHourFrequency([]int{0})
-	hourlySched1 := schedule.New(hourlyFreq1)
+	hourlySched1 := schedule.New(hourlyFreq1, user.ID{})
 	id1, _ := r.Add(hourlySched1)
 	hourlySched1.Pause()
 
