@@ -3,11 +3,10 @@
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
 	import { loading } from './../../loading-monitor'
-
-	const loaded = loading()
 	
 	export async function preload(page, session ) {
-		const result = await this.fetch(`task.json`, withJsonAndAuth(session ? session.token : null)).then(async r => {
+		const loaded = loading('task')
+		const result = await this.fetch(`task.json`, withJsonAndAuth(session)).then(async r => {
 			if (r.status === 200) {
 				return r.json()
 			} else {
@@ -45,7 +44,7 @@
 	let editID = 1
 
 	const addTask = (taskEditID, taskData) => {
-		return fetch(`task.json`, withJsonAndAuth($session.token, { method: "POST", body: JSON.stringify(taskData)})).then(r => {
+		return fetch(`task.json`, withJsonAndAuth($session, { method: "POST", body: JSON.stringify(taskData)})).then(r => {
 			r.json().then(({ id }) => {
 				taskData.id = id
 				tasks = [{
@@ -59,7 +58,7 @@
 	}
 
 	const completeTask = taskID => {
-		return fetch(`task/${taskID}/complete.json`, withJsonAndAuth($session.token, { method: "PUT" })).then(r => {
+		return fetch(`task/${taskID}/complete.json`, withJsonAndAuth($session, { method: "PUT" })).then(r => {
 			completedTasks = [...(tasks.filter(t => t.data.id === taskID).map(t => {
 				t.data.completedTime = 'just now'
 				t.open = false
@@ -89,7 +88,7 @@
 	function clearTasks() {
 		const prevCompletedTasks = completedTasks.slice(0)
 		completedTasks = []
-		return fetch(`task/clear.json`, withJsonAndAuth($session.token, { method: "POST" } )).then(r => {
+		return fetch(`task/clear.json`, withJsonAndAuth($session, { method: "POST" } )).then(r => {
 			r.json().then(({ count, message }) => {
 				completedSuccessMessage = `${message}${count ? ` (${count})` : ''}`
 			})

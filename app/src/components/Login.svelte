@@ -1,5 +1,5 @@
 <script context="module">
-    import { onMount, tick } from 'svelte'
+    import { onMount } from 'svelte'
     import createAuth0Client from '@auth0/auth0-spa-js'
     import Button from './Button.svelte'
 
@@ -36,71 +36,125 @@
 
 <script>
 	import { loading } from './../loading-monitor'
-    import { stores } from '@sapper/app'
-    const { session } = stores()
+    import * as sapper from '@sapper/app'
+    const { session, page } = sapper.stores()
     if (!$session) {
-        $session = {
-            isAuthenticated: undefined,
-        }
+        $session = {}
+    }
+    if (!$session.auth) {
+        $session.auth = {}
     }
     
-	const loaded = loading()
+	const loaded = loading('login')
     
 	let auth0 = undefined
     let errorMsg = undefined
+    let login = () => {}
+    let logout = () => {}
 
-    onMount(async () => {
+    const loginHandler = () => login()
+    const logoutHandler = () => logout()
+
+    const getDevUser = () => {
+        return {
+            displayname: "Dev E2E Test User"
+        }
+    }
+
+    const setCookies = (token, devLogin = false) => {
+        const sessionExpireDays = 30
+        const expires = new Date().getTime() + sessionExpireDays * 24 * 60 * 60 * 1000
+        document.cookie = `token=${token}; expires=${expires}; path=/;`
+        if (devLogin) {
+            document.cookie = `devLogin=true; expires=${expires}; path=/;`
+        } else {
+            document.cookie = `devLogin=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
+        }
+    }
+    const clearCookies = () => {
+        document.cookie = `token=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
+        document.cookie = `devLogin=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
+    }
+    const sessionLogout = () => {
+        $session.auth = {
+            isAuthenticated: false
+        }
+    }
+    const devLogin = token => {
+        $session.auth.devLogin = true
+        $session.auth.token = token
+        $session.auth.isAuthenticated = true
+        $session.auth.user = getDevUser()
+        setCookies(token, true)
+        console.log('logged in as dev e2e test user')
+        logout = () => {
+            sessionLogout()
+            clearCookies()
+            sapper.goto('/')
+            sessionAuth()
+        }
+    }
+
+    const sessionAuth = async () => {
+        // Session logged-in as dev user - populate dev session data
+        if ($session.auth.devLogin && $session.auth.token) {
+            devLogin($session.auth.token)
+            return
+        }
+
+        // Load auth config from server
         const { cfg, error } = await loadConfig()
         if (error) {
             console.error(error)
             errorMsg = error.message || 'login error'
-            loaded()
             return
         }
 
+        // Dev auto-login
+        if ($page.query['dev-login'] && cfg.environment === "development" && cfg.token && process.browser) {
+            devLogin(cfg.token)
+            return
+        }
+
+        // Auth0 user login - prep user login methods Auth0
         auth0 = await createAuth0Client({
 			domain: cfg.domain,
             client_id: cfg.clientId,
             audience: cfg.audience,
         })
 
-        $session.isAuthenticated = await authenticate(auth0)
+        $session.auth.isAuthenticated = await authenticate(auth0)
 
-        if ($session.isAuthenticated) {
-            $session.user = await getUser()
-            $session.token = await getToken()
-            
-            const expireDays = 30
-            document.cookie = `token=${$session.token}; expires=${(new Date()).getTime() + (expireDays*24*60*60*1000)}; path=/;`
+        if ($session.auth.isAuthenticated) {
+            // Get user data and token from Auth0 if user is currently logged-in
+            $session.auth.user = await (async () => {
+                const user = await auth0.getUser()
+                user.displayname = user.nickname || user.name || user.email || 'New User'
+                return user
+            })()
+            $session.auth.token = await auth0.getTokenSilently()
+            setCookies($session.auth.token)
+        }
+        
+        login = async () => {
+            await auth0.loginWithRedirect({
+                redirect_uri: window.location.origin
+            })
         }
 
-        await tick()
+        logout = () => {
+            sessionLogout()
+            clearCookies()
+            auth0.logout({
+                returnTo: window.location.origin
+            })
+        }
+    }
+
+    onMount(async () => {
+        await sessionAuth()
         loaded()
     })
-
-	const login = async () => {
-		await auth0.loginWithRedirect({
-            redirect_uri: window.location.origin
-        })
-	}
-
-	const logout = () => {
-		auth0.logout({
-            returnTo: window.location.origin
-        })
-        document.cookie = `token=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
-    }
-
-    const getUser = async () => {
-        const user = await auth0.getUser()
-        user.displayname = user.nickname || user.name || user.email || 'New User'
-        return user
-    }
-
-    const getToken = async () => {
-        return await auth0.getTokenSilently()
-    }
-
 </script>
 
 <style>
@@ -112,17 +166,17 @@
     }
 </style>
 
-{#if $session && $session.isAuthenticated}
+{#if $session && $session.auth && $session.auth.isAuthenticated}
     {#if errorMsg}
         <span class='text-danger login-text'>{errorMsg}</span>
     {/if}
-    {#if $session.user}
-        <span class=login-text>{$session.user.displayname}</span>
-        {#if $session.user.picture}
-            <img class=picture src={$session.user.picture} width=32 alt='user picture'/>
+    {#if $session.auth.user}
+        <span class=login-text>{$session.auth.user.displayname}</span>
+        {#if $session.auth.user.picture}
+            <img class=picture src={$session.auth.user.picture} width=32 alt='user picture'/>
         {/if}
     {/if}
-    <Button on:click={logout} style=outline-secondary classes=btn-sm>log out</Button>
+    <Button on:click={logoutHandler} style=outline-secondary classes=btn-sm>log out</Button>
 {:else}
-    <Button on:click={login} style=outline-success classes=btn-sm disabled={!$session || $session.isAuthenticated === undefined}>log in</Button>
+    <Button on:click={loginHandler} test=login-button style=outline-success classes=btn-sm disabled={!$session || !$session.auth || $session.auth.isAuthenticated === undefined}>log in</Button>
 {/if}

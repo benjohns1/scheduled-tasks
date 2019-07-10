@@ -1,5 +1,5 @@
 import fetch from 'node-fetch'
-import { getToken } from '../auth/auth0'
+import { getAnonymousToken } from '../auth/auth0'
 
 const baseUrl = `http://${process.env.APPLICATION_HOST || 'localhost'}:${process.env.APPLICATION_PORT || '8080'}/api/v1`
 
@@ -35,8 +35,8 @@ function error(res, code, msg) {
 
 async function checkAuth(opts) {
 	if (!opts.headers.authorization || opts.headers.authorization === 'Bearer undefined') {
-		// Auth header doesn't exist from user session, use machine-to-machine Auth0 token for basic API auth
-		const token = await getToken()
-		opts.headers.authorization = `Bearer ${token}`
+		// Auth header doesn't exist from user session, use machine-to-machine Auth0 token for anonymous user
+		const anonymousToken = await getAnonymousToken()
+		opts.headers.authorization = `Bearer ${anonymousToken}`
 	}
 }

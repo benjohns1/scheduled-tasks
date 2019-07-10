@@ -3,18 +3,22 @@ import { writable } from 'svelte/store'
 const loader = writable({
   m: new Map(),
   i: 0,
+  dirty: false,
 })
 
 let finishedLoading = false
 
-export const loading = (count = 1) => {
+export const loading = (id = undefined, count = 1) => {
   if (finishedLoading || !process.browser) {
     return () => {}
   }
   let key = undefined
   loader.update(l => {
-    key = l.i++
+    key = id === undefined ? l.i++ : `${id}-${l.i++}`
     l.m.set(key, count)
+    if (!l.dirty) {
+      l.dirty = true
+    }
     return l
   })
   let loaded = count
@@ -38,12 +42,15 @@ export const onFinishedLoading = callback => {
   if (!process.browser) {
     return
   }
-  let unsubscribe
-	unsubscribe = loader.subscribe(l => {
-		if (l.m.size === 0) {
+  let unsubscribe = () => {
+    console.error("loading-monitor unsubscribe() called before it is ready!")
+  }
+  unsubscribe = loader.subscribe(l => {
+    //console.log(l.m)
+		if (l.m.size === 0 && l.dirty) {
       finishedLoading = true
       callback()
       unsubscribe()
 		}
-	})
+  })
 }

@@ -8,7 +8,7 @@
 
 	let testID = 'loading'
 	onFinishedLoading(() => testID = 'loaded')
-	const loaded = loading()
+	const loaded = loading('layout')
 	onMount(() => tick().then(() => loaded()))
 
 </script>

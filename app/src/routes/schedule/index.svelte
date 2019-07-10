@@ -3,11 +3,10 @@
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
 	import { loading } from './../../loading-monitor'
-
-	const loaded = loading()
 	
 	export async function preload(page, session) {
-		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session ? session.token : null)).then(r => {
+		const loaded = loading('schedule')
+		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session)).then(r => {
 			return r.json().then(data => {
 				if (r.status !== 200) {
 					console.error(data, r)
@@ -66,7 +65,7 @@
 				return acc
 			}, {})
 		})()
-		return fetch(`schedule.json`, withJsonAndAuth($session.token, { method: "POST", body: JSON.stringify(postData)})).then(r => {
+		return fetch(`schedule.json`, withJsonAndAuth($session, { method: "POST", body: JSON.stringify(postData)})).then(r => {
 			r.json().then(data => {
 				if (r.status !== 201) {
 					console.error(data, r)
@@ -84,7 +83,7 @@
     const deleteSchedule = schedule => {
 		if (schedule.data.id !== undefined) {
 			const id = schedule.data.id
-			return fetch(`schedule/${id}.json`, withJsonAndAuth($session.token, { method: "DELETE" })).then(r => {
+			return fetch(`schedule/${id}.json`, withJsonAndAuth($session, { method: "DELETE" })).then(r => {
 				if (r.status !== 204) {
 					console.error(r)
 					return

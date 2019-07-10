@@ -18,7 +18,10 @@ polka() // You can also use Express
 			session: (req) => {
 				if (req.cookies.token) {
 					return ({
-						token: req.cookies.token
+						auth: {
+							token: req.cookies.token,
+							devLogin: req.cookies.devLogin
+						}
 					})
 				}
 			}

@@ -102,3 +102,8 @@ Cypress.Commands.add("addRecurringTasks", ($scheduleItem, tasks, { save = true }
 		})
 	})
 })
+
+Cypress.Commands.add("devLogin", (redirect = '/') => {
+	cy.visitWait('/?dev-login=1')
+	cy.visitWait(redirect)
+})
