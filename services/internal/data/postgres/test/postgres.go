@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/data/postgres"
 	"github.com/joho/godotenv"
@@ -11,9 +12,21 @@ import (
 
 type loggerStub struct{}
 
-func (l *loggerStub) Print(v ...interface{})                 {}
-func (l *loggerStub) Printf(format string, v ...interface{}) {}
-func (l *loggerStub) Println(v ...interface{})               {}
+func (l *loggerStub) Print(v ...interface{}) {
+	if testing.Verbose() {
+		l.Printf("%v", v...)
+	}
+}
+func (l *loggerStub) Printf(format string, v ...interface{}) {
+	if testing.Verbose() {
+		fmt.Printf(fmt.Sprintf("    LOG: %v\n", format), v...)
+	}
+}
+func (l *loggerStub) Println(v ...interface{}) {
+	if testing.Verbose() {
+		l.Printf("%v", v...)
+	}
+}
 
 type testType uint8
 

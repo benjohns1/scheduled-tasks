@@ -66,8 +66,11 @@ func TestTaskRepo_Get(t *testing.T) {
 	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for task Get")
+	userRepo.AddExternal(u, "p1", "e1")
 
-	newTask := task.New("t1", "t1desc", user.ID{})
+	newTask := task.New("t1", "t1desc", u.ID())
 	id, err := r.Add(newTask)
 	if err != nil {
 		t.Fatal(err)
@@ -117,9 +120,13 @@ func TestTaskRepo_GetAll(t *testing.T) {
 	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for task GetAll")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
-	newTask1 := task.New("", "", user.ID{})
-	newTask2 := task.New("", "", user.ID{})
+	newTask1 := task.New("", "", uid)
+	newTask2 := task.New("", "", uid)
 	id1, _ := r.Add(newTask1)
 	id2, _ := r.Add(newTask2)
 
@@ -156,8 +163,13 @@ func TestTaskRepo_Add(t *testing.T) {
 	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for task Add")
+	userRepo.AddExternal(u, "p1", "e1")
 
-	newTask := task.New("", "", user.ID{})
+	t1 := task.New("", "", user.ID{})
+	t2 := task.New("", "", user.New("unknown db user").ID())
+	t3 := task.New("t3", "", u.ID())
 
 	type args struct {
 		t *task.Task
@@ -172,8 +184,22 @@ func TestTaskRepo_Add(t *testing.T) {
 		{
 			name:    "should add 1 empty task",
 			r:       r,
-			args:    args{t: newTask},
+			args:    args{t: t1},
 			want:    1,
+			wantErr: usecase.ErrNone,
+		},
+		{
+			name:    "should return error with unknown user ID",
+			r:       r,
+			args:    args{t: t2},
+			want:    0,
+			wantErr: usecase.ErrRecordNotFound,
+		},
+		{
+			name:    "should add 1 task",
+			r:       r,
+			args:    args{t: t3},
+			want:    3,
 			wantErr: usecase.ErrNone,
 		},
 	}
@@ -197,10 +223,13 @@ func TestTaskRepo_Update(t *testing.T) {
 	}
 	defer conn.Close()
 	r, _ := NewTaskRepo(conn)
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for task Update")
+	userRepo.AddExternal(u, "p1", "e1")
 
-	newTask := task.New("", "", user.ID{})
-	id1, _ := r.Add(newTask)
-	newTask.CompleteNow()
+	t1 := task.New("t1", "", u.ID())
+	id1, _ := r.Add(t1)
+	t1.CompleteNow()
 
 	type args struct {
 		id usecase.TaskID
@@ -215,7 +244,7 @@ func TestTaskRepo_Update(t *testing.T) {
 		{
 			name:    "should successfully update task",
 			r:       r,
-			args:    args{id: id1, t: newTask},
+			args:    args{id: id1, t: t1},
 			wantErr: usecase.ErrNone,
 		},
 	}

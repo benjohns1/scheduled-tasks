@@ -55,48 +55,48 @@ func TestNewScheduleRepo(t *testing.T) {
 	}
 }
 
-func addHourSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
+func addHourSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, createdBy user.ID) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
 
 	f, err := schedule.NewHourFrequency(atMinutes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, id = addSchedule(t, r, f)
+	s, id = addSchedule(t, r, f, createdBy)
 	return f, s, id
 }
 
-func addDaySchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
+func addDaySchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, createdBy user.ID) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
 
 	f, err := schedule.NewDayFrequency(atMinutes, atHours)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, id = addSchedule(t, r, f)
+	s, id = addSchedule(t, r, f, createdBy)
 	return f, s, id
 }
 
-func addWeekSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, onDaysOfWeek []time.Weekday) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
+func addWeekSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, onDaysOfWeek []time.Weekday, createdBy user.ID) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
 
 	f, err := schedule.NewWeekFrequency(atMinutes, atHours, onDaysOfWeek)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, id = addSchedule(t, r, f)
+	s, id = addSchedule(t, r, f, createdBy)
 	return f, s, id
 }
 
-func addMonthSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, onDaysOfMonth []int) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
+func addMonthSchedule(t *testing.T, r *ScheduleRepo, atMinutes []int, atHours []int, onDaysOfMonth []int, createdBy user.ID) (f schedule.Frequency, s *schedule.Schedule, id usecase.ScheduleID) {
 
 	f, err := schedule.NewMonthFrequency(atMinutes, atHours, onDaysOfMonth)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, id = addSchedule(t, r, f)
+	s, id = addSchedule(t, r, f, createdBy)
 	return f, s, id
 }
 
-func addSchedule(t *testing.T, r *ScheduleRepo, f schedule.Frequency) (s *schedule.Schedule, id usecase.ScheduleID) {
-	s = schedule.New(f, user.ID{})
+func addSchedule(t *testing.T, r *ScheduleRepo, f schedule.Frequency, createdBy user.ID) (s *schedule.Schedule, id usecase.ScheduleID) {
+	s = schedule.New(f, createdBy)
 	id, err := r.Add(s)
 	if err != nil {
 		t.Fatal(err)
@@ -114,11 +114,15 @@ func TestScheduleRepo_Get(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for schedule Get")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
-	_, hs, hsID := addHourSchedule(t, r, []int{0})
-	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0})
-	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday})
-	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1})
+	_, hs, hsID := addHourSchedule(t, r, []int{0}, uid)
+	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0}, uid)
+	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday}, uid)
+	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1}, uid)
 
 	type args struct {
 		id usecase.ScheduleID
@@ -183,23 +187,27 @@ func TestScheduleRepo_GetAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for schedule GetAll")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
 	f1 := schedule.Frequency{}
 	if err != nil {
 		t.Fatal(err)
 	}
-	s1, id1 := addSchedule(t, r, f1)
+	s1, id1 := addSchedule(t, r, f1, uid)
 
 	f2 := schedule.Frequency{}
 	if err != nil {
 		t.Fatal(err)
 	}
-	s2, id2 := addSchedule(t, r, f2)
+	s2, id2 := addSchedule(t, r, f2, uid)
 
-	_, hs, hsID := addHourSchedule(t, r, []int{0})
-	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0})
-	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday})
-	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1})
+	_, hs, hsID := addHourSchedule(t, r, []int{0}, uid)
+	_, ds, dsID := addDaySchedule(t, r, []int{0}, []int{0}, uid)
+	_, ws, wsID := addWeekSchedule(t, r, []int{0}, []int{0}, []time.Weekday{time.Sunday}, uid)
+	_, ms, msID := addMonthSchedule(t, r, []int{0}, []int{0}, []int{1}, uid)
 
 	tests := []struct {
 		name    string
@@ -247,12 +255,16 @@ func TestScheduleRepo_GetAllScheduled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for schedule GetAllScheduled")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
-	sPause := schedule.New(f, user.ID{})
+	sPause := schedule.New(f, uid)
 	sPause.Pause()
-	sRemove := schedule.New(f, user.ID{})
+	sRemove := schedule.New(f, uid)
 	sRemove.Remove()
-	sValid := schedule.New(f, user.ID{})
+	sValid := schedule.New(f, uid)
 	_, err = r.Add(sPause)
 	if err != nil {
 		t.Fatal(err)
@@ -308,6 +320,10 @@ func TestScheduleRepo_Add(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for schedule Add")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
 	hf, err := schedule.NewHourFrequency([]int{0})
 	if err != nil {
@@ -339,29 +355,36 @@ func TestScheduleRepo_Add(t *testing.T) {
 		{
 			name:    "should add hour schedule",
 			r:       r,
-			args:    args{s: schedule.New(hf, user.ID{})},
+			args:    args{s: schedule.New(hf, uid)},
 			want:    1,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add day schedule",
 			r:       r,
-			args:    args{s: schedule.New(df, user.ID{})},
+			args:    args{s: schedule.New(df, uid)},
 			want:    2,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add week schedule",
 			r:       r,
-			args:    args{s: schedule.New(wf, user.ID{})},
+			args:    args{s: schedule.New(wf, uid)},
 			want:    3,
 			wantErr: usecase.ErrNone,
 		},
 		{
 			name:    "should add month schedule",
 			r:       r,
-			args:    args{s: schedule.New(mf, user.ID{})},
+			args:    args{s: schedule.New(mf, uid)},
 			want:    4,
+			wantErr: usecase.ErrNone,
+		},
+		{
+			name:    "should add hour schedule with no createdBy field",
+			r:       r,
+			args:    args{s: schedule.New(hf, user.ID{})},
+			want:    5,
 			wantErr: usecase.ErrNone,
 		},
 	}
@@ -389,9 +412,13 @@ func TestScheduleRepo_Update(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userRepo, _ := NewUserRepo(conn)
+	u := user.New("test user for schedule Update")
+	userRepo.AddExternal(u, "p1", "e1")
+	uid := u.ID()
 
 	hf, _ := schedule.NewHourFrequency([]int{0})
-	hs := schedule.New(hf, user.ID{})
+	hs := schedule.New(hf, uid)
 	hsID, err := r.Add(hs)
 	if err != nil {
 		t.Fatal(err)
@@ -399,7 +426,7 @@ func TestScheduleRepo_Update(t *testing.T) {
 	hs.Pause()
 
 	df, _ := schedule.NewDayFrequency([]int{0}, []int{0})
-	ds := schedule.New(df, user.ID{})
+	ds := schedule.New(df, uid)
 	dsID, err := r.Add(ds)
 	if err != nil {
 		t.Fatal(err)
@@ -437,7 +464,7 @@ func TestScheduleRepo_Update(t *testing.T) {
 			wantErr: usecase.ErrNone,
 		},
 		{
-			name:    "should successfully update week schedule",
+			name:    "should successfully update week schedule with empty createdBy user",
 			r:       r,
 			args:    args{id: wsID, s: ws},
 			wantErr: usecase.ErrNone,

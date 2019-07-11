@@ -141,13 +141,15 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 			description character varying(500) NOT NULL,
 			completed_time TIMESTAMPTZ,
 			cleared_time TIMESTAMPTZ,
-			created_time TIMESTAMPTZ
+			created_time TIMESTAMPTZ,
+			created_by uuid REFERENCES user_account(id)
 			);
 		CREATE TABLE schedule (
 			id SERIAL PRIMARY KEY,
 			paused boolean NOT NULL,
 			last_checked TIMESTAMPTZ,
 			removed_time TIMESTAMPTZ,
+			created_by uuid REFERENCES user_account(id),
 			frequency_offset integer NOT NULL,
 			frequency_interval integer NOT NULL,
 			frequency_time_period smallint NOT NULL,

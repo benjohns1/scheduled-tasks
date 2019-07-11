@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
+	"github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/pqerr"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -36,7 +37,7 @@ func (r *UserRepo) AddExternal(u *user.User, providerID string, externalID strin
 	addUserCommand := "INSERT INTO user_account (id, displayname) VALUES ($1, $2);"
 	_, err = txn.Exec(addUserCommand, id, u.DisplayName())
 	if err != nil {
-		if isPqErr(err, ErrUniqueViolation) {
+		if pqerr.Eq(err, pqerr.UniqueViolation) {
 			return usecase.NewError(usecase.ErrDuplicateRecord, "user with id %v already exists", id)
 		}
 		return usecase.NewError(usecase.ErrUnknown, "error inserting new user '%v': %v", id, err)
@@ -46,7 +47,7 @@ func (r *UserRepo) AddExternal(u *user.User, providerID string, externalID strin
 	addExternalCommand := "INSERT INTO user_external (user_id, provider, external_id) VALUES ($1, $2, $3);"
 	_, err = txn.Exec(addExternalCommand, id, providerID, externalID)
 	if err != nil {
-		if isPqErr(err, ErrUniqueViolation) {
+		if pqerr.Eq(err, pqerr.UniqueViolation) {
 			return usecase.NewError(usecase.ErrDuplicateRecord, "external id %v for provider %v already exists", externalID, providerID)
 		}
 		return usecase.NewError(usecase.ErrUnknown, "error inserting user '%v' external IDs: %v", id, err)

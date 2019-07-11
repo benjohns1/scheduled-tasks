@@ -46,14 +46,19 @@ func (s *Schedule) Paused() bool {
 	return s.paused
 }
 
+// LastChecked returns the last time this schedule was checked for recurrences
+func (s *Schedule) LastChecked() time.Time {
+	return s.lastChecked
+}
+
 // RemovedTime returns removed time
 func (s *Schedule) RemovedTime() time.Time {
 	return s.removedTime
 }
 
-// LastChecked returns the last time this schedule was checked for recurrences
-func (s *Schedule) LastChecked() time.Time {
-	return s.lastChecked
+// CreatedBy returns the user ID of the user that created the schedule
+func (s *Schedule) CreatedBy() user.ID {
+	return s.createdBy
 }
 
 // Check sets the lastChecked time

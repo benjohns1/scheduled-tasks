@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/pqerr"
+
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -64,7 +66,7 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 }
 
 func taskSelectClause() (selectClause string) {
-	return "SELECT id, name, description, completed_time, cleared_time, created_time FROM task"
+	return "SELECT id, name, description, completed_time, cleared_time, created_time, created_by FROM task"
 }
 
 func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
@@ -79,8 +81,9 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 		completedTime *string
 		clearedTime   *string
 		createdTime   *string
+		createdBy     *string
 	}
-	err = r.Scan(&row.id, &row.name, &row.description, &row.completedTime, &row.clearedTime, &row.createdTime)
+	err = r.Scan(&row.id, &row.name, &row.description, &row.completedTime, &row.clearedTime, &row.createdTime, &row.createdBy)
 	if err != nil {
 		return
 	}
@@ -98,8 +101,12 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 	if err != nil {
 		createdTime = time.Time{}
 	}
+	createdBy := user.ID{}
+	if row.createdBy != nil {
+		createdBy, _ = user.ParseID(*row.createdBy)
+	}
 
-	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime, createdTime, user.ID{})
+	td.Task = task.NewRaw(row.name, row.description, completedTime, clearedTime, createdTime, createdBy)
 	td.TaskID = usecase.TaskID(row.id)
 
 	return
@@ -107,10 +114,13 @@ func parseTaskRow(r scannable) (td usecase.TaskData, err error) {
 
 // Add adds a task to the persisence layer
 func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
-	q := "INSERT INTO task (name, description, completed_time, cleared_time, created_time) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+	q := "INSERT INTO task (name, description, completed_time, cleared_time, created_time, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
 	var id usecase.TaskID
-	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime()).Scan(&id)
+	err := r.db.QueryRow(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime(), t.CreatedBy().StringPtr()).Scan(&id)
 	if err != nil {
+		if pqerr.Eq(err, pqerr.ForeignKeyViolation) {
+			return 0, usecase.NewError(usecase.ErrRecordNotFound, "error inserting new task: %v", err)
+		}
 		return 0, usecase.NewError(usecase.ErrUnknown, "error inserting new task: %v", err)
 	}
 
@@ -119,9 +129,12 @@ func (r *TaskRepo) Add(t *task.Task) (usecase.TaskID, usecase.Error) {
 
 // Update updates a task's persistent data to the given entity values
 func (r *TaskRepo) Update(id usecase.TaskID, t *task.Task) usecase.Error {
-	q := "UPDATE task SET name = $1, description = $2, completed_time = $3, cleared_time = $4, created_time = $5 WHERE id = $6 RETURNING id"
-	rows, err := r.db.Query(q, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime(), id)
+	q := "UPDATE task SET name = $2, description = $3, completed_time = $4, cleared_time = $5, created_time = $6, created_by = $7 WHERE id = $1 RETURNING id"
+	rows, err := r.db.Query(q, id, t.Name(), t.Description(), t.CompletedTime(), t.ClearedTime(), t.CreatedTime(), t.CreatedBy().StringPtr())
 	if err != nil {
+		if pqerr.Eq(err, pqerr.ForeignKeyViolation) {
+			return usecase.NewError(usecase.ErrRecordNotFound, "error inserting new task: %v", err)
+		}
 		return usecase.NewError(usecase.ErrUnknown, "error updating task id %d: %v", id, err)
 	}
 	defer rows.Close()

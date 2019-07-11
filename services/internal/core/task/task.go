@@ -71,6 +71,11 @@ func (t *Task) CreatedTime() time.Time {
 	return t.createdTime
 }
 
+// CreatedBy returns the user ID of the user who created the task
+func (t *Task) CreatedBy() user.ID {
+	return t.createdBy
+}
+
 // CompleteNow completes a task now
 func (t *Task) CompleteNow() (bool, error) {
 	if !t.IsValid() {

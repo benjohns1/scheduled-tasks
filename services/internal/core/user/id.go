@@ -31,7 +31,16 @@ func (val ID) Equals(other interface{}) bool {
 	return false
 }
 
-// String return the string representation of the ID
+// String returns the string representation of the ID
 func (val ID) String() string {
 	return val.id.String()
+}
+
+// StringPtr returns a pointer to the string representation of the ID, or nil if it is the zero-value
+func (val ID) StringPtr() *string {
+	if (val.id == uuid.UUID{}) {
+		return nil
+	}
+	str := val.id.String()
+	return &str
 }

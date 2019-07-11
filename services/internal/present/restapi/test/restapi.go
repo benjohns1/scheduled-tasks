@@ -1,7 +1,9 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
+	"testing"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/data/postgres"
 	postgres_test "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/test"
@@ -18,7 +20,11 @@ type Tester interface {
 
 type loggerStub struct{}
 
-func (l *loggerStub) Printf(format string, v ...interface{}) {}
+func (l *loggerStub) Printf(format string, v ...interface{}) {
+	if testing.Verbose() {
+		fmt.Printf(fmt.Sprintf("    LOG: %v\n", format), v...)
+	}
+}
 
 // Strp returns a pointer to the passed-in string
 func Strp(str string) *string {
