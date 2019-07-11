@@ -29,11 +29,12 @@ type transientTester struct{}
 
 func (m *transientTester) NewAPI() http.Handler {
 	l := &loggerStub{}
+	userRepo := transient.NewUserRepo()
 	taskRepo := transient.NewTaskRepo()
 	scheduleRepo := transient.NewScheduleRepo()
 	c := make(chan<- bool)
 	authStub := auth.New(l)
-	return restapi.New(l, authStub, c, taskRepo, scheduleRepo)
+	return restapi.New(l, authStub, c, userRepo, taskRepo, scheduleRepo)
 }
 
 func (m *transientTester) Close() error {
@@ -56,6 +57,11 @@ func (m *postgresTester) NewAPI() http.Handler {
 		panic(err)
 	}
 	m.prevConn = &conn
+
+	userRepo, err := postgres.NewUserRepo(conn)
+	if err != nil {
+		panic(err)
+	}
 	taskRepo, err := postgres.NewTaskRepo(conn)
 	if err != nil {
 		panic(err)
@@ -67,7 +73,7 @@ func (m *postgresTester) NewAPI() http.Handler {
 	l := &loggerStub{}
 	c := make(chan<- bool)
 	authStub := auth.New(l)
-	return restapi.New(l, authStub, c, taskRepo, scheduleRepo)
+	return restapi.New(l, authStub, c, userRepo, taskRepo, scheduleRepo)
 }
 
 func (m *postgresTester) Close() error {

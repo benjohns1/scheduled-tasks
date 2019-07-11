@@ -1,6 +1,7 @@
 <script context="module">
     import { onMount } from 'svelte'
     import createAuth0Client from '@auth0/auth0-spa-js'
+	import { withJsonAndAuth } from "../api/default.headers"
     import Button from './Button.svelte'
 
     const loadConfig = async () => {
@@ -75,11 +76,6 @@
         document.cookie = `token=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
         document.cookie = `devLogin=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;`
     }
-    const sessionLogout = () => {
-        $session.auth = {
-            isAuthenticated: false
-        }
-    }
     const devLogin = token => {
         $session.auth.devLogin = true
         $session.auth.token = token
@@ -89,10 +85,41 @@
         console.log('logged in as dev e2e test user')
         logout = () => {
             sessionLogout()
-            clearCookies()
             sapper.goto('/')
             sessionAuth()
         }
+    }
+
+    const sessionLogin = async auth0 => {
+        $session.auth.token = await auth0.getTokenSilently()
+        $session.auth.user = await (async () => {
+            const user = await auth0.getUser()
+            user.displayname = user.nickname || user.name || user.email || 'New User'
+            return user
+        })()
+        setCookies($session.auth.token)
+        logout = () => {
+            auth0.logout()
+            sessionLogout()
+        }
+        onUserLogin()
+    }
+    const sessionLogout = () => {
+        $session.auth = {
+            isAuthenticated: false
+        }
+        clearCookies()
+    }
+
+    const onUserLogin = async () => {
+		return await fetch('auth/on-user-login.json', withJsonAndAuth($session, { method: 'POST', body: JSON.stringify($session.auth.user)})).then(async r => {
+			if (r.status !== 204) {
+				throw {
+					message: "Error calling on-user-login hook",
+					r: await r.text()
+				}
+			}
+		}).catch(error => console.error(error))
     }
 
     const sessionAuth = async () => {
@@ -127,27 +154,14 @@
 
         if ($session.auth.isAuthenticated) {
             // Get user data and token from Auth0 if user is currently logged-in
-            $session.auth.user = await (async () => {
-                const user = await auth0.getUser()
-                user.displayname = user.nickname || user.name || user.email || 'New User'
-                return user
-            })()
-            $session.auth.token = await auth0.getTokenSilently()
-            setCookies($session.auth.token)
+            await sessionLogin(auth0)
         }
         
         login = async () => {
             await auth0.loginWithRedirect({
                 redirect_uri: window.location.origin
             })
-        }
-
-        logout = () => {
-            sessionLogout()
-            clearCookies()
-            auth0.logout({
-                returnTo: window.location.origin
-            })
+            sessionLogin(auth0)
         }
     }
 

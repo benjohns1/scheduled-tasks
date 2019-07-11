@@ -21,8 +21,8 @@ func NewUserRepo() *UserRepo {
 	return &UserRepo{users: make(map[user.ID]*user.User), external: make(map[providerKey]user.ID)}
 }
 
-// Add adds a user to the memory cache
-func (r *UserRepo) Add(u *user.User, providerID string, externalID string) usecase.Error {
+// AddExternal adds a user to the memory cache
+func (r *UserRepo) AddExternal(u *user.User, providerID string, externalID string) usecase.Error {
 	id := u.ID()
 	if (id == user.ID{}) {
 		return usecase.NewError(usecase.ErrInvalidID, "user ID cannot be empty when adding to repo")

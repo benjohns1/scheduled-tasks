@@ -43,13 +43,13 @@ func Handle(r *httprouter.Router, a Auth, prefix string, l Logger, rf responseMa
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(rf)
 
-	tPre := prefix + "/task"
-	r.GET(tPre+"/", a.Handle(listTasks(l, f, taskRepo)))
-	r.GET(tPre+"/:taskID", a.Handle(getTask(l, f, taskRepo)))
-	r.POST(tPre+"/", a.Handle(addTask(l, f, p, taskRepo)))
-	r.PUT(tPre+"/:taskID/complete", a.Handle(completeTask(l, f, taskRepo)))
-	r.DELETE(tPre+"/:taskID", a.Handle(clearTask(l, f, taskRepo)))
-	r.POST(tPre+"/clear", a.Handle(clearCompletedTasks(l, f, taskRepo)))
+	pre := prefix + "/task"
+	r.GET(pre+"/", a.Handle(listTasks(l, f, taskRepo)))
+	r.GET(pre+"/:taskID", a.Handle(getTask(l, f, taskRepo)))
+	r.POST(pre+"/", a.Handle(addTask(l, f, p, taskRepo)))
+	r.PUT(pre+"/:taskID/complete", a.Handle(completeTask(l, f, taskRepo)))
+	r.DELETE(pre+"/:taskID", a.Handle(clearTask(l, f, taskRepo)))
+	r.POST(pre+"/clear", a.Handle(clearCompletedTasks(l, f, taskRepo)))
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {

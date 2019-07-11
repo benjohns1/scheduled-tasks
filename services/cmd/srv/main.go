@@ -63,6 +63,10 @@ func startAPIServer(dbconn data.DBConn, check chan<- bool) (closed <-chan bool) 
 	}
 
 	// Instantiate repositories
+	userRepo, err := data.NewUserRepo(dbconn)
+	if err != nil {
+		l.Panic(err)
+	}
 	taskRepo, err := data.NewTaskRepo(dbconn)
 	if err != nil {
 		l.Panic(err)
@@ -80,7 +84,7 @@ func startAPIServer(dbconn data.DBConn, check chan<- bool) (closed <-chan bool) 
 	})
 
 	// Serve REST API
-	api := restapi.New(l, a, check, taskRepo, scheduleRepo)
+	api := restapi.New(l, a, check, userRepo, taskRepo, scheduleRepo)
 	return restapi.Serve(l, api)
 }
 

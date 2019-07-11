@@ -30,3 +30,8 @@ func (val ID) Equals(other interface{}) bool {
 	}
 	return false
 }
+
+// String return the string representation of the ID
+func (val ID) String() string {
+	return val.id.String()
+}

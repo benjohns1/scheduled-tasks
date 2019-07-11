@@ -124,7 +124,18 @@ func (conn *DBConn) Setup() (setup bool, err error) {
 	}
 
 	setup = true
-	_, err = conn.DB.Exec(`CREATE TABLE task (
+	_, err = conn.DB.Exec(`
+		CREATE TABLE user_account (
+			id uuid PRIMARY KEY,
+			displayname character varying(100)
+			);
+		CREATE TABLE user_external (
+			user_id uuid REFERENCES user_account(id) ON DELETE CASCADE ON UPDATE CASCADE,
+			provider character varying(100) NOT NULL,
+			external_id character varying (100) NOT NULL,
+			PRIMARY KEY(provider, external_id)
+			);
+		CREATE TABLE task (
 			id SERIAL PRIMARY KEY,
 			name character varying(100) NOT NULL,
 			description character varying(500) NOT NULL,

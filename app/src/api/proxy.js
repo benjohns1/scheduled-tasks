@@ -3,16 +3,23 @@ import { getAnonymousToken } from '../auth/auth0'
 
 const baseUrl = `http://${process.env.APPLICATION_HOST || 'localhost'}:${process.env.APPLICATION_PORT || '8080'}/api/v1`
 
-export async function proxy(req, res, url) {
+export async function proxy(req, res, { method = undefined, url = undefined, body = undefined } = {}) {
+	if (method === undefined) {
+		method = req.method
+	}
+	if (body === undefined) {
+		body = req.body
+	}
+	if (url === undefined) {
+		url = req.url.replace('.json', '')
+	}
+
 	const opts = {
-		method: req.method,
+		method: method,
 		headers: req.headers,
 	}
 	if (Object.keys(req.body).length !== 0) {
 		opts.body = JSON.stringify(req.body)
-	}
-	if (url === undefined) {
-		url = req.url.replace('.json', '')
 	}
 	await checkAuth(opts)
 
@@ -24,7 +31,7 @@ export async function proxy(req, res, url) {
 	}).catch(err => error(res, 500, err))
 }
 
-function error(res, code, msg) {
+export function error(res, code, msg) {
 	res.writeHead(code, {
 		'content-type': 'application/json'
 	})

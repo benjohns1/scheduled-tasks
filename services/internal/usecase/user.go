@@ -6,7 +6,7 @@ import (
 
 // UserRepo defines the user repository interface required by use cases
 type UserRepo interface {
-	Add(u *user.User, providerID string, externalID string) Error
+	AddExternal(u *user.User, providerID string, externalID string) Error
 	Update(*user.User) Error
 	GetExternal(providerID string, externalID string) (*user.User, Error)
 }
@@ -20,7 +20,7 @@ func AddOrUpdateExternalUser(r UserRepo, providerID string, externalID string, d
 		}
 
 		u = user.New(displayname)
-		if err := r.Add(u, providerID, externalID); err != nil {
+		if err := r.AddExternal(u, providerID, externalID); err != nil {
 			return nil, err.Prefix("error adding external user: ")
 		}
 		return u, nil

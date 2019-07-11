@@ -44,10 +44,6 @@ type outScheduleID struct {
 	ID usecase.ScheduleID `json:"id"`
 }
 
-type outError struct {
-	Error string `json:"error"`
-}
-
 type outClearedCompleted struct {
 	Count   int    `json:"count"`
 	Message string `json:"message"`

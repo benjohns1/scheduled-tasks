@@ -37,6 +37,100 @@ func suiteBasic(t *testing.T, tester test.Tester) {
 	pauseSchedule(t, tester.NewAPI())
 	unpauseSchedule(t, tester.NewAPI())
 	removeSchedule(t, tester.NewAPI())
+	addOrUpdateExternalUser(t, tester.NewAPI())
+	errorResponse(t, tester.NewAPI())
+}
+
+func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
+
+	type args struct {
+		method string
+		url    string
+		body   string
+	}
+	type asserts struct {
+		statusEquals int
+		bodyEquals   *string
+		bodyContains *string
+	}
+	tests := []struct {
+		name    string
+		h       http.Handler
+		args    args
+		asserts asserts
+	}{
+		{
+			name:    "should return 204",
+			h:       api,
+			args:    args{method: "PUT", url: "/api/v1/user/external/someProvider/userExternalID/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
+			asserts: asserts{statusEquals: http.StatusNoContent, bodyEquals: test.Strp(``)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.args.method, tt.args.url, strings.NewReader(tt.args.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			tt.h.ServeHTTP(rr, req)
+			if rr.Code != tt.asserts.statusEquals {
+				t.Errorf("status code = %v, want %v (body: %v)", rr.Code, tt.asserts.statusEquals, rr.Body.String())
+			}
+			if tt.asserts.bodyEquals != nil && rr.Body.String() != *tt.asserts.bodyEquals {
+				t.Errorf("response body = %v, should equal %v", rr.Body.String(), *tt.asserts.bodyEquals)
+			}
+			if tt.asserts.bodyContains != nil && !strings.Contains(rr.Body.String(), *tt.asserts.bodyContains) {
+				t.Errorf("response body = %v, should contain %v", rr.Body.String(), *tt.asserts.bodyContains)
+			}
+		})
+	}
+}
+
+func errorResponse(t *testing.T, api http.Handler) {
+
+	type args struct {
+		method string
+		url    string
+		body   string
+	}
+	type asserts struct {
+		statusEquals int
+		bodyEquals   *string
+		bodyContains *string
+	}
+	tests := []struct {
+		name    string
+		h       http.Handler
+		args    args
+		asserts asserts
+	}{
+		{
+			name:    "should return 404 with JSON error",
+			h:       api,
+			args:    args{method: "GET", url: "/invalid-resource-uri"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyEquals: test.Strp(`{"error":"Not found"}`)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.args.method, tt.args.url, strings.NewReader(tt.args.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			tt.h.ServeHTTP(rr, req)
+			if rr.Code != tt.asserts.statusEquals {
+				t.Errorf("status code = %v, want %v", rr.Code, tt.asserts.statusEquals)
+			}
+			if tt.asserts.bodyEquals != nil && rr.Body.String() != *tt.asserts.bodyEquals {
+				t.Errorf("response body = %v, should equal %v", rr.Body.String(), *tt.asserts.bodyEquals)
+			}
+			if tt.asserts.bodyContains != nil && !strings.Contains(rr.Body.String(), *tt.asserts.bodyContains) {
+				t.Errorf("response body = %v, should contain %v", rr.Body.String(), *tt.asserts.bodyContains)
+			}
+		})
+	}
 }
 
 func listTasks(t *testing.T, api http.Handler) {
@@ -84,6 +178,7 @@ func listTasks(t *testing.T, api http.Handler) {
 		})
 	}
 }
+
 func addTask(t *testing.T, api http.Handler) {
 
 	type args struct {

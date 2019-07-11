@@ -1,7 +1,6 @@
 package test
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,11 +56,15 @@ func NewTestDBConn(test testType) (postgres.DBConn, error) {
 		dbconn.Close()
 		return dbconn, fmt.Errorf("could not connect to test DB: %v", err)
 	}
-	_, destroyErr := destroy(&dbconn)
+	destroyErr := destroy(&dbconn)
 	didSetup, err := dbconn.Setup()
 	if err != nil {
 		dbconn.Close()
-		return dbconn, fmt.Errorf("error setting up DB tables: %v", err)
+		destroyStr := ""
+		if destroyErr != nil {
+			destroyStr = fmt.Sprintf(", error destroying tables: %v", destroyErr)
+		}
+		return dbconn, fmt.Errorf("error setting up DB tables: %v%v", err, destroyStr)
 	}
 	if !didSetup {
 		dbconn.Close()
@@ -71,6 +74,7 @@ func NewTestDBConn(test testType) (postgres.DBConn, error) {
 }
 
 // destroy !!!WARNING!!! completely destroys all data in the DB
-func destroy(conn *postgres.DBConn) (sql.Result, error) {
-	return conn.DB.Exec("DROP TABLE task; DROP TABLE recurring_task; DROP TABLE schedule;")
+func destroy(conn *postgres.DBConn) error {
+	_, err := conn.DB.Exec("DROP TABLE task; DROP TABLE recurring_task; DROP TABLE schedule; DROP TABLE user_external; DROP TABLE user_account;")
+	return err
 }

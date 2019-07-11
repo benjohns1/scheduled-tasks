@@ -16,14 +16,14 @@ func newUserRaw(t *testing.T, idStr string, displayname string) *user.User {
 	return u
 }
 
-func TestUserRepo_Add(t *testing.T) {
+func TestUserRepo_AddExternal(t *testing.T) {
 	r := NewUserRepo()
 	emptyUser := user.New("")
 	basicUser := user.New("Test Displayname")
 	dupeUser1 := newUserRaw(t, "111e1111-e89b-12d3-a456-426655440000", "displayname1")
 	dupeUser2 := newUserRaw(t, "111e1111-e89b-12d3-a456-426655440000", "displayname2")
 
-	if err := r.Add(dupeUser1, "p1", "e1"); err != nil {
+	if err := r.AddExternal(dupeUser1, "p1", "e1"); err != nil {
 		t.Fatalf("Error adding user")
 	}
 
@@ -59,7 +59,7 @@ func TestUserRepo_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.r.Add(tt.args.u, tt.args.providerID, tt.args.externalID)
+			err := tt.r.AddExternal(tt.args.u, tt.args.providerID, tt.args.externalID)
 			if ((err == nil) != (tt.wantErr == usecase.ErrNone)) || ((err != nil) && (tt.wantErr != err.Code())) {
 				t.Errorf("UserRepo.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -70,7 +70,7 @@ func TestUserRepo_Add(t *testing.T) {
 func TestUserRepo_Update(t *testing.T) {
 	r := NewUserRepo()
 	u := user.New("display name")
-	r.Add(u, "", "")
+	r.AddExternal(u, "", "")
 	u.UpdateDisplayName("new display name")
 
 	type args struct {
@@ -102,7 +102,7 @@ func TestUserRepo_Update(t *testing.T) {
 func TestUserRepo_GetExternal(t *testing.T) {
 	r := NewUserRepo()
 	u := user.New("display name")
-	r.Add(u, "p1", "e1")
+	r.AddExternal(u, "p1", "e1")
 
 	type args struct {
 		providerID string
