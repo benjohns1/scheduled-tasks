@@ -34,7 +34,8 @@ func suiteMulti(t *testing.T, tester test.Tester) {
 	addRemoveListSchedule(t, tester.NewAPI())
 }
 
-func addListGetCompleteTasks(t *testing.T, api http.Handler) {
+func addListGetCompleteTasks(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 	nowStr := now.Format(format.OutTimeFormat)
@@ -137,7 +138,9 @@ func addListGetCompleteTasks(t *testing.T, api http.Handler) {
 	}
 }
 
-func addRemoveListSchedule(t *testing.T, api http.Handler) {
+func addRemoveListSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -244,7 +247,9 @@ func addRemoveListSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func addListGetSchedules(t *testing.T, api http.Handler) {
+func addListGetSchedules(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -399,7 +404,9 @@ func addListGetSchedules(t *testing.T, api http.Handler) {
 	}
 }
 
-func addRecurringTasksToEmptySchedule(t *testing.T, api http.Handler) {
+func addRecurringTasksToEmptySchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string

@@ -15,14 +15,17 @@ polka() // You can also use Express
 		json(),
 		cookieParser(),
 		sapper.middleware({
-			session: (req) => {
-				if (req.cookies.token) {
-					return ({
-						auth: {
-							token: req.cookies.token,
-							devLogin: req.cookies.devLogin
-						}
-					})
+			session: req => {
+				if (!req.cookies.token) {
+					return {
+						auth: {}
+					}
+				}
+				return {
+					auth: {
+						token: req.cookies.token,
+						devLogin: req.cookies.devLogin
+					}
 				}
 			}
 		})

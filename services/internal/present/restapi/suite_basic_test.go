@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 )
 
@@ -41,7 +43,16 @@ func suiteBasic(t *testing.T, tester test.Tester) {
 	errorResponse(t, tester.NewAPI())
 }
 
-func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
+func addOrUpdateExternalUser(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+	u1 := user.New("test user")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermUpsertUserSelf}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "https://p1/", Subject: "e1", Permissions: u1Perms}, api)
+
+	u2 := user.New("test user, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "https://p1/", Subject: "e2"}, api)
 
 	type args struct {
 		method string
@@ -60,13 +71,25 @@ func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
 		asserts asserts
 	}{
 		{
-			name:    "should return 204 for a valid user and token @TODO: STUB AUTH FOR TESTING",
-			h:       api,
-			args:    args{method: "PUT", url: "/api/v1/user/external/someProvider/userExternalID/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
+			name:    "should return 204 for a valid user and token",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/user/external/p1/e1/addOrUpdate", body: `{"displayname":"update my username"}`},
 			asserts: asserts{statusEquals: http.StatusNoContent, bodyEquals: test.Strp(``)},
 		},
 		{
+			name:    "should return 401 for valid user without permissions",
+			h:       u2Api,
+			args:    args{method: "PUT", url: "/api/v1/user/external/p1/e2/addOrUpdate", body: `{"displayname":"badPerms!"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
 			name:    "should return 401 for invalid user",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/user/external/p1/invalid-user-id/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "should return 401 for unauthorized user",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/user/external/someProvider/userExternalID/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
 			asserts: asserts{statusEquals: http.StatusUnauthorized},
@@ -81,7 +104,7 @@ func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
 			rr := httptest.NewRecorder()
 			tt.h.ServeHTTP(rr, req)
 			if rr.Code != tt.asserts.statusEquals {
-				t.Errorf("status code = %v, want %v (body: %v)", rr.Code, tt.asserts.statusEquals, rr.Body.String())
+				t.Errorf("status code = %v, want %v", rr.Code, tt.asserts.statusEquals)
 			}
 			if tt.asserts.bodyEquals != nil && rr.Body.String() != *tt.asserts.bodyEquals {
 				t.Errorf("response body = %v, should equal %v", rr.Body.String(), *tt.asserts.bodyEquals)
@@ -93,7 +116,8 @@ func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
 	}
 }
 
-func errorResponse(t *testing.T, api http.Handler) {
+func errorResponse(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -139,7 +163,8 @@ func errorResponse(t *testing.T, api http.Handler) {
 	}
 }
 
-func listTasks(t *testing.T, api http.Handler) {
+func listTasks(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -185,7 +210,8 @@ func listTasks(t *testing.T, api http.Handler) {
 	}
 }
 
-func addTask(t *testing.T, api http.Handler) {
+func addTask(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -248,7 +274,8 @@ func addTask(t *testing.T, api http.Handler) {
 		})
 	}
 }
-func getTask(t *testing.T, api http.Handler) {
+func getTask(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -294,7 +321,8 @@ func getTask(t *testing.T, api http.Handler) {
 	}
 }
 
-func completeTask(t *testing.T, api http.Handler) {
+func completeTask(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -340,7 +368,8 @@ func completeTask(t *testing.T, api http.Handler) {
 	}
 }
 
-func clearTask(t *testing.T, api http.Handler) {
+func clearTask(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -386,7 +415,8 @@ func clearTask(t *testing.T, api http.Handler) {
 	}
 }
 
-func clearCompletedTasks(t *testing.T, api http.Handler) {
+func clearCompletedTasks(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -432,7 +462,8 @@ func clearCompletedTasks(t *testing.T, api http.Handler) {
 	}
 }
 
-func listSchedules(t *testing.T, api http.Handler) {
+func listSchedules(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -478,7 +509,8 @@ func listSchedules(t *testing.T, api http.Handler) {
 	}
 }
 
-func addSchedule(t *testing.T, api http.Handler) {
+func addSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
 
 	type args struct {
 		method string
@@ -560,7 +592,9 @@ func addSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func getSchedule(t *testing.T, api http.Handler) {
+func getSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -605,7 +639,9 @@ func getSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func removeSchedule(t *testing.T, api http.Handler) {
+func removeSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -650,7 +686,9 @@ func removeSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func pauseSchedule(t *testing.T, api http.Handler) {
+func pauseSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -695,7 +733,9 @@ func pauseSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func unpauseSchedule(t *testing.T, api http.Handler) {
+func unpauseSchedule(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string
@@ -740,7 +780,9 @@ func unpauseSchedule(t *testing.T, api http.Handler) {
 	}
 }
 
-func addRecurringTask(t *testing.T, api http.Handler) {
+func addRecurringTask(t *testing.T, apiMock test.MockAPI) {
+	api := apiMock.API
+
 	type args struct {
 		method string
 		url    string

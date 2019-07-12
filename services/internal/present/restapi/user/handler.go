@@ -33,7 +33,6 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(rf)
 
-	// @TODO: ensure token subject matches the user!
 	pre := prefix + "/user"
 	r.PUT(pre+"/external/:providerID/:userID/addOrUpdate", authorize(l, f, addOrUpdateExternalUser(l, p, f, userRepo)))
 }
@@ -48,14 +47,19 @@ func authorize(l Logger, f Formatter, next httprouter.Handle) httprouter.Handle 
 		}
 
 		// Enforce users may only create/update themselves
-		providerID := ps.ByName("providerID")
-		userID := ps.ByName("userID")
-		if auth.FormatProvider(providerID) != userContext.Auth.Issuer || userID != userContext.Auth.Subject {
-			l.Printf("external user credentials (%v, %v) do not match authorization token: %v", providerID, userID, userContext)
-			f.WriteResponse(w, f.Error("Not authorized"), 401)
+		if userContext.Auth.HasPerm(auth.PermUpsertUserSelf) {
+			providerID := ps.ByName("providerID")
+			userID := ps.ByName("userID")
+			if auth.FormatProvider(providerID) != userContext.Auth.Issuer || userID != userContext.Auth.Subject {
+				l.Printf("external user credentials (%v, %v) do not match authorization token: %v", providerID, userID, userContext)
+				f.WriteResponse(w, f.Error("Not authorized"), 401)
+				return
+			}
+			next(w, r, ps)
 			return
 		}
-		next(w, r, ps)
+
+		f.ErrUnauthorized(w)
 	}
 }
 

@@ -38,7 +38,7 @@ func HRHydrateUser(userRepo usecase.UserRepo, l Logger, f Formatter, required bo
 func hydrateUser(w http.ResponseWriter, userRepo usecase.UserRepo, l Logger, f Formatter, required bool) (*user.User, Context, bool) {
 	a, ok := w.(ResponseContext)
 	if !ok {
-		l.Printf("Invalid auth context, could not parse user: %v", w)
+		l.Printf("Invalid auth context, while trying to hydrate user: %v", w)
 		f.WriteResponse(w, f.Error("Error parsing user"), 500)
 		return nil, Context{}, false
 	}
@@ -54,7 +54,7 @@ func hydrateUser(w http.ResponseWriter, userRepo usecase.UserRepo, l Logger, f F
 		}
 		if required {
 			l.Printf("Error finding authorized user from token: %v", err)
-			f.WriteResponse(w, f.Error("Could not find authorized user from token"), 401)
+			f.ErrUnauthorized(w)
 			return nil, c, false
 		}
 		u = &user.User{}

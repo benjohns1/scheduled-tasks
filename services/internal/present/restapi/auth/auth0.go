@@ -46,10 +46,10 @@ func (a *Auth0) Authenticate(next http.Handler) http.Handler {
 			return
 		}
 		claims := struct {
-			Issuer      string   `json:"iss"`
-			Subject     string   `json:"sub"`
-			Permissions []string `json:"permissions"`
-			Scope       string   `json:"scope"`
+			Issuer      string       `json:"iss"`
+			Subject     string       `json:"sub"`
+			Permissions []Permission `json:"permissions"`
+			Scope       string       `json:"scope"`
 		}{}
 		validator.Claims(r, token, &claims)
 

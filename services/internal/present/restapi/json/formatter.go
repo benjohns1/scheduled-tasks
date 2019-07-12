@@ -19,6 +19,7 @@ type Logger interface {
 type ResponseFormatter interface {
 	WriteResponse(w http.ResponseWriter, res []byte, statusCode int)
 	WriteEmpty(w http.ResponseWriter, statusCode int)
+	ErrUnauthorized(w http.ResponseWriter)
 	Errorf(format string, a ...interface{}) []byte
 	Error(a interface{}) []byte
 }
@@ -47,6 +48,12 @@ func (f *Formatter) WriteResponse(w http.ResponseWriter, res []byte, statusCode 
 func (f *Formatter) WriteEmpty(w http.ResponseWriter, statusCode int) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
+}
+
+// ErrUnauthorized writes an unauthorized response
+func (f *Formatter) ErrUnauthorized(w http.ResponseWriter) {
+	f.WriteEmpty(w, 401)
+	w.Write(f.Error("Unauthorized"))
 }
 
 // Errorf formats a format string and args to JSON

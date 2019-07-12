@@ -9,13 +9,21 @@ import (
 	postgres_test "github.com/benjohns1/scheduled-tasks/services/internal/data/postgres/test"
 	"github.com/benjohns1/scheduled-tasks/services/internal/data/transient"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi"
-	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
+	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
 // Tester describes an API struct used to create new test API instances
 type Tester interface {
-	NewAPI() http.Handler
+	NewAPI() MockAPI
 	Close() error
+}
+
+// MockAPI contain the API mock and repos used during setup
+type MockAPI struct {
+	API          http.Handler
+	UserRepo     usecase.UserRepo
+	TaskRepo     usecase.TaskRepo
+	ScheduleRepo usecase.ScheduleRepo
 }
 
 type loggerStub struct{}
@@ -33,14 +41,15 @@ func Strp(str string) *string {
 
 type transientTester struct{}
 
-func (m *transientTester) NewAPI() http.Handler {
+func (m *transientTester) NewAPI() MockAPI {
 	l := &loggerStub{}
 	userRepo := transient.NewUserRepo()
 	taskRepo := transient.NewTaskRepo()
 	scheduleRepo := transient.NewScheduleRepo()
 	c := make(chan<- bool)
-	authStub := auth.New(l)
-	return restapi.New(l, authStub, c, userRepo, taskRepo, scheduleRepo)
+	authMock := NewAuthMock(l)
+	api := restapi.New(l, authMock, c, userRepo, taskRepo, scheduleRepo)
+	return MockAPI{api, userRepo, taskRepo, scheduleRepo}
 }
 
 func (m *transientTester) Close() error {
@@ -56,7 +65,7 @@ type postgresTester struct {
 	prevConn *postgres.DBConn
 }
 
-func (m *postgresTester) NewAPI() http.Handler {
+func (m *postgresTester) NewAPI() MockAPI {
 	m.Close()
 	conn, err := postgres_test.NewTestDBConn(postgres_test.IntegrationTest)
 	if err != nil {
@@ -78,8 +87,9 @@ func (m *postgresTester) NewAPI() http.Handler {
 	}
 	l := &loggerStub{}
 	c := make(chan<- bool)
-	authStub := auth.New(l)
-	return restapi.New(l, authStub, c, userRepo, taskRepo, scheduleRepo)
+	authMock := NewAuthMock(l)
+	api := restapi.New(l, authMock, c, userRepo, taskRepo, scheduleRepo)
+	return MockAPI{api, userRepo, taskRepo, scheduleRepo}
 }
 
 func (m *postgresTester) Close() error {
