@@ -60,10 +60,16 @@ func addOrUpdateExternalUser(t *testing.T, api http.Handler) {
 		asserts asserts
 	}{
 		{
-			name:    "should return 204",
+			name:    "should return 204 for a valid user and token @TODO: STUB AUTH FOR TESTING",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/user/external/someProvider/userExternalID/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
 			asserts: asserts{statusEquals: http.StatusNoContent, bodyEquals: test.Strp(``)},
+		},
+		{
+			name:    "should return 401 for invalid user",
+			h:       api,
+			args:    args{method: "PUT", url: "/api/v1/user/external/someProvider/userExternalID/addOrUpdate", body: `{"displayname":"myNameIsWho?"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
 		},
 	}
 	for _, tt := range tests {

@@ -36,7 +36,7 @@ func New(l Logger, a auth.Authenticator, checkSchedule chan<- bool, userRepo use
 	r.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.WriteResponse(w, f.Error("Not found"), 404)
 	})
-	return a.Authenticate(auth.HydrateUser(userRepo, l, f, false, true, r))
+	return a.Authenticate(auth.HydrateUser(userRepo, l, f, false, r))
 }
 
 // Serve starts an API server
