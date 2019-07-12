@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/auth0-community/go-auth0"
-	"github.com/julienschmidt/httprouter"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -26,9 +25,9 @@ func NewAuth0(l Logger, c Auth0Config) *Auth0 {
 	return &Auth0{Auth{l: l}, c}
 }
 
-// Handle creates httprouter middleware for Auth0 authentication
-func (a *Auth0) Handle(next httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// Authenticate authenticates a request and calls the next handler
+func (a *Auth0) Authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		secretProvider := auth0.NewKeyProvider(a.c.Secret)
 		configuration := auth0.NewConfiguration(secretProvider, a.c.Audience, "https://"+a.c.Domain+"/", jose.HS256)
 		validator := auth0.NewValidator(configuration, nil)
@@ -46,7 +45,14 @@ func (a *Auth0) Handle(next httprouter.Handle) httprouter.Handle {
 			}
 			return
 		}
+		claims := struct {
+			Issuer      string   `json:"iss"`
+			Subject     string   `json:"sub"`
+			Permissions []string `json:"permissions"`
+			Scope       string   `json:"scope"`
+		}{}
+		validator.Claims(r, token, &claims)
 
-		next(w, r, ps)
-	}
+		next.ServeHTTP(ResponseContext{w, Context(claims)}, r)
+	})
 }

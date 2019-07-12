@@ -18,13 +18,13 @@ func NewParser() *Parser {
 }
 
 // AddTask parses addTask request JSON data into a core Task struct
-func (p *Parser) AddTask(b io.Reader) (*task.Task, error) {
+func (p *Parser) AddTask(b io.Reader, uid user.ID) (*task.Task, error) {
 	var addTask addTask
 	err := json.NewDecoder(b).Decode(&addTask)
 	if err != nil {
 		return nil, err
 	}
-	return parseAddTask(&addTask), nil
+	return parseAddTask(&addTask, uid), nil
 }
 
 type addTask struct {
@@ -32,6 +32,6 @@ type addTask struct {
 	Description string `json:"description"`
 }
 
-func parseAddTask(at *addTask) *task.Task {
-	return task.New(at.Name, at.Description, user.ID{})
+func parseAddTask(at *addTask, uid user.ID) *task.Task {
+	return task.New(at.Name, at.Description, uid)
 }

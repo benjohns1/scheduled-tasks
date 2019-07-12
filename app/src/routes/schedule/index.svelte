@@ -6,24 +6,24 @@
 	
 	export async function preload(page, session) {
 		const loaded = loading('schedule')
-		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session)).then(r => {
-			return r.json().then(data => {
-				if (r.status !== 200) {
-					console.error(data, r)
-					return { scheduleError: 'Sorry, there was a problem retrieving schedules' + data.error ? `: ${data.error}` : ''}
+		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session)).then(async r => {
+			if (r.status !== 200) {
+				throw {
+					message: "Sorry, there was a problem retrieving schedules",
+					r: await r.json()
 				}
-
-				const schedules = Object.values(data).reverse().map(s => {
+			} else {
+				const schedules = Object.values(await r.json()).reverse().map(s => {
 					return {
 						data: s,
 						open: false
 					}
 				})
 				return { schedules }
-			})
-		}).catch(err => {
-			console.error(err)
-			return { scheduleError: `Sorry, there was a problem retrieving schedules: ${err.message}` }
+			}
+		}).catch(scheduleError => {
+			console.error(scheduleError)
+			return { scheduleError }
 		})
 		loaded()
 		return result
@@ -160,7 +160,7 @@
 		<Button on:click={newSchedule} test=new-schedule-button classes=right style=success>new schedule</Button>
 	</header>
 	{#if scheduleError !== undefined}
-		<p class='error'>{scheduleError}</p>
+		<p class='error'>{scheduleError.message || 'Unknown error'}</p>
 	{/if}
 
 	{#if schedules.length === 0}

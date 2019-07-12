@@ -11,6 +11,11 @@ type UserRepo interface {
 	GetExternal(providerID string, externalID string) (*user.User, Error)
 }
 
+// GetExternalUser looks up a user by an external provider's ID, then returns it
+func GetExternalUser(r UserRepo, providerID string, externalID string) (*user.User, Error) {
+	return r.GetExternal(providerID, externalID)
+}
+
 // AddOrUpdateExternalUser looks up a user by an external provider's ID, then either adds them or updates their displayname if needed
 func AddOrUpdateExternalUser(r UserRepo, providerID string, externalID string, displayname string) (*user.User, Error) {
 	u, err := r.GetExternal(providerID, externalID)

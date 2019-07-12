@@ -22,21 +22,21 @@ type Logger interface {
 }
 
 // New creates a REST API server
-func New(l Logger, a auth.Authorizer, checkSchedule chan<- bool, userRepo usecase.UserRepo, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
+func New(l Logger, a auth.Authenticator, checkSchedule chan<- bool, userRepo usecase.UserRepo, taskRepo usecase.TaskRepo, scheduleRepo usecase.ScheduleRepo) (api http.Handler) {
 
 	r := httprouter.New()
 	f := mapper.NewFormatter(l)
 	a.SetFormatter(f)
 	prefix := "/api/v1"
-	taskapi.Handle(r, a, prefix, l, f, taskRepo)
-	scheduleapi.Handle(r, a, prefix, l, f, checkSchedule, scheduleRepo)
-	userapi.Handle(r, a, prefix, l, f, userRepo)
+	taskapi.Handle(r, prefix, l, f, taskRepo)
+	scheduleapi.Handle(r, prefix, l, f, checkSchedule, scheduleRepo)
+	userapi.Handle(r, prefix, l, f, userRepo)
 
 	r.HandleMethodNotAllowed = false
 	r.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.WriteResponse(w, f.Error("Not found"), 404)
 	})
-	return &server{r}
+	return a.Authenticate(auth.HydrateUser(userRepo, l, f, false, true, r))
 }
 
 // Serve starts an API server
@@ -61,13 +61,4 @@ func Serve(l Logger, api http.Handler) (closed <-chan bool) {
 	}()
 
 	return onClosed
-}
-
-type server struct {
-	r *httprouter.Router
-}
-
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// @TODO: Handle global auth
-	s.r.ServeHTTP(w, r)
 }

@@ -21,13 +21,13 @@ func NewParser() *Parser {
 }
 
 // AddSchedule parses addSchedule request JSON data into a core Schedule struct
-func (p *Parser) AddSchedule(b io.Reader) (*schedule.Schedule, error) {
+func (p *Parser) AddSchedule(b io.Reader, uid user.ID) (*schedule.Schedule, error) {
 	var addSchedule addSchedule
 	err := json.NewDecoder(b).Decode(&addSchedule)
 	if err != nil {
 		return nil, err
 	}
-	return parseAddSchedule(&addSchedule)
+	return parseAddSchedule(&addSchedule, uid)
 }
 
 type addSchedule struct {
@@ -42,7 +42,7 @@ type addSchedule struct {
 	Tasks         []addRecurringTask `json:"tasks"`
 }
 
-func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
+func parseAddSchedule(as *addSchedule, uid user.ID) (*schedule.Schedule, error) {
 
 	var f schedule.Frequency
 	var err error
@@ -78,7 +78,7 @@ func parseAddSchedule(as *addSchedule) (*schedule.Schedule, error) {
 		}
 	}
 
-	s := schedule.New(f, user.ID{})
+	s := schedule.New(f, uid)
 	if as.Paused {
 		s.Pause()
 	}

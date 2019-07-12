@@ -2,8 +2,6 @@ package auth
 
 import (
 	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 // Logger interface needed for log messages
@@ -21,7 +19,21 @@ type Formatter interface {
 type Auth struct {
 	l Logger
 	f Formatter
-	Authorizer
+	Authenticator
+}
+
+// ResponseContext wraps http.ResponseWriter in a context that provides authorization details to other handlers
+type ResponseContext struct {
+	http.ResponseWriter
+	Auth Context
+}
+
+// Context contains relevant auth data from request
+type Context struct {
+	Issuer      string
+	Subject     string
+	Permissions []string
+	Scope       string
 }
 
 // New creates a new base Auth struct (useful for test stubbing)
@@ -34,13 +46,15 @@ func (a *Auth) SetFormatter(f Formatter) {
 	a.f = f
 }
 
-// Handle dummy method for auth handler
-func (a *Auth) Handle(next httprouter.Handle) httprouter.Handle {
-	return next
+// Authenticate stub authentication method
+func (a *Auth) Authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
 }
 
-// Authorizer interface for authorization
-type Authorizer interface {
+// Authenticator interface for authorization
+type Authenticator interface {
 	SetFormatter(f Formatter)
-	Handle(next httprouter.Handle) httprouter.Handle
+	Authenticate(next http.Handler) http.Handler
 }

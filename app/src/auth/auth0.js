@@ -14,6 +14,7 @@ const {
 	AUTH0_ANON_CLIENT_ID,
 	AUTH0_ANON_CLIENT_SECRET,
 	AUTH0_E2E_DEV_CLIENT_ID,
+	AUTH0_E2E_DEV_CLIENT_SUBJECT,
 	AUTH0_E2E_DEV_CLIENT_SECRET
 } = process.env;
 
@@ -26,6 +27,8 @@ export async function getConfig() {
 	}
 	if (dev) {
 		cfg.token = await getE2EDevToken()
+		cfg.devSubject = AUTH0_E2E_DEV_CLIENT_SUBJECT
+		cfg.devDisplayname = "Dev E2E Test User"
 	}
 	return cfg
 }

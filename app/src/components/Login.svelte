@@ -50,6 +50,7 @@
     
 	let auth0 = undefined
     let errorMsg = undefined
+    let config = {}
     let login = () => {}
     let logout = () => {}
 
@@ -58,7 +59,9 @@
 
     const getDevUser = () => {
         return {
-            displayname: "Dev E2E Test User"
+            displayname: config.devDisplayname,
+            sub: config.devSubject,
+            iss: config.domain,
         }
     }
 
@@ -88,6 +91,7 @@
             sapper.goto('/')
             sessionAuth()
         }
+        onUserLogin()
     }
 
     const sessionLogin = async auth0 => {
@@ -95,6 +99,7 @@
         $session.auth.user = await (async () => {
             const user = await auth0.getUser()
             user.displayname = user.nickname || user.name || user.email || 'New User'
+            user.iss = config.domain
             return user
         })()
         setCookies($session.auth.token)
@@ -123,17 +128,18 @@
     }
 
     const sessionAuth = async () => {
-        // Session logged-in as dev user - populate dev session data
-        if ($session.auth.devLogin && $session.auth.token) {
-            devLogin($session.auth.token)
-            return
-        }
-
         // Load auth config from server
         const { cfg, error } = await loadConfig()
         if (error) {
             console.error(error)
             errorMsg = error.message || 'login error'
+            return
+        }
+        config = cfg
+        
+        // Session logged-in as dev user - populate dev session data
+        if ($session.auth.devLogin && $session.auth.token) {
+            devLogin($session.auth.token)
             return
         }
 
@@ -192,5 +198,5 @@
     {/if}
     <Button on:click={logoutHandler} style=outline-secondary classes=btn-sm>log out</Button>
 {:else}
-    <Button on:click={loginHandler} test=login-button style=outline-success classes=btn-sm disabled={!$session || !$session.auth || $session.auth.isAuthenticated === undefined}>log in</Button>
+    <Button on:click={loginHandler} test=login-button style=outline-success classes=btn-sm disabled={!$session || !$session.auth || $session.auth.isAuthenticated === undefined}>log in | sign up</Button>
 {/if}

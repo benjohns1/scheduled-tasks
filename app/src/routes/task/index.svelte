@@ -24,6 +24,7 @@
 			})
 			return { tasks: allTasks.filter(t => !t.data.completedTime), completedTasks: allTasks.filter(t => t.data.completedTime) }
 		}).catch(taskError => {
+			console.error(taskError)
 			return { taskError }
 		})
 	
@@ -144,7 +145,7 @@
 		<Button on:click={newTask} test=new-task-button classes=right style=success>new task</Button>
 	</header>
 	{#if taskError !== undefined}
-		<p class="error">{taskError.message}</p>
+		<p class="error">{taskError.message || 'Unknown error'}</p>
 	{/if}
 
 	{#if tasks.length === 0}

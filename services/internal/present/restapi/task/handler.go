@@ -8,6 +8,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	responseMapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	mapper "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/task/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
@@ -29,27 +31,22 @@ type Formatter interface {
 
 // Parser defines the parser interface for parsing input requests
 type Parser interface {
-	AddTask(b io.Reader) (*task.Task, error)
-}
-
-// Auth defines the auth interface for auth middleware
-type Auth interface {
-	Handle(next httprouter.Handle) httprouter.Handle
+	AddTask(b io.Reader, uid user.ID) (*task.Task, error)
 }
 
 // Handle adds task handling endpoints
-func Handle(r *httprouter.Router, a Auth, prefix string, l Logger, rf responseMapper.ResponseFormatter, taskRepo usecase.TaskRepo) {
+func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.ResponseFormatter, taskRepo usecase.TaskRepo) {
 
 	p := mapper.NewParser()
 	f := mapper.NewFormatter(rf)
 
 	pre := prefix + "/task"
-	r.GET(pre+"/", a.Handle(listTasks(l, f, taskRepo)))
-	r.GET(pre+"/:taskID", a.Handle(getTask(l, f, taskRepo)))
-	r.POST(pre+"/", a.Handle(addTask(l, f, p, taskRepo)))
-	r.PUT(pre+"/:taskID/complete", a.Handle(completeTask(l, f, taskRepo)))
-	r.DELETE(pre+"/:taskID", a.Handle(clearTask(l, f, taskRepo)))
-	r.POST(pre+"/clear", a.Handle(clearCompletedTasks(l, f, taskRepo)))
+	r.GET(pre+"/", listTasks(l, f, taskRepo))
+	r.GET(pre+"/:taskID", getTask(l, f, taskRepo))
+	r.POST(pre+"/", addTask(l, f, p, taskRepo))
+	r.PUT(pre+"/:taskID/complete", completeTask(l, f, taskRepo))
+	r.DELETE(pre+"/:taskID", clearTask(l, f, taskRepo))
+	r.POST(pre+"/clear", clearCompletedTasks(l, f, taskRepo))
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
@@ -100,7 +97,14 @@ func getTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle
 
 func addTask(l Logger, f Formatter, p Parser, taskRepo usecase.TaskRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		t, ucerr := p.AddTask(r.Body)
+		userContext, ok := w.(auth.UserContext)
+		if !ok {
+			l.Printf("error parsing userContext from http.ResponseWriter: %v", w)
+			f.WriteResponse(w, f.Errorf("Error: could not parse user for request"), 401)
+			return
+		}
+
+		t, ucerr := p.AddTask(r.Body, userContext.User.ID())
 		defer r.Body.Close()
 		if ucerr != nil {
 			l.Printf("error parsing addTask data: %v", ucerr)
