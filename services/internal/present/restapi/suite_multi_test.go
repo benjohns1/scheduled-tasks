@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
+	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	format "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 )
@@ -44,6 +46,11 @@ func addListGetCompleteTasks(t *testing.T, apiMock test.MockAPI) {
 	clock.Set(clockMock)
 	defer clock.Set(prevClock)
 
+	u1 := user.New("test user 1 for addListGetCompleteTasks")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermReadTask, auth.PermUpsertTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+
 	type args struct {
 		method string
 		url    string
@@ -64,49 +71,49 @@ func addListGetCompleteTasks(t *testing.T, apiMock test.MockAPI) {
 	}{
 		{
 			name:    "should return 200 empty list",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "GET", url: "/api/v1/task/"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
 		},
 		{
 			name:    "task with name and description should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task1", "description": "task1 description"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "task with name and description should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task2", "description": "task2 description"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
 		},
 		{
 			name:    "task with name and description should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task3", "description": "task3 description"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
 			name:    "should return 200 list with 3 tasks",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "GET", url: "/api/v1/task/"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"1":{"id":1,"name":"task1","description":"task1 description","completedTime":null,"createdTime":"%v"},"2":{"id":2,"name":"task2","description":"task2 description","completedTime":null,"createdTime":"%v"},"3":{"id":3,"name":"task3","description":"task3 description","completedTime":null,"createdTime":"%v"}}`, nowStr, nowStr, nowStr))},
 		},
 		{
 			name:    "get task ID 1 should return incompleted task",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"id":1,"name":"task1","description":"task1 description","completedTime":null,"createdTime":"%v"}`, nowStr))},
 		},
 		{
 			name:    "complete ID 1 should return 204",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "PUT", url: "/api/v1/task/1/complete"},
 			asserts: asserts{statusEquals: http.StatusNoContent, bodyContains: test.Strp(``)},
 		},
 		{
 			name:    "get task ID 1 should return completed task",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"id":1,"name":"task1","description":"task1 description","completedTime":"%v","createdTime":"%v"}`, nowStr, nowStr))},
 		},

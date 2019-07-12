@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 // TaskID is the persistent ID of the task
@@ -15,15 +16,16 @@ type TaskData struct {
 
 // TaskRepo defines the task repository interface required by use cases
 type TaskRepo interface {
-	Get(TaskID) (*task.Task, Error)
+	GetForUser(TaskID, user.ID) (*task.Task, Error)
 	GetAll() (map[TaskID]*task.Task, Error)
+	GetAllForUser(user.ID) (map[TaskID]*task.Task, Error)
 	Add(*task.Task) (TaskID, Error)
 	Update(TaskID, *task.Task) Error
 }
 
 // GetTask gets a single task
-func GetTask(r TaskRepo, id TaskID) (*TaskData, Error) {
-	t, ucerr := r.Get(id)
+func GetTask(r TaskRepo, id TaskID, uid user.ID) (*TaskData, Error) {
+	t, ucerr := r.GetForUser(id, uid)
 	if ucerr != nil {
 		return nil, ucerr.Prefix("error retrieving task id %d", id)
 	}
@@ -44,8 +46,8 @@ func AddTask(r TaskRepo, t *task.Task) (*TaskData, Error) {
 }
 
 // CompleteTask completes an existing task
-func CompleteTask(r TaskRepo, id TaskID) (bool, Error) {
-	t, ucerr := r.Get(id)
+func CompleteTask(r TaskRepo, id TaskID, uid user.ID) (bool, Error) {
+	t, ucerr := r.GetForUser(id, uid)
 	if ucerr != nil {
 		return false, ucerr.Prefix("error retrieving task id %d", id)
 	}
@@ -70,8 +72,8 @@ func CompleteTask(r TaskRepo, id TaskID) (bool, Error) {
 }
 
 // ClearTask clears (removes) a single task, regardless of whether it has been completed
-func ClearTask(r TaskRepo, id TaskID) (bool, Error) {
-	t, ucerr := r.Get(id)
+func ClearTask(r TaskRepo, id TaskID, uid user.ID) (bool, Error) {
+	t, ucerr := r.GetForUser(id, uid)
 	if ucerr != nil {
 		if ucerr.Code() == ErrRecordNotFound {
 			return false, ucerr.Prefix("task id %d not found", id)
@@ -96,8 +98,8 @@ func ClearTask(r TaskRepo, id TaskID) (bool, Error) {
 }
 
 // ClearCompletedTasks clears all completed tasks, returning the number completed and an error
-func ClearCompletedTasks(r TaskRepo) (int, Error) {
-	ts, ucerr := r.GetAll()
+func ClearCompletedTasks(r TaskRepo, uid user.ID) (int, Error) {
+	ts, ucerr := r.GetAllForUser(uid)
 	if ucerr != nil {
 		return 0, ucerr.Prefix("error retrieving tasks to clear")
 	}
@@ -122,8 +124,8 @@ func ClearCompletedTasks(r TaskRepo) (int, Error) {
 }
 
 // ListTasks returns all valid (uncleared) tasks
-func ListTasks(r TaskRepo) (map[TaskID]*task.Task, Error) {
-	all, ucerr := r.GetAll()
+func ListTasks(r TaskRepo, uid user.ID) (map[TaskID]*task.Task, Error) {
+	all, ucerr := r.GetAllForUser(uid)
 	if ucerr != nil {
 		return nil, ucerr.Prefix("error retrieving tasks")
 	}

@@ -41,17 +41,36 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	f := mapper.NewFormatter(rf)
 
 	pre := prefix + "/task"
-	r.GET(pre+"/", listTasks(l, f, taskRepo))
-	r.GET(pre+"/:taskID", getTask(l, f, taskRepo))
-	r.POST(pre+"/", addTask(l, f, p, taskRepo))
-	r.PUT(pre+"/:taskID/complete", completeTask(l, f, taskRepo))
-	r.DELETE(pre+"/:taskID", clearTask(l, f, taskRepo))
-	r.POST(pre+"/clear", clearCompletedTasks(l, f, taskRepo))
+	r.GET(pre+"/", authorize(auth.PermReadTask, l, f, listTasks(l, f, taskRepo)))
+	r.GET(pre+"/:taskID", authorize(auth.PermReadTask, l, f, getTask(l, f, taskRepo)))
+	r.POST(pre+"/", authorize(auth.PermUpsertTask, l, f, addTask(l, f, p, taskRepo)))
+	r.PUT(pre+"/:taskID/complete", authorize(auth.PermUpsertTask, l, f, completeTask(l, f, taskRepo)))
+	r.DELETE(pre+"/:taskID", authorize(auth.PermDeleteTask, l, f, clearTask(l, f, taskRepo)))
+	r.POST(pre+"/clear", authorize(auth.PermDeleteTask, l, f, clearCompletedTasks(l, f, taskRepo)))
+}
+
+func authorize(perm auth.Permission, l Logger, f Formatter, next httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		userContext, ok := w.(auth.UserContext)
+		if !ok {
+			l.Printf("invalid authorization context from http.ResponseWriter: %v", w)
+			f.WriteResponse(w, f.Error("Internal authorization error"), 500)
+			return
+		}
+
+		if userContext.Auth.HasPerm(perm) {
+			next(w, r, ps)
+			return
+		}
+
+		f.ErrUnauthorized(w)
+	}
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		ts, ucerr := usecase.ListTasks(taskRepo)
+		u := auth.GetUser(w)
+		ts, ucerr := usecase.ListTasks(taskRepo, u.ID())
 		if ucerr != nil {
 			l.Printf("error retrieving task list: %v", ucerr)
 			f.WriteResponse(w, f.Error("Error: couldn't retrieve tasks"), 500)
@@ -74,8 +93,9 @@ func getTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle
 			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
 		id := usecase.TaskID(taskIDInt)
-		td, ucerr := usecase.GetTask(taskRepo, id)
+		td, ucerr := usecase.GetTask(taskRepo, id, u.ID())
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
@@ -97,14 +117,13 @@ func getTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle
 
 func addTask(l Logger, f Formatter, p Parser, taskRepo usecase.TaskRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		userContext, ok := w.(auth.UserContext)
-		if !ok {
-			l.Printf("error parsing userContext from http.ResponseWriter: %v", w)
-			f.WriteResponse(w, f.Errorf("Error: could not parse user for request"), 401)
+		u := auth.GetUser(w)
+		if u.ID().IsEmpty() {
+			l.Printf("error retrieving required user from http.ResponseWriter: %v", w)
+			f.ErrUnauthorized(w)
 			return
 		}
-
-		t, ucerr := p.AddTask(r.Body, userContext.User.ID())
+		t, ucerr := p.AddTask(r.Body, u.ID())
 		defer r.Body.Close()
 		if ucerr != nil {
 			l.Printf("error parsing addTask data: %v", ucerr)
@@ -134,8 +153,15 @@ func completeTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.H
 			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
+		uid := u.ID()
+		if uid.IsEmpty() {
+			l.Printf("error retrieving required user from http.ResponseWriter: %v", w)
+			f.ErrUnauthorized(w)
+			return
+		}
 		id := usecase.TaskID(taskIDInt)
-		ok, ucerr := usecase.CompleteTask(taskRepo, id)
+		ok, ucerr := usecase.CompleteTask(taskRepo, id, uid)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
@@ -161,8 +187,15 @@ func clearTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Hand
 			f.WriteResponse(w, f.Error("Error: valid task ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
+		uid := u.ID()
+		if uid.IsEmpty() {
+			l.Printf("error retrieving required user from http.ResponseWriter: %v", w)
+			f.ErrUnauthorized(w)
+			return
+		}
 		id := usecase.TaskID(taskIDInt)
-		ok, ucerr := usecase.ClearTask(taskRepo, id)
+		ok, ucerr := usecase.ClearTask(taskRepo, id, uid)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Task ID %d not found", id), 404)
@@ -182,7 +215,14 @@ func clearTask(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Hand
 
 func clearCompletedTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		count, ucerr := usecase.ClearCompletedTasks(taskRepo)
+		u := auth.GetUser(w)
+		uid := u.ID()
+		if uid.IsEmpty() {
+			l.Printf("error retrieving required user from http.ResponseWriter: %v", w)
+			f.ErrUnauthorized(w)
+			return
+		}
+		count, ucerr := usecase.ClearCompletedTasks(taskRepo, uid)
 		if ucerr != nil {
 			l.Printf("error clearing completed tasks: %v", ucerr)
 			f.WriteResponse(w, f.Error("Error clearing completed tasks"), 500)

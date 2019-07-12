@@ -88,10 +88,10 @@
         console.log('logged in as dev e2e test user')
         logout = () => {
             sessionLogout()
-            sapper.goto('/')
-            sessionAuth()
+            location.reload()
         }
         onUserLogin()
+        sapper.goto('/')
     }
 
     const sessionLogin = async auth0 => {

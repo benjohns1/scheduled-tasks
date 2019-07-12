@@ -65,11 +65,22 @@ func authorize(l Logger, f Formatter, next httprouter.Handle) httprouter.Handle 
 
 func addOrUpdateExternalUser(l Logger, p Parser, f Formatter, userRepo usecase.UserRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// Validate URL params
 		providerID := ps.ByName("providerID")
 		userID := ps.ByName("userID")
 		if providerID == "" || userID == "" {
 			l.Printf("valid provider and user IDs required")
 			f.WriteResponse(w, f.Error("Error: valid provider and user IDs required"), 404)
+			return
+		}
+		provider := auth.FormatProvider(providerID)
+
+		// Validate URL params match logged-in user
+		u1 := auth.GetUser(w)
+		u2, err := usecase.GetExternalUser(userRepo, provider, userID)
+		if err != nil || !u1.ID().Equals(u2.ID()) {
+			l.Printf("logged-in user doesn't match URL specified user (%v != %v), err: %v", u1, u2, err)
+			f.WriteResponse(w, f.Errorf("Error: logged-in user doesn't match URL specified user"), 400)
 			return
 		}
 
@@ -81,7 +92,7 @@ func addOrUpdateExternalUser(l Logger, p Parser, f Formatter, userRepo usecase.U
 			return
 		}
 
-		_, ucerr = usecase.AddOrUpdateExternalUser(userRepo, auth.FormatProvider(providerID), userID, userData.DisplayName)
+		_, ucerr = usecase.AddOrUpdateExternalUser(userRepo, provider, userID, userData.DisplayName)
 		if ucerr != nil {
 			l.Printf("error adding or updating external user: %v", ucerr)
 			f.WriteResponse(w, f.Error("Error adding or updating external user"), 500)

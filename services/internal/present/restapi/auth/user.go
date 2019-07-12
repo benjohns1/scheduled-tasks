@@ -67,3 +67,13 @@ func hydrateUser(w http.ResponseWriter, userRepo usecase.UserRepo, l Logger, f F
 func FormatProvider(provider string) string {
 	return fmt.Sprintf("https://%v/", provider)
 }
+
+// GetUser gets a domain user from a hydrated userContext
+// will return an empty domain user if not found
+func GetUser(w http.ResponseWriter) user.User {
+	userContext, ok := w.(UserContext)
+	if !ok || userContext.User == nil {
+		return user.User{}
+	}
+	return *userContext.User
+}

@@ -31,6 +31,11 @@ func (val ID) Equals(other interface{}) bool {
 	return false
 }
 
+// IsEmpty determines if this ID is empty or zero-value
+func (val ID) IsEmpty() bool {
+	return val.id == uuid.UUID{}
+}
+
 // String returns the string representation of the ID
 func (val ID) String() string {
 	return val.id.String()

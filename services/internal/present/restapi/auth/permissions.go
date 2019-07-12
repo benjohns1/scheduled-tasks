@@ -7,5 +7,9 @@ type Permission string
 const (
 	PermUpsertUserSelf Permission = "upsert:user:self"
 	PermUpsertTask     Permission = "upsert:task"
+	PermReadTask       Permission = "read:task"
+	PermDeleteTask     Permission = "delete:task"
 	PermUpsertSchedule Permission = "upsert:schedule"
+	PermReadSchedule   Permission = "read:schedule"
+	PermDeleteSchedule Permission = "delete:schedule"
 )

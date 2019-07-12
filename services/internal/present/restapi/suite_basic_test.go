@@ -3,13 +3,18 @@
 package restapi_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
+	format "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 )
 
@@ -26,6 +31,8 @@ func TestPostgresRESTAPIBasic(t *testing.T) {
 }
 
 func suiteBasic(t *testing.T, tester test.Tester) {
+	addOrUpdateExternalUser(t, tester.NewAPI())
+	errorResponse(t, tester.NewAPI())
 	listTasks(t, tester.NewAPI())
 	addTask(t, tester.NewAPI())
 	getTask(t, tester.NewAPI())
@@ -39,19 +46,17 @@ func suiteBasic(t *testing.T, tester test.Tester) {
 	pauseSchedule(t, tester.NewAPI())
 	unpauseSchedule(t, tester.NewAPI())
 	removeSchedule(t, tester.NewAPI())
-	addOrUpdateExternalUser(t, tester.NewAPI())
-	errorResponse(t, tester.NewAPI())
 }
 
 func addOrUpdateExternalUser(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 	u1 := user.New("test user")
-	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	apiMock.UserRepo.AddExternal(u1, "https://p1/", "e1")
 	u1Perms := []auth.Permission{auth.PermUpsertUserSelf}
 	u1Api := test.InjectClaims(test.MockClaims{Issuer: "https://p1/", Subject: "e1", Permissions: u1Perms}, api)
 
 	u2 := user.New("test user, no perms")
-	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	apiMock.UserRepo.AddExternal(u2, "https://p1/", "e2")
 	u2Api := test.InjectClaims(test.MockClaims{Issuer: "https://p1/", Subject: "e2"}, api)
 
 	type args struct {
@@ -166,6 +171,29 @@ func errorResponse(t *testing.T, apiMock test.MockAPI) {
 func listTasks(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+	nowStr := now.Format(format.OutTimeFormat)
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
+
+	u1 := user.New("test user")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermReadTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+
+	u2 := user.New("test user, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e2"}, api)
+
+	u3 := user.New("test user with tasks")
+	apiMock.UserRepo.AddExternal(u3, "p1", "e3")
+	u3t1 := task.New("u3 task1", "u3t1 description", u3.ID())
+	apiMock.TaskRepo.Add(u3t1)
+	u3Perms := []auth.Permission{auth.PermReadTask}
+	u3Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e3", Permissions: u3Perms}, api)
+
 	type args struct {
 		method string
 		url    string
@@ -183,10 +211,28 @@ func listTasks(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "should return 200 empty list",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "u1 should return 200 empty list",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/task/"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
+		},
+		{
+			name:    "u2 invalid permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "GET", url: "/api/v1/task/"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "u3 should return list with 1 task",
+			h:       u3Api,
+			args:    args{method: "GET", url: "/api/v1/task/"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"1":{"id":1,"name":"u3 task1","description":"u3t1 description","completedTime":null,"createdTime":"%v"}}`, nowStr))},
 		},
 	}
 	for _, tt := range tests {
@@ -213,6 +259,15 @@ func listTasks(t *testing.T, apiMock test.MockAPI) {
 func addTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1 := user.New("test user for addTask")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermUpsertTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+
+	u2 := user.New("test user for addTask, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e2"}, api)
+
 	type args struct {
 		method string
 		url    string
@@ -230,28 +285,40 @@ func addTask(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "empty task should return 201 and ID",
+			name:    "no auth should return 401",
 			h:       api,
+			args:    args{method: "POST", url: "/api/v1/task/", body: `{}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "empty task should return 201 and ID",
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "task with name and description should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{"name": "task1", "description": "task1 description"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
 		},
 		{
 			name:    "invalid JSON should return 400",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: `{{{`},
 			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse task data`)},
 		},
 		{
 			name:    "empty body should return 400",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/task/", body: ``},
 			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse task data`)},
+		},
+		{
+			name:    "invalid permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "POST", url: "/api/v1/task/", body: `{}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
 		},
 	}
 	for _, tt := range tests {
@@ -277,6 +344,20 @@ func addTask(t *testing.T, apiMock test.MockAPI) {
 func getTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+	nowStr := now.Format(format.OutTimeFormat)
+	prevClock := clock.Get()
+	clockMock := clock.NewStaticMock(now)
+	clock.Set(clockMock)
+	defer clock.Set(prevClock)
+
+	u1 := user.New("test user for getTask")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermReadTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+	u1t1 := task.New("u1 task1", "u1t1 task description", u1.ID())
+	apiMock.TaskRepo.Add(u1t1)
+
 	type args struct {
 		method string
 		url    string
@@ -294,10 +375,22 @@ func getTask(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown task ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown task ID should return 404",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/task/9999"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 9999 not found`)},
+		},
+		{
+			name:    "should return valid task",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/task/1"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"id":1,"name":"u1 task1","description":"u1t1 task description","completedTime":null,"createdTime":"%v"}`, nowStr))},
 		},
 	}
 	for _, tt := range tests {
@@ -324,6 +417,19 @@ func getTask(t *testing.T, apiMock test.MockAPI) {
 func completeTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1 := user.New("test user for completeTask")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermUpsertTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+	u1t1 := task.New("u1t1 task", "", u1.ID())
+	apiMock.TaskRepo.Add(u1t1)
+
+	u2 := user.New("test user for completeTask, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e2"}, api)
+	u2t1 := task.New("u2t1 task", "", u2.ID())
+	apiMock.TaskRepo.Add(u2t1)
+
 	type args struct {
 		method string
 		url    string
@@ -341,10 +447,34 @@ func completeTask(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown task ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/task/1/complete"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown task ID should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/task/9999/complete"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 9999 not found`)},
+		},
+		{
+			name:    "valid task ID should return 204",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/task/1/complete"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "valid task ID without proper permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "PUT", url: "/api/v1/task/2/complete"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid task ID owned by another user should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/task/2/complete"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 2 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -371,6 +501,19 @@ func completeTask(t *testing.T, apiMock test.MockAPI) {
 func clearTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1 := user.New("test user for clearTask")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermDeleteTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+	u1t1 := task.New("u1t1 task", "", u1.ID())
+	apiMock.TaskRepo.Add(u1t1)
+
+	u2 := user.New("test user for clearTask, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e2"}, api)
+	u2t1 := task.New("u2t1 task", "", u2.ID())
+	apiMock.TaskRepo.Add(u2t1)
+
 	type args struct {
 		method string
 		url    string
@@ -388,10 +531,34 @@ func clearTask(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown task ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "DELETE", url: "/api/v1/task/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown task ID should return 404",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/task/9999"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 9999 not found`)},
+		},
+		{
+			name:    "valid task ID should return 204",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/task/1"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "valid task ID without proper permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "DELETE", url: "/api/v1/task/2"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid task ID owned by another user should return 404",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/task/2"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Task ID 2 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -418,6 +585,29 @@ func clearTask(t *testing.T, apiMock test.MockAPI) {
 func clearCompletedTasks(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1 := user.New("test user 1 for clearTask")
+	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
+	u1Perms := []auth.Permission{auth.PermDeleteTask}
+	u1Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e1", Permissions: u1Perms}, api)
+	u1t1 := task.New("u1t1 task", "", u1.ID())
+	u1t1.CompleteNow()
+	u1t2 := task.New("u1t2 task", "", u1.ID())
+	u1t2.CompleteNow()
+	apiMock.TaskRepo.Add(u1t1)
+	apiMock.TaskRepo.Add(u1t2)
+
+	u2 := user.New("test user 2 for clearTask, no perms")
+	apiMock.UserRepo.AddExternal(u2, "p1", "e2")
+	u2Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e2"}, api)
+	u2t1 := task.New("u2t1 task", "", u2.ID())
+	u2t1.CompleteNow()
+	apiMock.TaskRepo.Add(u2t1)
+
+	u3 := user.New("test user 3 for clearTask")
+	apiMock.UserRepo.AddExternal(u3, "p1", "e3")
+	u3Perms := []auth.Permission{auth.PermDeleteTask}
+	u3Api := test.InjectClaims(test.MockClaims{Issuer: "p1", Subject: "e3", Permissions: u3Perms}, api)
+
 	type args struct {
 		method string
 		url    string
@@ -435,8 +625,26 @@ func clearCompletedTasks(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "clearing empty task list should return 200 with 0 count",
+			name:    "no auth should return 401",
 			h:       api,
+			args:    args{method: "POST", url: "/api/v1/task/clear"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "clearing task list should return 200 with 2 count",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/task/clear"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"count":2,"message":"Cleared all completed tasks"}`)},
+		},
+		{
+			name:    "clearing task list with invalid permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "POST", url: "/api/v1/task/clear"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "clearing empty task list should return 200 with 0 count",
+			h:       u3Api,
 			args:    args{method: "POST", url: "/api/v1/task/clear"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"count":0,"message":"No completed tasks to clear"}`)},
 		},

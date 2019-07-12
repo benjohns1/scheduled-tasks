@@ -44,10 +44,50 @@ func (r *TaskRepo) Get(id usecase.TaskID) (*task.Task, usecase.Error) {
 	return td.Task, nil
 }
 
+// GetForUser retrieves a task entity, given its persistent ID and user ID
+func (r *TaskRepo) GetForUser(id usecase.TaskID, uid user.ID) (*task.Task, usecase.Error) {
+
+	// Retrieve from DB
+	query := fmt.Sprintf("%s WHERE id = $1 AND created_by = $2", taskSelectClause())
+	row := r.db.QueryRow(query, id, uid.String())
+	td, err := parseTaskRow(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, usecase.NewError(usecase.ErrRecordNotFound, "no task found with id = %v", id)
+		}
+		return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task id %d: %v", id, err)
+	}
+
+	return td.Task, nil
+}
+
 // GetAll retrieves all tasks
 func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 	// Retrieve from DB
 	rows, err := r.db.Query(taskSelectClause())
+	if err != nil {
+		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
+	}
+	defer rows.Close()
+
+	tasks := map[usecase.TaskID]*task.Task{}
+	for rows.Next() {
+		td, err := parseTaskRow(rows)
+		if err != nil {
+			return nil, usecase.NewError(usecase.ErrUnknown, "error parsing task row: %v", err)
+		}
+		tasks[td.TaskID] = td.Task
+	}
+
+	return tasks, nil
+}
+
+// GetAllForUser retrieves all tasks for a user
+func (r *TaskRepo) GetAllForUser(uid user.ID) (map[usecase.TaskID]*task.Task, usecase.Error) {
+	q := fmt.Sprintf("%v WHERE created_by = $1", taskSelectClause())
+
+	// Retrieve from DB
+	rows, err := r.db.Query(q, uid.String())
 	if err != nil {
 		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving all tasks: %v", err)
 	}
