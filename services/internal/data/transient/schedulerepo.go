@@ -2,6 +2,7 @@ package transient
 
 import (
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
@@ -18,10 +19,17 @@ func NewScheduleRepo() *ScheduleRepo {
 
 // Get retrieves a schedule entity, given its persistent ID
 func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.Error) {
-
-	// Try to retrieve from cache
 	s, ok := r.schedules[id]
 	if !ok {
+		return nil, usecase.NewError(usecase.ErrRecordNotFound, "no schedule with ID: %v", id)
+	}
+	return s, nil
+}
+
+// GetForUser retrieves a schedule entity for a user, given its persistent ID
+func (r *ScheduleRepo) GetForUser(id usecase.ScheduleID, uid user.ID) (*schedule.Schedule, usecase.Error) {
+	s, ok := r.schedules[id]
+	if !ok || !uid.Equals(s.CreatedBy()) {
 		return nil, usecase.NewError(usecase.ErrRecordNotFound, "no schedule with ID: %v", id)
 	}
 	return s, nil
@@ -42,6 +50,17 @@ func (r *ScheduleRepo) GetAllScheduled() (map[usecase.ScheduleID]*schedule.Sched
 func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
 
 	return r.schedules, nil
+}
+
+// GetAllForUser retrieves all schedules created by the given user
+func (r *ScheduleRepo) GetAllForUser(uid user.ID) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+	ss := map[usecase.ScheduleID]*schedule.Schedule{}
+	for id, s := range r.schedules {
+		if s.IsValid() && uid.Equals(s.CreatedBy()) {
+			ss[id] = s
+		}
+	}
+	return ss, nil
 }
 
 // Add adds a task to the persisence layer

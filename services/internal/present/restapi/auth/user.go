@@ -94,7 +94,7 @@ func authorize(w http.ResponseWriter, perm Permission, userRequired bool, l Logg
 		f.WriteResponse(w, f.Error("Internal authorization error"), 500)
 		return false
 	}
-	if userRequired && userContext.User == nil {
+	if userRequired && (userContext.User == nil || *userContext.User == user.User{}) {
 		l.Printf("user required but not found from http.ResponseWriter: %v", w)
 		f.ErrUnauthorized(w)
 		return false

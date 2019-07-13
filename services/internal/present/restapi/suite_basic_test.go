@@ -10,11 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benjohns1/scheduled-tasks/services/internal/core/clock"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/task"
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
-	format "github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/json"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
 )
 
@@ -171,12 +170,8 @@ func errorResponse(t *testing.T, apiMock test.MockAPI) {
 func listTasks(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
-	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
-	nowStr := now.Format(format.OutTimeFormat)
-	prevClock := clock.Get()
-	clockMock := clock.NewStaticMock(now)
-	clock.Set(clockMock)
-	defer clock.Set(prevClock)
+	nowStr, reset := test.SetStaticClock(time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC))
+	defer reset()
 
 	u1 := user.New("test user")
 	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
@@ -344,12 +339,8 @@ func addTask(t *testing.T, apiMock test.MockAPI) {
 func getTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
-	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
-	nowStr := now.Format(format.OutTimeFormat)
-	prevClock := clock.Get()
-	clockMock := clock.NewStaticMock(now)
-	clock.Set(clockMock)
-	defer clock.Set(prevClock)
+	nowStr, reset := test.SetStaticClock(time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC))
+	defer reset()
 
 	u1 := user.New("test user for getTask")
 	apiMock.UserRepo.AddExternal(u1, "p1", "e1")
@@ -673,6 +664,18 @@ func clearCompletedTasks(t *testing.T, apiMock test.MockAPI) {
 func listSchedules(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	_, u1Api := apiMock.NewUserWithPerm("test user for listSchedules", "p1", "e1", auth.PermReadSchedule)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for listSchedules, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
+	u3, u3Api := apiMock.NewUserWithPerm("test user for listSchedules, with tasks", "p1", "e3", auth.PermReadSchedule)
+	u3f1, _ := schedule.NewHourFrequency([]int{0, 30})
+	u3s1 := schedule.New(u3f1, u3.ID())
+	apiMock.ScheduleRepo.Add(u3s1)
+
 	type args struct {
 		method string
 		url    string
@@ -690,10 +693,28 @@ func listSchedules(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "should return 200 empty list",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "u1 should return 200 empty list",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/"},
 			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
+		},
+		{
+			name:    "u2 invalid permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "u3 should return list with 1 schedule",
+			h:       u3Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"2":{"id":2,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0,30],"paused":false,"tasks":[]}}`)},
 		},
 	}
 	for _, tt := range tests {
@@ -720,6 +741,9 @@ func listSchedules(t *testing.T, apiMock test.MockAPI) {
 func addSchedule(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	_, u1Api := apiMock.NewUserWithPerm("test user for addSchedule", "p1", "e1", auth.PermUpsertSchedule)
+	_, u2Api := apiMock.NewUserWithPerm("test user for addSchedule, no perms", "p1", "e2", auth.PermNone)
+
 	type args struct {
 		method string
 		url    string
@@ -737,46 +761,58 @@ func addSchedule(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "empty hour schedule should return 201 and ID",
+			name:    "no auth should return 401",
 			h:       api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "empty hour schedule should return 201 and ID",
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
 		},
 		{
 			name:    "empty day schedule should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Day"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":2}`)},
 		},
 		{
 			name:    "empty week schedule should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Week"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":3}`)},
 		},
 		{
 			name:    "empty month schedule should return 201 and ID",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Month"}`},
 			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":4}`)},
 		},
 		{
 			name:    "empty/invalid schedule should return 400",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{}`},
 			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data: invalid frequency`)},
 		},
 		{
 			name:    "invalid JSON should return 400",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{{{`},
 			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data`)},
 		},
 		{
 			name:    "empty body should return 400",
-			h:       api,
+			h:       u1Api,
 			args:    args{method: "POST", url: "/api/v1/schedule/", body: ``},
 			asserts: asserts{statusEquals: http.StatusBadRequest, bodyContains: test.Strp(`Error: could not parse schedule data`)},
+		},
+		{
+			name:    "invalid permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency": "Hour"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
 		},
 	}
 	for _, tt := range tests {
@@ -803,6 +839,16 @@ func addSchedule(t *testing.T, apiMock test.MockAPI) {
 func getSchedule(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1, u1Api := apiMock.NewUserWithPerm("test user for getSchedule", "p1", "e1", auth.PermReadSchedule)
+	u1f1, _ := schedule.NewHourFrequency([]int{0})
+	u1s1 := schedule.New(u1f1, u1.ID())
+	apiMock.ScheduleRepo.Add(u1s1)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for getSchedule, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
 	type args struct {
 		method string
 		url    string
@@ -820,10 +866,34 @@ func getSchedule(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "GET", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid ID should return schedule data",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/1"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[0],"paused":false,"tasks":[]}`)},
+		},
+		{
+			name:    "other user's schedule should return 404",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/2"},
+			asserts: asserts{statusEquals: http.StatusNotFound},
+		},
+		{
+			name:    "user without permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/2"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown ID should return 404",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/9999"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 9999 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -850,6 +920,16 @@ func getSchedule(t *testing.T, apiMock test.MockAPI) {
 func removeSchedule(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1, u1Api := apiMock.NewUserWithPerm("test user for removeSchedule", "p1", "e1", auth.PermDeleteSchedule)
+	u1f1, _ := schedule.NewHourFrequency([]int{0})
+	u1s1 := schedule.New(u1f1, u1.ID())
+	apiMock.ScheduleRepo.Add(u1s1)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for removeSchedule, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
 	type args struct {
 		method string
 		url    string
@@ -867,10 +947,34 @@ func removeSchedule(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "DELETE", url: "/api/v1/schedule/1"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid ID should return 204",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/1"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "other user's schedule should return 404",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/2"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 2 not found`)},
+		},
+		{
+			name:    "user without permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/2"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown ID should return 404",
+			h:       u1Api,
+			args:    args{method: "DELETE", url: "/api/v1/schedule/9999"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 9999 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -897,6 +1001,16 @@ func removeSchedule(t *testing.T, apiMock test.MockAPI) {
 func pauseSchedule(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1, u1Api := apiMock.NewUserWithPerm("test user for removeSchedule", "p1", "e1", auth.PermUpsertSchedule)
+	u1f1, _ := schedule.NewHourFrequency([]int{0})
+	u1s1 := schedule.New(u1f1, u1.ID())
+	apiMock.ScheduleRepo.Add(u1s1)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for removeSchedule, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
 	type args struct {
 		method string
 		url    string
@@ -914,10 +1028,34 @@ func pauseSchedule(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/schedule/1/pause"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid ID should return 204",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/1/pause"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "other user's schedule should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/2/pause"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 2 not found`)},
+		},
+		{
+			name:    "user without permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/2/pause"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown ID should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/9999/pause"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 9999 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -944,6 +1082,16 @@ func pauseSchedule(t *testing.T, apiMock test.MockAPI) {
 func unpauseSchedule(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1, u1Api := apiMock.NewUserWithPerm("test user for removeSchedule", "p1", "e1", auth.PermUpsertSchedule)
+	u1f1, _ := schedule.NewHourFrequency([]int{0})
+	u1s1 := schedule.New(u1f1, u1.ID())
+	apiMock.ScheduleRepo.Add(u1s1)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for removeSchedule, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
 	type args struct {
 		method string
 		url    string
@@ -961,10 +1109,34 @@ func unpauseSchedule(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
 			args:    args{method: "PUT", url: "/api/v1/schedule/1/unpause"},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid ID should return 204",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/1/unpause"},
+			asserts: asserts{statusEquals: http.StatusNoContent},
+		},
+		{
+			name:    "other user's schedule should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/2/unpause"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 2 not found`)},
+		},
+		{
+			name:    "user without permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/2/unpause"},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown ID should return 404",
+			h:       u1Api,
+			args:    args{method: "PUT", url: "/api/v1/schedule/9999/unpause"},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 9999 not found`)},
 		},
 	}
 	for _, tt := range tests {
@@ -991,6 +1163,16 @@ func unpauseSchedule(t *testing.T, apiMock test.MockAPI) {
 func addRecurringTask(t *testing.T, apiMock test.MockAPI) {
 	api := apiMock.API
 
+	u1, u1Api := apiMock.NewUserWithPerm("test user for removeSchedule", "p1", "e1", auth.PermUpsertSchedule)
+	u1f1, _ := schedule.NewHourFrequency([]int{0})
+	u1s1 := schedule.New(u1f1, u1.ID())
+	apiMock.ScheduleRepo.Add(u1s1)
+
+	u2, u2Api := apiMock.NewUserWithPerm("test user for removeSchedule, no perms", "p1", "e2", auth.PermNone)
+	u2f1, _ := schedule.NewHourFrequency([]int{0})
+	u2s1 := schedule.New(u2f1, u2.ID())
+	apiMock.ScheduleRepo.Add(u2s1)
+
 	type args struct {
 		method string
 		url    string
@@ -1008,10 +1190,46 @@ func addRecurringTask(t *testing.T, apiMock test.MockAPI) {
 		asserts asserts
 	}{
 		{
-			name:    "unknown ID should return 404",
+			name:    "no auth should return 401",
 			h:       api,
-			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: `{"name": "task1", "description": "task1 description"}`},
-			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 1 not found`)},
+			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: `{"name": "t1", "description": "t1 desc"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "valid schedule ID should return 201",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: `{"name": "t1", "description": "t1 desc"}`},
+			asserts: asserts{statusEquals: http.StatusCreated},
+		},
+		{
+			name:    "valid schedule ID with empty task body should return 201",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: `{}`},
+			asserts: asserts{statusEquals: http.StatusCreated},
+		},
+		{
+			name:    "valid schedule ID with null body should return 400",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/1/task/", body: ``},
+			asserts: asserts{statusEquals: http.StatusBadRequest},
+		},
+		{
+			name:    "other user's schedule should return 404",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/2/task/", body: `{"name": "t1", "description": "t1 desc"}`},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 2 not found`)},
+		},
+		{
+			name:    "user without permissions should return 401",
+			h:       u2Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/2/task/", body: `{"name": "t1", "description": "t1 desc"}`},
+			asserts: asserts{statusEquals: http.StatusUnauthorized},
+		},
+		{
+			name:    "unknown ID should return 404",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/9999/task/", body: `{"name": "t1", "description": "t1 desc"}`},
+			asserts: asserts{statusEquals: http.StatusNotFound, bodyContains: test.Strp(`Schedule ID 9999 not found`)},
 		},
 	}
 	for _, tt := range tests {

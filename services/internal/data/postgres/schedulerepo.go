@@ -55,6 +55,32 @@ func (r *ScheduleRepo) Get(id usecase.ScheduleID) (*schedule.Schedule, usecase.E
 	return sd.Schedule, nil
 }
 
+// GetForUser retrieves a schedule entity for a user, given its persistent ID
+func (r *ScheduleRepo) GetForUser(id usecase.ScheduleID, uid user.ID) (*schedule.Schedule, usecase.Error) {
+
+	// Retrieve from DB
+	query := fmt.Sprintf("%s WHERE id = $1 AND created_by = $2", scheduleSelectClause())
+	row := r.db.QueryRow(query, id, uid.StringPtr())
+	sd, err := parseScheduleRow(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, usecase.NewError(usecase.ErrRecordNotFound, "no task found with id = %v", id)
+		}
+		return nil, usecase.NewError(usecase.ErrUnknown, "error parsing schedule id %d: %v", id, err)
+	}
+
+	// Get recurring tasks from DB
+	rts, err := r.getRecurringTasks([]usecase.ScheduleID{id})
+	if err != nil {
+		return nil, usecase.NewError(usecase.ErrUnknown, "error retrieving recurring tasks for schedule id %v", id)
+	}
+	for _, rt := range rts[id] {
+		sd.Schedule.AddTask(rt)
+	}
+
+	return sd.Schedule, nil
+}
+
 // GetAll retrieves all schedules
 func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
 	return r.getAllWhere("")
@@ -63,6 +89,11 @@ func (r *ScheduleRepo) GetAll() (map[usecase.ScheduleID]*schedule.Schedule, usec
 // GetAllScheduled retrieves all unpaused schedules that haven't been removed
 func (r *ScheduleRepo) GetAllScheduled() (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
 	return r.getAllWhere("paused = FALSE AND removed_time = $1", time.Time{})
+}
+
+// GetAllForUser retrieves all schedules created by the given user
+func (r *ScheduleRepo) GetAllForUser(uid user.ID) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {
+	return r.getAllWhere("removed_time = $1 AND created_by = $2", time.Time{}, uid.StringPtr())
 }
 
 func (r *ScheduleRepo) getAllWhere(whereClause string, params ...interface{}) (map[usecase.ScheduleID]*schedule.Schedule, usecase.Error) {

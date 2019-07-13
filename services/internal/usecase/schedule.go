@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"github.com/benjohns1/scheduled-tasks/services/internal/core/schedule"
+	"github.com/benjohns1/scheduled-tasks/services/internal/core/user"
 )
 
 // ScheduleID is the persistent ID of the task
@@ -16,15 +17,17 @@ type ScheduleData struct {
 // ScheduleRepo defines the task repository interface required by use cases
 type ScheduleRepo interface {
 	Get(ScheduleID) (*schedule.Schedule, Error)
+	GetForUser(ScheduleID, user.ID) (*schedule.Schedule, Error)
 	GetAll() (map[ScheduleID]*schedule.Schedule, Error)
+	GetAllForUser(user.ID) (map[ScheduleID]*schedule.Schedule, Error)
 	GetAllScheduled() (map[ScheduleID]*schedule.Schedule, Error)
 	Add(*schedule.Schedule) (ScheduleID, Error)
 	Update(ScheduleID, *schedule.Schedule) Error
 }
 
 // GetSchedule returns a single schedule
-func GetSchedule(r ScheduleRepo, id ScheduleID) (*ScheduleData, Error) {
-	s, err := r.Get(id)
+func GetSchedule(r ScheduleRepo, id ScheduleID, uid user.ID) (*ScheduleData, Error) {
+	s, err := r.GetForUser(id, uid)
 	if err != nil {
 		return nil, err.Prefix("error getting schedule id %v", id)
 	}
@@ -37,8 +40,8 @@ func GetSchedule(r ScheduleRepo, id ScheduleID) (*ScheduleData, Error) {
 }
 
 // ListSchedules returns all schedules
-func ListSchedules(r ScheduleRepo) (map[ScheduleID]*schedule.Schedule, Error) {
-	ss, err := r.GetAll()
+func ListSchedules(r ScheduleRepo, uid user.ID) (map[ScheduleID]*schedule.Schedule, Error) {
+	ss, err := r.GetAllForUser(uid)
 	if err != nil {
 		return nil, err.Prefix("error listing all schedules")
 	}
@@ -68,9 +71,9 @@ func AddSchedule(r ScheduleRepo, s *schedule.Schedule, checkSchedule chan<- bool
 }
 
 // PauseSchedule pauses the schedule
-func PauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
+func PauseSchedule(r ScheduleRepo, id ScheduleID, uid user.ID, checkSchedule chan<- bool) Error {
 
-	s, err := r.Get(id)
+	s, err := r.GetForUser(id, uid)
 	if err != nil {
 		return err.Prefix("error retrieving schedule id %d to pause", id)
 	}
@@ -93,9 +96,9 @@ func PauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Err
 }
 
 // UnpauseSchedule unpauses the schedule
-func UnpauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
+func UnpauseSchedule(r ScheduleRepo, id ScheduleID, uid user.ID, checkSchedule chan<- bool) Error {
 
-	s, err := r.Get(id)
+	s, err := r.GetForUser(id, uid)
 	if err != nil {
 		return err.Prefix("error retrieving schedule id %d to unpause", id)
 	}
@@ -118,8 +121,8 @@ func UnpauseSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) E
 }
 
 // RemoveSchedule removes a schedule
-func RemoveSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Error {
-	s, ucErr := r.Get(id)
+func RemoveSchedule(r ScheduleRepo, id ScheduleID, uid user.ID, checkSchedule chan<- bool) Error {
+	s, ucErr := r.GetForUser(id, uid)
 	if ucErr != nil {
 		return ucErr.Prefix("error retrieving schedule id %d to remove", id)
 	}
@@ -141,9 +144,9 @@ func RemoveSchedule(r ScheduleRepo, id ScheduleID, checkSchedule chan<- bool) Er
 }
 
 // AddRecurringTask adds a new recurring task to the schedule
-func AddRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) Error {
+func AddRecurringTask(r ScheduleRepo, id ScheduleID, uid user.ID, rt schedule.RecurringTask) Error {
 
-	s, err := r.Get(id)
+	s, err := r.GetForUser(id, uid)
 	if err != nil {
 		return err.Prefix("error retrieving schedule id %v to add recurring task", id)
 	}
@@ -161,8 +164,8 @@ func AddRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) 
 }
 
 // RemoveRecurringTask removes the recurring task at the specified index from the schedule
-func RemoveRecurringTask(r ScheduleRepo, id ScheduleID, rt schedule.RecurringTask) Error {
-	s, err := r.Get(id)
+func RemoveRecurringTask(r ScheduleRepo, id ScheduleID, uid user.ID, rt schedule.RecurringTask) Error {
+	s, err := r.GetForUser(id, uid)
 	if err != nil {
 		return err.Prefix("error retrieving schedule id %v to remove recurring task", id)
 	}

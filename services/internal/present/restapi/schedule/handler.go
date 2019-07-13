@@ -44,20 +44,21 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	f := mapper.NewFormatter(rf)
 
 	sPre := prefix + "/schedule"
-	r.GET(sPre+"/", listSchedules(l, f, scheduleRepo))
-	r.GET(sPre+"/:scheduleID", getSchedule(l, f, scheduleRepo))
-	r.DELETE(sPre+"/:scheduleID", removeSchedule(l, f, checkSchedule, scheduleRepo))
-	r.POST(sPre+"/", addSchedule(l, f, p, checkSchedule, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/pause", pauseSchedule(l, f, checkSchedule, scheduleRepo))
-	r.PUT(sPre+"/:scheduleID/unpause", unpauseSchedule(l, f, checkSchedule, scheduleRepo))
+	r.GET(sPre+"/", auth.HRAuthorize(auth.PermReadSchedule, false, l, f, listSchedules(l, f, scheduleRepo)))
+	r.GET(sPre+"/:scheduleID", auth.HRAuthorize(auth.PermReadSchedule, false, l, f, getSchedule(l, f, scheduleRepo)))
+	r.DELETE(sPre+"/:scheduleID", auth.HRAuthorize(auth.PermDeleteSchedule, true, l, f, removeSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.POST(sPre+"/", auth.HRAuthorize(auth.PermUpsertSchedule, true, l, f, addSchedule(l, f, p, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/pause", auth.HRAuthorize(auth.PermUpsertSchedule, true, l, f, pauseSchedule(l, f, checkSchedule, scheduleRepo)))
+	r.PUT(sPre+"/:scheduleID/unpause", auth.HRAuthorize(auth.PermUpsertSchedule, true, l, f, unpauseSchedule(l, f, checkSchedule, scheduleRepo)))
 
 	rtPre := sPre + "/:scheduleID/task"
-	r.POST(rtPre+"/", addRecurringTask(l, f, p, scheduleRepo))
+	r.POST(rtPre+"/", auth.HRAuthorize(auth.PermUpsertSchedule, true, l, f, addRecurringTask(l, f, p, scheduleRepo)))
 }
 
 func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		ss, err := usecase.ListSchedules(scheduleRepo)
+		u := auth.GetUser(w)
+		ss, err := usecase.ListSchedules(scheduleRepo, u.ID())
 		if err != nil {
 			l.Printf("error retrieving schedule list: %v", err)
 			f.WriteResponse(w, f.Error("Error: couldn't retrieve schedules"), 500)
@@ -76,14 +77,8 @@ func listSchedules(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) htt
 
 func addSchedule(l Logger, f Formatter, p Parser, checkSchedule chan<- bool, scheduleRepo usecase.ScheduleRepo) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		userContext, ok := w.(auth.UserContext)
-		if !ok {
-			l.Printf("error parsing userContext from http.ResponseWriter: %v", w)
-			f.WriteResponse(w, f.Errorf("Error: could not parse user for request"), 401)
-			return
-		}
-
-		s, err := p.AddSchedule(r.Body, userContext.User.ID())
+		u := auth.GetUser(w)
+		s, err := p.AddSchedule(r.Body, u.ID())
 		defer r.Body.Close()
 		if err != nil {
 			l.Printf("error parsing addSchedule data: %v", err)
@@ -113,8 +108,9 @@ func getSchedule(l Logger, f Formatter, scheduleRepo usecase.ScheduleRepo) httpr
 			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
 		id := usecase.ScheduleID(scheduleIDInt)
-		sd, ucerr := usecase.GetSchedule(scheduleRepo, id)
+		sd, ucerr := usecase.GetSchedule(scheduleRepo, id, u.ID())
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
@@ -142,8 +138,9 @@ func removeSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleRe
 			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
 		id := usecase.ScheduleID(scheduleIDInt)
-		ucerr := usecase.RemoveSchedule(scheduleRepo, id, checkSchedule)
+		ucerr := usecase.RemoveSchedule(scheduleRepo, id, u.ID(), checkSchedule)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
@@ -165,8 +162,9 @@ func pauseSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleRep
 			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
 		id := usecase.ScheduleID(scheduleIDInt)
-		ucerr := usecase.PauseSchedule(scheduleRepo, id, checkSchedule)
+		ucerr := usecase.PauseSchedule(scheduleRepo, id, u.ID(), checkSchedule)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
@@ -188,8 +186,9 @@ func unpauseSchedule(l Logger, f Formatter, checkSchedule chan<- bool, scheduleR
 			f.WriteResponse(w, f.Error("Error: valid schedule ID required"), 404)
 			return
 		}
+		u := auth.GetUser(w)
 		id := usecase.ScheduleID(scheduleIDInt)
-		ucerr := usecase.UnpauseSchedule(scheduleRepo, id, checkSchedule)
+		ucerr := usecase.UnpauseSchedule(scheduleRepo, id, u.ID(), checkSchedule)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)
@@ -225,7 +224,8 @@ func addRecurringTask(l Logger, f Formatter, p Parser, scheduleRepo usecase.Sche
 		}
 
 		// Add recurring task
-		ucerr := usecase.AddRecurringTask(scheduleRepo, id, rt)
+		u := auth.GetUser(w)
+		ucerr := usecase.AddRecurringTask(scheduleRepo, id, u.ID(), rt)
 		if ucerr != nil {
 			if ucerr.Code() == usecase.ErrRecordNotFound {
 				f.WriteResponse(w, f.Errorf("Schedule ID %d not found", id), 404)

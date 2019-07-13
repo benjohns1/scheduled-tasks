@@ -5,7 +5,7 @@
 	import { loading } from './../../loading-monitor'
 	
 	export async function preload(page, session) {
-		const loaded = loading('schedule')
+		const schedulesFetched = loading('fetchSchedules')
 		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session)).then(async r => {
 			if (r.status !== 200) {
 				throw {
@@ -25,12 +25,13 @@
 			console.error(scheduleError)
 			return { scheduleError }
 		})
-		loaded()
+		schedulesFetched()
 		return result
 	}
 </script>
 
 <script>
+	import { onMount, tick } from 'svelte'
     import { stores } from '@sapper/app'
 	const { session } = stores()
 
@@ -38,6 +39,7 @@
 	export let schedules = []
 
 	let editID = 1
+	const routeLoaded = loading('scheduleRoute')
 
 	const addSchedule = schedule => {
 		const editID = schedule.editID
@@ -119,6 +121,11 @@
 			open: true
 		}, ...schedules]
 	}
+
+	onMount(async () => {
+		await tick()
+		routeLoaded()
+	})
 </script>
 
 <style>

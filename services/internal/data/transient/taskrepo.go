@@ -34,7 +34,7 @@ func (r *TaskRepo) GetForUser(id usecase.TaskID, uid user.ID) (*task.Task, useca
 	// Try to retrieve from cache
 	t, ok := r.tasks[id]
 	if ok {
-		if t.CreatedBy() == uid {
+		if uid.Equals(t.CreatedBy()) {
 			return t, nil
 		}
 	}
@@ -51,7 +51,7 @@ func (r *TaskRepo) GetAll() (map[usecase.TaskID]*task.Task, usecase.Error) {
 func (r *TaskRepo) GetAllForUser(uid user.ID) (map[usecase.TaskID]*task.Task, usecase.Error) {
 	tasks := make(map[usecase.TaskID]*task.Task)
 	for tid, task := range r.tasks {
-		if task.CreatedBy() == uid {
+		if uid.Equals(task.CreatedBy()) {
 			tasks[tid] = task
 		}
 	}

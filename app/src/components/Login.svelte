@@ -46,7 +46,7 @@
         $session.auth = {}
     }
     
-	const loaded = loading('login')
+	const mounted = loading('login')
     
 	let auth0 = undefined
     let errorMsg = undefined
@@ -174,7 +174,7 @@
 
     onMount(async () => {
         await sessionAuth()
-        loaded()
+        mounted()
     })
 </script>
 

@@ -2,6 +2,9 @@
     import { slide } from 'svelte/transition'
 	import Task from "./Task.svelte"
 	import Button from "./Button.svelte"
+	import { withJsonAndAuth } from "../api/default.headers"
+    import { stores } from '@sapper/app'
+	const { session } = stores()
 
     export let schedule = {}
     export let addScheduleHandler = undefined
@@ -256,9 +259,8 @@
     }
 
     let addTaskHandler = undefined
-    
 	function addTask(taskEditID, taskData) {
-		return fetch(`schedule/${schedule.data.id}/task.json`, { method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(taskData)}).then(r => {
+		return fetch(`schedule/${schedule.data.id}/task.json`, withJsonAndAuth($session, { method: "POST", body: JSON.stringify(taskData) })).then(r => {
             if (r.status === 201) {
 				tasks = [{
 					data: taskData,
@@ -279,7 +281,7 @@
 
     function togglePause() {
         const pause = schedule.data.paused ? 'pause' : 'unpause'
-		return fetch(`schedule/${schedule.data.id}/${pause}.json`, { method: "PUT", headers: {'Content-Type': 'application/json'}}).then(r => {
+		return fetch(`schedule/${schedule.data.id}/${pause}.json`, withJsonAndAuth($session, { method: "PUT" })).then(r => {
             if (r.status !== 204) {
                 console.error(r)
             }
