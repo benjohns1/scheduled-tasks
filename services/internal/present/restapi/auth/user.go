@@ -77,3 +77,34 @@ func GetUser(w http.ResponseWriter) user.User {
 	}
 	return *userContext.User
 }
+
+// HRAuthorize wraps authorization logic in httprouter middleware
+func HRAuthorize(perm Permission, userRequired bool, l Logger, f Formatter, next httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		if ok := authorize(w, perm, userRequired, l, f); ok {
+			next(w, r, ps)
+		}
+	}
+}
+
+func authorize(w http.ResponseWriter, perm Permission, userRequired bool, l Logger, f Formatter) bool {
+	userContext, ok := w.(UserContext)
+	if !ok {
+		l.Printf("invalid authorization context from http.ResponseWriter: %v", w)
+		f.WriteResponse(w, f.Error("Internal authorization error"), 500)
+		return false
+	}
+	if userRequired && userContext.User == nil {
+		l.Printf("user required but not found from http.ResponseWriter: %v", w)
+		f.ErrUnauthorized(w)
+		return false
+	}
+
+	if userContext.Auth.HasPerm(perm) {
+		return true
+	}
+
+	l.Printf("user not authorized %v, need permission: %v", userContext.User.ID(), perm)
+	f.ErrUnauthorized(w)
+	return false
+}

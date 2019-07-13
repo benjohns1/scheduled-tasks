@@ -13,7 +13,6 @@ type Context struct {
 	Issuer      string
 	Subject     string
 	Permissions []Permission
-	Scope       string
 }
 
 // HasPerm returns true if the request token has the specified permission

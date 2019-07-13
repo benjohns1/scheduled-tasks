@@ -41,30 +41,12 @@ func Handle(r *httprouter.Router, prefix string, l Logger, rf responseMapper.Res
 	f := mapper.NewFormatter(rf)
 
 	pre := prefix + "/task"
-	r.GET(pre+"/", authorize(auth.PermReadTask, l, f, listTasks(l, f, taskRepo)))
-	r.GET(pre+"/:taskID", authorize(auth.PermReadTask, l, f, getTask(l, f, taskRepo)))
-	r.POST(pre+"/", authorize(auth.PermUpsertTask, l, f, addTask(l, f, p, taskRepo)))
-	r.PUT(pre+"/:taskID/complete", authorize(auth.PermUpsertTask, l, f, completeTask(l, f, taskRepo)))
-	r.DELETE(pre+"/:taskID", authorize(auth.PermDeleteTask, l, f, clearTask(l, f, taskRepo)))
-	r.POST(pre+"/clear", authorize(auth.PermDeleteTask, l, f, clearCompletedTasks(l, f, taskRepo)))
-}
-
-func authorize(perm auth.Permission, l Logger, f Formatter, next httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		userContext, ok := w.(auth.UserContext)
-		if !ok {
-			l.Printf("invalid authorization context from http.ResponseWriter: %v", w)
-			f.WriteResponse(w, f.Error("Internal authorization error"), 500)
-			return
-		}
-
-		if userContext.Auth.HasPerm(perm) {
-			next(w, r, ps)
-			return
-		}
-
-		f.ErrUnauthorized(w)
-	}
+	r.GET(pre+"/", auth.HRAuthorize(auth.PermReadTask, false, l, f, listTasks(l, f, taskRepo)))
+	r.GET(pre+"/:taskID", auth.HRAuthorize(auth.PermReadTask, false, l, f, getTask(l, f, taskRepo)))
+	r.POST(pre+"/", auth.HRAuthorize(auth.PermUpsertTask, true, l, f, addTask(l, f, p, taskRepo)))
+	r.PUT(pre+"/:taskID/complete", auth.HRAuthorize(auth.PermUpsertTask, true, l, f, completeTask(l, f, taskRepo)))
+	r.DELETE(pre+"/:taskID", auth.HRAuthorize(auth.PermDeleteTask, true, l, f, clearTask(l, f, taskRepo)))
+	r.POST(pre+"/clear", auth.HRAuthorize(auth.PermDeleteTask, true, l, f, clearCompletedTasks(l, f, taskRepo)))
 }
 
 func listTasks(l Logger, f Formatter, taskRepo usecase.TaskRepo) httprouter.Handle {

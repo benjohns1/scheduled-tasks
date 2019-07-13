@@ -89,6 +89,7 @@
         logout = () => {
             sessionLogout()
             sapper.goto('/')
+            sessionAuth()
         }
         onUserLogin()
         sapper.goto($page.path)

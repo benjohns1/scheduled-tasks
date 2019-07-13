@@ -27,10 +27,9 @@ func NewAuth0(l Logger, c Auth0Config) *Auth0 {
 }
 
 type claims struct {
-	Issuer      string       `json:"iss"`
-	Subject     string       `json:"sub"`
-	Permissions []Permission `json:"permissions"`
-	Scope       string       `json:"scope"`
+	Issuer  string `json:"iss"`
+	Subject string `json:"sub"`
+	Scope   string `json:"scope"`
 }
 
 // Authenticate authenticates a request and calls the next handler
@@ -55,23 +54,19 @@ func (a *Auth0) Authenticate(next http.Handler) http.Handler {
 		}
 		c := claims{}
 		validator.Claims(r, token, &c)
-		parseScopes(&c)
+		ps := getDefaultPerms(&c)
 
-		next.ServeHTTP(ResponseContext{w, Context(c)}, r)
+		next.ServeHTTP(ResponseContext{w, Context{c.Issuer, c.Subject, ps}}, r)
 	})
 }
 
-func parseScopes(c *claims) {
+func getDefaultPerms(c *claims) []Permission {
 	scopes := strings.Split(c.Scope, " ")
-	for i, scope := range scopes {
-		if scope == "parse_scope_perms" {
-			// Add scopes as permissions if flag is set (excluding flag itself)
-			for j, perm := range scopes {
-				if i != j {
-					c.Permissions = append(c.Permissions, Permission(perm))
-				}
-			}
-			return
+	for _, scope := range scopes {
+		switch scope {
+		case "type:anon":
+			return []Permission{PermNone}
 		}
 	}
+	return GetDefaultUserPerms()
 }

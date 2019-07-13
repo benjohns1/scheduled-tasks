@@ -16,7 +16,6 @@ type MockClaims struct {
 	Issuer      string
 	Subject     string
 	Permissions []auth.Permission
-	Scope       string
 }
 
 type injectContext struct {
