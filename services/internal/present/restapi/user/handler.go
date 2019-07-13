@@ -75,15 +75,6 @@ func addOrUpdateExternalUser(l Logger, p Parser, f Formatter, userRepo usecase.U
 		}
 		provider := auth.FormatProvider(providerID)
 
-		// Validate URL params match logged-in user
-		u1 := auth.GetUser(w)
-		u2, err := usecase.GetExternalUser(userRepo, provider, userID)
-		if err != nil || !u1.ID().Equals(u2.ID()) {
-			l.Printf("logged-in user doesn't match URL specified user (%v != %v), err: %v", u1, u2, err)
-			f.WriteResponse(w, f.Errorf("Error: logged-in user doesn't match URL specified user"), 400)
-			return
-		}
-
 		userData, ucerr := p.AddOrUpdateUser(r.Body)
 		defer r.Body.Close()
 		if ucerr != nil {
