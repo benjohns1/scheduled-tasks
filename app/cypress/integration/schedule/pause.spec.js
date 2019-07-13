@@ -1,7 +1,7 @@
 describe('edit schedule functionality', () => {
-
+  
 	beforeEach(() => {
-		cy.visitWait('/schedule')
+		cy.devLogin('/schedule')
 	})
 	
 	describe('pause checkbox', () => {

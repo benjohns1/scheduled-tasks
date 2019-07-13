@@ -1,4 +1,9 @@
 describe('schedule page basic elements', () => {
+  
+	before(() => {
+		cy.devLogin()
+	})
+	
 	beforeEach(() => {
 		cy.visit('/schedule')
 	})

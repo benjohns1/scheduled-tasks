@@ -3,7 +3,7 @@ import { createUUIDs } from '../../support/uuid'
 describe('delete schedule functionality', () => {
 
 	beforeEach(() => {
-		cy.visitWait('/schedule')
+		cy.devLogin('/schedule')
 	})
 	
 	describe('delete schedule button', () => {

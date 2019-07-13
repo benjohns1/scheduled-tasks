@@ -11,7 +11,7 @@ describe('new schedule api functionality', () => {
   })
 
   beforeEach(() => {
-    cy.visitWait('/schedule', {
+    cy.devLogin('/schedule', {
       onBeforeLoad(win) {
         delete win.fetch
         win.eval(fetchPolyfill)

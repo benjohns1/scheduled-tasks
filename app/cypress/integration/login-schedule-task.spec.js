@@ -1,7 +1,6 @@
 describe('login schedule task primary flow', () => {
   it('should login dev user, create a schedule, and create a task', () => {
-    cy.devLogin()
-    cy.visitWait('/schedule')
+    cy.devLogin('/schedule')
     cy.get('[data-test=new-schedule-button]').click()
     cy.get('[data-test=schedules] li[data-test=schedule-item]:nth-child(1)').then($sli => {
       cy.wrap($sli).find('[data-test=schedule-frequency-input]').select('Day')

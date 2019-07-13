@@ -3,7 +3,7 @@ import { createUUIDs } from '../../support/uuid'
 describe('edit schedule functionality', () => {
 
 	beforeEach(() => {
-		cy.visitWait('/schedule')
+		cy.devLogin('/schedule')
 	})
 	
 	describe('add task button', () => {

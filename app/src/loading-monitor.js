@@ -15,7 +15,8 @@ export const loading = (id = undefined, count = 1) => {
   let key = undefined
   loader.update(l => {
     key = id === undefined ? l.i++ : `${id}-${l.i++}`
-    l.m.set(key, count)
+    let val = l.m.get(key) || 0
+    l.m.set(key, val + count)
     if (!l.dirty) {
       l.dirty = true
     }

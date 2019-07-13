@@ -1,6 +1,7 @@
 describe('task page basic elements', () => {
+
 	beforeEach(() => {
-		cy.visit('/task')
+		cy.devLogin('/task')
 	})
 
 	it('has the expected title and page content', () => {

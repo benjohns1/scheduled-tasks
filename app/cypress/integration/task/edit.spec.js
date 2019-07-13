@@ -1,8 +1,9 @@
 import { createUUID } from '../../support/uuid'
 
 describe('edit task functionality', () => {
+
 	beforeEach(() => {
-		cy.visitWait('/task')
+		cy.devLogin('/task')
 	})
 
 	describe('clear task button', () => {

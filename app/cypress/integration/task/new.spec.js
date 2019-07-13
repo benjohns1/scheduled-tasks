@@ -3,7 +3,7 @@ import { createUUID } from '../../support/uuid'
 describe('new task functionality', () => {
 
 	beforeEach(() => {
-		cy.visitWait('/task')
+		cy.devLogin('/task')
 	})
 	
 	describe('new task button', () => {

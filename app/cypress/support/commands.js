@@ -41,6 +41,7 @@ Cypress.Commands.add("debug", {prevSubject: true}, (subject, desc, value) => {
 Cypress.Commands.add("visitWait", (url, options) => {
 	cy.visit(url, options)
 	cy.get('[data-test=loaded]')
+	cy.wait(500)
 })
 
 Cypress.Commands.add("addTask", (name, description) => {
@@ -103,7 +104,9 @@ Cypress.Commands.add("addRecurringTasks", ($scheduleItem, tasks, { save = true }
 	})
 })
 
-Cypress.Commands.add("devLogin", (redirect = '/') => {
+Cypress.Commands.add("devLogin", (redirect, redirectOpts) => {
 	cy.visitWait('/?dev-login=1')
-	cy.visitWait(redirect)
+	if (redirect !== undefined) {
+		cy.visitWait(redirect, redirectOpts)
+	}
 })

@@ -1,6 +1,10 @@
 import { createUUIDs, createUUID } from '../../support/uuid'
 
 describe('new schedule functionality', () => {
+  
+	beforeEach(() => {
+		cy.devLogin()
+	})
 	
 	describe('new schedule button', () => {
 		it('creates an editable schedule form at the top', () => {
