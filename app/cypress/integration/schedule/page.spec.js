@@ -1,11 +1,7 @@
 describe('schedule page basic elements', () => {
-  
-	before(() => {
-		cy.devLogin()
-	})
-	
+
 	beforeEach(() => {
-		cy.visit('/schedule')
+		cy.devLogin('/schedule')
 	})
 
 	it('has the expected title and page content', () => {
