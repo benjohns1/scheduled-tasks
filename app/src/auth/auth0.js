@@ -38,6 +38,11 @@ export async function getAnonymousToken(forceNew = false) {
 }
 
 async function fetchToken(domain, clientId, clientSecret, audience) {
+	if (!domain || !clientId || !clientSecret || !audience) {
+		console.error('Error: at least 1 auth config params is empty, could not retrieve token')
+		return ''
+	}
+
 	const authRequest = {
 		"client_id": clientId,
 		"client_secret": clientSecret,
