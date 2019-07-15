@@ -1,7 +1,7 @@
 version: '3.1'
 services:
   webapp:
-    build: ./app
+    build: ../../app
     ports:
       - ${WEBAPP_PORT}:${WEBAPP_PORT}
     env_file:
@@ -10,7 +10,7 @@ services:
       - APPLICATION_HOST=srv
       - PORT=${WEBAPP_PORT}
   srv:
-    build: ./services/cmd/srv
+    build: ../../services/cmd/srv
     ports:
       - ${APPLICATION_PORT}:${APPLICATION_PORT}
     env_file:

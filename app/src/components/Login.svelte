@@ -58,9 +58,12 @@
     const logoutHandler = () => logout()
 
     const getDevUser = () => {
+        if (!config.dev) {
+            return {}
+        }
         return {
-            displayname: config.devDisplayname,
-            sub: config.devSubject,
+            displayname: config.dev.displayname,
+            sub: config.dev.subject,
             iss: config.domain,
         }
     }
@@ -85,7 +88,7 @@
         $session.auth.isAuthenticated = true
         $session.auth.user = getDevUser()
         setCookies(token, true)
-        console.log('logged in as dev e2e test user')
+        console.log('logged in as e2e test user')
         logout = () => {
             sessionLogout()
             sapper.goto('/')
@@ -145,8 +148,8 @@
         }
 
         // Dev auto-login
-        if ($page.query['dev-login'] && cfg.environment === "development" && cfg.token && process.browser) {
-            devLogin(cfg.token)
+        if ($page.query['devlogin'] !== undefined && cfg.dev && cfg.dev.enabled && process.browser) {
+            devLogin(cfg.dev.token)
             return
         }
 

@@ -14,8 +14,7 @@ import (
 func main() {
 	l := log.New(os.Stderr, "main ", log.LstdFlags)
 
-	// Load environment vars
-	godotenv.Load("../../../.env")
+	loadEnv()
 
 	// Scheduler DB connection
 	scConn := data.NewDBConn(l, "scheduler")
@@ -48,6 +47,13 @@ func main() {
 			l.Print("all processes closed, exiting")
 			return
 		}
+	}
+}
+
+func loadEnv() {
+	// Load environment vars from file, if ENV_FILEPATH was set
+	if path, exists := os.LookupEnv("ENV_FILEPATH"); exists {
+		godotenv.Load(path)
 	}
 }
 

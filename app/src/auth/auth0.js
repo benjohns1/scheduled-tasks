@@ -1,34 +1,30 @@
 import fetch from 'node-fetch'
 
-const dev = process.env.NODE_ENV === 'development'
-const prod = process.env.NODE_ENV === 'production'
-
-if (!prod) {
-	require('dotenv').config({ path: '../.env'})
-}
-
 const {
 	AUTH0_DOMAIN,
 	AUTH0_WEBAPP_CLIENT_ID,
 	AUTH0_API_IDENTIFIER,
 	AUTH0_ANON_CLIENT_ID,
 	AUTH0_ANON_CLIENT_SECRET,
+	ENABLE_E2E_DEV_LOGIN,
 	AUTH0_E2E_DEV_CLIENT_ID,
 	AUTH0_E2E_DEV_CLIENT_SUBJECT,
-	AUTH0_E2E_DEV_CLIENT_SECRET
+	AUTH0_E2E_DEV_CLIENT_SECRET,
 } = process.env;
 
 export async function getConfig() {
 	let cfg = {
-		"domain": AUTH0_DOMAIN,
-		"clientId": AUTH0_WEBAPP_CLIENT_ID,
-		"audience": AUTH0_API_IDENTIFIER,
-		"environment": process.env.NODE_ENV,
+		domain: AUTH0_DOMAIN,
+		clientId: AUTH0_WEBAPP_CLIENT_ID,
+		audience: AUTH0_API_IDENTIFIER,
 	}
-	if (dev) {
-		cfg.token = await getE2EDevToken()
-		cfg.devSubject = AUTH0_E2E_DEV_CLIENT_SUBJECT
-		cfg.devDisplayname = "Dev E2E Test User"
+	if (ENABLE_E2E_DEV_LOGIN) {
+		cfg.dev = {
+			enabled: true,
+			token: await getE2EDevToken(),
+			subject: AUTH0_E2E_DEV_CLIENT_SUBJECT,
+			displayname: "E2E Test User",
+		}
 	}
 	return cfg
 }
@@ -58,8 +54,8 @@ async function fetchToken(domain, clientId, clientSecret, audience) {
 
 let devE2EToken = undefined
 async function getE2EDevToken(forceNew = false) {
-	if (!dev) {
-		console.error('attempting to call getE2EDevToken() when not in development mode!')
+	if (!ENABLE_E2E_DEV_LOGIN) {
+		console.error('attempting to call getE2EDevToken() when it is not enabled!')
 		return null
 	}
 	if (forceNew || !devE2EToken) {
