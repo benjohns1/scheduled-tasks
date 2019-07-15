@@ -10,7 +10,7 @@ services:
       - APPLICATION_HOST=srv
       - PORT=${WEBAPP_PORT}
   srv:
-    build: ../../services/cmd/srv
+    build: ../../services
     ports:
       - ${APPLICATION_PORT}:${APPLICATION_PORT}
     env_file:

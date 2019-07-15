@@ -7,10 +7,14 @@
     "build": "sapper build --legacy",
     "export": "sapper export --legacy",
     "start": "node __sapper__/build",
-    "cy:run": "cypress run",
-    "cy:open": "cypress open",
-    "test": "run-p --race dev cy:run"
+    "test": "echo-cli run end-to-end tests in ../app-test with npm test"
   },
+  "repository": {
+    "type": "git",
+    "url": "github.com/benjohns1/scheduled-tasks/app"
+  },
+  "author": "Ben Johns",
+  "license": "MIT",
   "dependencies": {
     "@auth0/auth0-spa-js": "^1.0.2",
     "body-parser": "^1.19.0",
@@ -27,8 +31,7 @@
     "@babel/plugin-transform-runtime": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/runtime": "^7.0.0",
-    "cypress": "^3.3.2",
-    "npm-run-all": "^4.1.5",
+    "echo-cli": "^1.0.8",
     "rollup": "^1.0.0",
     "rollup-plugin-babel": "^4.0.2",
     "rollup-plugin-commonjs": "^9.1.6",
