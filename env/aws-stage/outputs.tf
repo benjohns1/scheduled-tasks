@@ -1,4 +1,4 @@
-output "this_db_instance_address" {
+/*output "this_db_instance_address" {
   description = "The address of the RDS instance"
   value       = "${module.db.this_db_instance_address}"
 }
@@ -76,4 +76,4 @@ output "this_db_instance_port" {
 output "this_db_subnet_group_id" {
   description = "The db subnet group name"
   value       = "${module.db.this_db_subnet_group_id}"
-}
+}*/

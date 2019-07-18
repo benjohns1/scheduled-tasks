@@ -4,7 +4,6 @@ terraform {
 
 locals {
   prefix = "${var.application_name}-${var.env}"
-  db_name = "${local.prefix}-db-${var.postgres_db_name}"
   tags = {
     Environment = var.env
   }
@@ -16,64 +15,14 @@ provider "aws" {
   profile = var.aws_profile
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnet_ids" "all" {
-  vpc_id = data.aws_vpc.default.id
-}
-
-data "aws_security_group" "default" {
-  vpc_id = data.aws_vpc.default.id
-  name = "default"
-}
-
 module "db" {
-
-  source = "terraform-aws-modules/rds/aws"
-  version = "~> 2.0"
-
-  identifier = local.db_name
-
-  engine            = "postgres"
-  engine_version    = "10.6"
-  instance_class    = "db.t2.micro"
-  allocated_storage = 20
-  storage_encrypted = false
-  publicly_accessible = true
-
-  name = var.postgres_db_name
-  username = var.postgres_db_user
-  password = var.postgres_db_password
-  port     = var.postgres_db_port
-
-  vpc_security_group_ids = [data.aws_security_group.default.id]
-  performance_insights_enabled = false
-  performance_insights_retention_period = 0
-
-  maintenance_window = "Mon:00:00-Mon:03:00"
-  backup_window      = "03:00-06:00"
-
-  # disable backups to create DB faster
-  backup_retention_period = 0
-
+  source = "./db"
+  prefix = local.prefix
+  db_name = var.postgres_db_name
   tags = local.tags
-
-  # DB subnet group
-  subnet_ids = data.aws_subnet_ids.all.ids
-
-  # DB parameter group
-  family = "postgres10"
-
-  # DB option group
-  major_engine_version = "10.6"
-
-  # Snapshot name upon DB deletion
-  final_snapshot_identifier = local.db_name
-
-  # Database Deletion Protection
-  deletion_protection = false
+  db_port = var.postgres_db_port
+  db_user = var.postgres_db_user
+  db_password = var.postgres_db_password
 }
 
 resource "aws_ecs_cluster" "ecs_cluster" {
@@ -87,4 +36,18 @@ module "services" {
   tags = local.tags
   prefix = local.prefix
   logregion = var.aws_region
+  host_application_port = var.application_port
+  container_env = {
+    "APPLICATION_PORT" = var.application_port,
+    "AUTH0_DOMAIN" = var.auth0_domain,
+    "AUTH0_API_IDENTIFIER" = var.auth0_api_identifier,
+    "AUTH0_API_SECRET" = var.auth0_api_secret,
+    "POSTGRES_HOST" = module.db.db_instance_endpoint,
+    "POSTGRES_PORT" = "${var.postgres_db_port}",
+    "POSTGRES_DB" = var.postgres_db_name,
+    "POSTGRES_USER" = var.postgres_db_user,
+    "POSTGRES_PASSWORD" = var.postgres_db_password,
+    "DBCONN_MAXRETRYATTEMPTS" = "${var.dbconn_maxretryattempts}",
+    "DBCONN_RETRYSLEEPSECONDS" = "${var.dbconn_retrysleepseconds}"
+  }
 }
