@@ -3,25 +3,25 @@ terraform {
 }
 
 variable "cluster_id" {
-    description = "The ECS cluster ID"
-    type = string
+  description = "The ECS cluster ID"
+  type = string
 }
 
 variable "tags" {
-    type = map(string)
+  type = map(string)
 }
 
 variable "prefix" {
-    description = "Prefix for resource names"
-    type = string
+  description = "Prefix for resource names"
+  type = string
 }
 
 variable "logregion" {
-    type = string
+  type = string
 }
 
 variable "host_application_port" {
-    type = number
+  type = number
 }
 
 variable "container_env" {
@@ -52,14 +52,14 @@ data "aws_iam_policy_document" "assume_role_policy" {
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-    name = "${var.prefix}-ecs-execution-role"
-    assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+  name = "${var.prefix}-ecs-execution-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 }
 
 resource "aws_iam_policy_attachment" "ecs_execution_policy" {
-    name = "${var.prefix}-ecs-execution-policy"
-    roles = [aws_iam_role.ecs_execution_role.name]
-    policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  name = "${var.prefix}-ecs-execution-policy"
+  roles = [aws_iam_role.ecs_execution_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 locals {
@@ -100,41 +100,41 @@ resource "aws_security_group_rule" "nsg_task_egress_rule" {
 }
 
 resource "aws_ecs_task_definition" "services" {
-    family = "${var.prefix}-services"
-    container_definitions = templatefile("${path.module}/services_container_definition.json", {
-      prefix = var.prefix,
-      logname = local.logname,
-      logregion = var.logregion,
-      host_application_port = var.host_application_port,
-      env = var.container_env
-    })
-    requires_compatibilities = ["FARGATE"]
-    cpu = "256"
-    memory = "512"
-    network_mode = "awsvpc"
-    execution_role_arn = aws_iam_role.ecs_execution_role.arn
-    tags = var.tags
+  family = "${var.prefix}-services"
+  container_definitions = templatefile("${path.module}/services_container_definition.json", {
+    prefix = var.prefix,
+    logname = local.logname,
+    logregion = var.logregion,
+    host_application_port = var.host_application_port,
+    env = var.container_env
+  })
+  requires_compatibilities = ["FARGATE"]
+  cpu = "256"
+  memory = "512"
+  network_mode = "awsvpc"
+  execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  tags = var.tags
 }
 
 resource "aws_ecs_service" "services" {
-    name = "${var.prefix}-services"
-    cluster = var.cluster_id
-    task_definition = aws_ecs_task_definition.services.arn
-    desired_count = 1
-    launch_type = "FARGATE"
-    deployment_maximum_percent = 100
-    deployment_minimum_healthy_percent = 50
-    network_configuration {
-        security_groups = [aws_security_group.nsg_task.id]
-        subnets = data.aws_subnet_ids.all.ids
-        assign_public_ip = true
-    }
-    tags = var.tags
-    enable_ecs_managed_tags = true
+  name = "${var.prefix}-services"
+  cluster = var.cluster_id
+  task_definition = aws_ecs_task_definition.services.arn
+  desired_count = 1
+  launch_type = "FARGATE"
+  deployment_maximum_percent = 200
+  deployment_minimum_healthy_percent = 100
+  network_configuration {
+    security_groups = [aws_security_group.nsg_task.id]
+    subnets = data.aws_subnet_ids.all.ids
+    assign_public_ip = true
+  }
+  tags = var.tags
+  enable_ecs_managed_tags = true
 
-    lifecycle {
-      ignore_changes = [task_definition]
-    }
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "logs" {

@@ -4,17 +4,19 @@
 ## Setup
 To test and run this locally you'll first need to:
 1. Install [Go](https://golang.org/) :-)
-1. Install [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
-1. Install [Docker](https://www.docker.com/products/docker-desktop)
-1. Install client web app node modules `cd app` and `npm install`
-1. Install end-to-end test runner `cd app-test` and `npm install`
-1. Copy `default.env` to `env/local-dev/.env` (these environment variables are injected into containers and used in the app)
-1. Sign-up and create an [Auth0](https://auth0.com) tenant with the following:
+2. Install [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
+3. Install [Docker](https://www.docker.com/products/docker-desktop)
+4. Install client web app node modules `cd app` and `npm install`
+5. Install end-to-end test runner `cd app-test` and `npm install`
+6. Copy `default.env` to `env/local-dev/.env` (these environment variables are injected into containers and used in the apps when running locally)
+7. Sign-up and create an [Auth0](https://auth0.com) tenant with the following:
    1. An API (e.g. 'Dev API') with the HS256 signing alg and a single permission of 'type:anon', then set the AUTH0_API_* env vars appropriately
-   1. A machine to machine application (e.g. 'Dev Anon User') with 'type:anon' scoped access to your API, then set the AUTH0_ANON_CLIENT_* env vars
-   1. A machine to machine application (e.g. 'Dev E2E Test User') with no scoped access to your API, then set the AUTH0_E2E_DEV_CLIENT_* env vars
-   1. A single page application (e.g. 'Dev Web App') with Allowed Callback URLs, Allowed Web Origins, Allowed Logout URLs, and Allowed Origins (CORS) set to http://localhost:3000, then set the AUTH0_DOMAIN and AUTH0_WEBAPP_CLIENT_ID env vars
-1. Repeat the previous 2 steps for the `local-test` environment if you wish
+   2. A machine to machine application (e.g. 'Dev Anon User') with 'type:anon' scoped access to your API, then set the AUTH0_ANON_CLIENT_* env vars
+   3. A machine to machine application (e.g. 'Dev E2E Test User') with no scoped access to your API, then set the AUTH0_E2E_DEV_CLIENT_* env vars
+   4. A single page application (e.g. 'Dev Web App') with Allowed Callback URLs, Allowed Web Origins, Allowed Logout URLs, and Allowed Origins (CORS) set to http://localhost:3000, then set the AUTH0_DOMAIN and AUTH0_WEBAPP_CLIENT_ID env vars
+8. Repeat the previous 2 steps for the `local-test` environment if you wish
+9. Copy `default.secret.auto.tfvars` to `env/local-stage/.secret.auto.tfvars` (these are used when spinning up cloud infrastructure with terraform)
+10. Create a new 'Staging' Auth0 tenant as before and set the .tfvars appropriately
 
 ## Quick Run Scripts
 Setup local environments in one command (Windows only, for now)

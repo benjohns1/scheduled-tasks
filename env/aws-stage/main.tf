@@ -15,6 +15,37 @@ provider "aws" {
   profile = var.aws_profile
 }
 
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnet_ids" "all" {
+  vpc_id = data.aws_vpc.default.id
+}
+
+/* @TODO: create vpc with public/private subnets, use load balancer for public traffic
+ * https://airship.tf/getting_started/preparation.html#vpc
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  version = "2.7.0"
+
+  name = "${local.prefix}-vpc"
+  cidr = "10.50.0.0/16"
+
+  azs = ["us-west-2a", "us-west-2b"]
+  public_subnets = ["10.50.11.0/24", "10.50.12.0/24"]
+  private_subnets = ["10.50.21.0/24", "10.50.22.0/24"]
+
+  single_nat_gateway = true
+
+  enable_nat_gateway   = true
+  enable_vpn_gateway   = false
+  enable_dns_hostnames = true
+
+  tags = local.tags
+
+}*/
+
 module "db" {
   source = "./db"
   prefix = local.prefix
@@ -30,6 +61,12 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   tags = local.tags
 }
 
+/* @TODO: create service discovery resources for container networking
+resource "aws_service_discovery_private_dns_namespace" "dns_namespace" {
+  name = "${local.prefix}-dns-namespace"
+  vpc = data.aws_vpc.default.id
+}*/
+
 module "services" {
   source = "./services"
   cluster_id = aws_ecs_cluster.ecs_cluster.id
@@ -42,7 +79,7 @@ module "services" {
     "AUTH0_DOMAIN" = var.auth0_domain,
     "AUTH0_API_IDENTIFIER" = var.auth0_api_identifier,
     "AUTH0_API_SECRET" = var.auth0_api_secret,
-    "POSTGRES_HOST" = module.db.db_instance_endpoint,
+    "POSTGRES_HOST" = module.db.db_instance_address,
     "POSTGRES_PORT" = "${var.postgres_db_port}",
     "POSTGRES_DB" = var.postgres_db_name,
     "POSTGRES_USER" = var.postgres_db_user,

@@ -3,29 +3,29 @@ terraform {
 }
 
 variable "tags" {
-    type = map(string)
+  type = map(string)
 }
 
 variable "prefix" {
-    description = "Prefix for resource names"
-    type = string
+  description = "Prefix for resource names"
+  type = string
 }
 
 variable "db_name" {
-    type = string
+  type = string
 }
 
 variable "db_user" {
-    type = string
+  type = string
 }
 
 variable "db_password" {
-    type = string
+  type = string
 }
 
 variable "db_port" {
-    default = 5432
-    type = number
+  default = 5432
+  type = number
 }
 
 data "aws_vpc" "default" {
@@ -112,11 +112,7 @@ module "aws_rds" {
   deletion_protection = false
 }
 
-locals {
-  db_instance_endpoint_pieces = split(":", module.aws_rds.this_db_instance_endpoint)
-}
-
-output "db_instance_endpoint" {
-  description = "DB connection endpoint"
-  value       = local.db_instance_endpoint_pieces[0]
+output "db_instance_address" {
+  description = "DB connection address"
+  value       = module.aws_rds.this_db_instance_address
 }

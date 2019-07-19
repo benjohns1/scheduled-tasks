@@ -1,61 +1,93 @@
 variable "env" {
-    type = string
-    default = "prod"
+type = string
+default = "prod"
 }
 
 variable "aws_region" {
-    type = string
-    default = "us-west-2"
+  type = string
+  default = "us-west-2"
 }
 
 variable "aws_profile" {
-    type = string
-    default = ""
+  type = string
+  default = ""
 }
 
 variable "application_name" {
-    type = string
-    default = "st"
+  type = string
+  default = "st"
 }
 
 variable "postgres_db_name" {
-    type = string
+  type = string
 }
 
 variable "postgres_db_port" {
-    type = number
+  type = number
 }
 
 variable "postgres_db_user" {
-    type = string
+  type = string
 }
 
 variable "postgres_db_password" {
-    type = string
+  type = string
 }
 
 variable "application_port" {
-    type = number
+  type = number
+}
+
+variable "webapp_port" {
+  type = number
 }
 
 variable "auth0_domain" {
-    type = string
+  type = string
 }
 
 variable "auth0_api_identifier" {
-    type = string
+  type = string
 }
 
 variable "auth0_api_secret" {
-    type = string
+  type = string
+}
+
+variable "auth0_webapp_client_id" {
+  type = string
+}
+
+variable "auth0_anon_client_id" {
+  type = string
+}
+
+variable "auth0_anon_client_secret" {
+  type = string
+}
+
+variable "enable_e2e_dev_login" {
+  type = bool
+}
+
+variable "auth0_e2e_dev_client_id" {
+  type = string
+}
+
+variable "auth0_e2e_dev_client_subject" {
+  type = string
+}
+
+variable "auth0_e2e_dev_client_secret" {
+  type = string
 }
 
 variable "dbconn_maxretryattempts" {
-    default = 20
-    type = number
+  default = 20
+  type = number
 }
 
 variable "dbconn_retrysleepseconds" {
-    default = 3
-    type = number
+  default = 3
+  type = number
 }
