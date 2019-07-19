@@ -5,6 +5,7 @@ terraform {
 locals {
   prefix = "${var.application_name}-${var.env}"
   tags = {
+    Name = var.application_name
     Environment = var.env
   }
 }
@@ -56,24 +57,25 @@ module "db" {
   db_password = var.postgres_db_password
 }
 
-resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "${local.prefix}-ecs-cluster"
-  tags = local.tags
-}
-
 /* @TODO: create service discovery resources for container networking
 resource "aws_service_discovery_private_dns_namespace" "dns_namespace" {
   name = "${local.prefix}-dns-namespace"
   vpc = data.aws_vpc.default.id
 }*/
 
-module "services" {
-  source = "./services"
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name = "${local.prefix}-ecs-cluster"
+  tags = local.tags
+}
+
+module "ecs" {
+  source = "./ecs"
   cluster_id = aws_ecs_cluster.ecs_cluster.id
   tags = local.tags
   prefix = local.prefix
   logregion = var.aws_region
   host_application_port = var.application_port
+  host_webapp_port = var.webapp_port
   container_env = {
     "APPLICATION_PORT" = var.application_port,
     "AUTH0_DOMAIN" = var.auth0_domain,
@@ -85,6 +87,14 @@ module "services" {
     "POSTGRES_USER" = var.postgres_db_user,
     "POSTGRES_PASSWORD" = var.postgres_db_password,
     "DBCONN_MAXRETRYATTEMPTS" = "${var.dbconn_maxretryattempts}",
-    "DBCONN_RETRYSLEEPSECONDS" = "${var.dbconn_retrysleepseconds}"
+    "DBCONN_RETRYSLEEPSECONDS" = "${var.dbconn_retrysleepseconds}",
+    "WEBAPP_PORT" = var.webapp_port,
+    "AUTH0_WEBAPP_CLIENT_ID" = var.auth0_webapp_client_id,
+    "AUTH0_ANON_CLIENT_ID" = var.auth0_anon_client_id,
+    "AUTH0_ANON_CLIENT_SECRET" = var.auth0_anon_client_secret,
+    "ENABLE_E2E_DEV_LOGIN" = "${var.enable_e2e_dev_login}",
+    "AUTH0_E2E_DEV_CLIENT_ID" = var.auth0_e2e_dev_client_id,
+    "AUTH0_E2E_DEV_CLIENT_SUBJECT" = var.auth0_e2e_dev_client_subject,
+    "AUTH0_E2E_DEV_CLIENT_SECRET" = var.auth0_e2e_dev_client_secret
   }
 }

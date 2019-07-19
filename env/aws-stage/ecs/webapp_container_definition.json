@@ -1,0 +1,74 @@
+{
+  "name": "${name}",
+  "image": "benjohns1/scheduled-tasks-webapp",
+  "portMappings": [
+    {
+      "containerPort": ${env["WEBAPP_PORT"]},
+      "hostPort": ${host_webapp_port},
+      "protocol": "tcp"
+    }
+  ],
+  "essential": true,
+  "environment": [
+    {
+      "name": "PORT",
+      "value": "${env["WEBAPP_PORT"]}"
+    },
+    {
+      "name": "WEBAPP_PORT",
+      "value": "${env["WEBAPP_PORT"]}"
+    },
+    {
+      "name": "APPLICATION_HOST",
+      "value": "${application_host}"
+    },
+    {
+      "name": "APPLICATION_PORT",
+      "value": "${env["APPLICATION_PORT"]}"
+    },
+    {
+      "name": "AUTH0_DOMAIN",
+      "value": "${env["AUTH0_DOMAIN"]}"
+    },
+    {
+      "name": "AUTH0_API_IDENTIFIER",
+      "value": "${env["AUTH0_API_IDENTIFIER"]}"
+    },
+    {
+      "name": "AUTH0_WEBAPP_CLIENT_ID",
+      "value": "${env["AUTH0_WEBAPP_CLIENT_ID"]}"
+    },
+    {
+      "name": "AUTH0_ANON_CLIENT_ID",
+      "value": "${env["AUTH0_ANON_CLIENT_ID"]}"
+    },
+    {
+      "name": "AUTH0_ANON_CLIENT_SECRET",
+      "value": "${env["AUTH0_ANON_CLIENT_SECRET"]}"
+    },
+    {
+      "name": "ENABLE_E2E_DEV_LOGIN",
+      "value": "${env["ENABLE_E2E_DEV_LOGIN"]}"
+    },
+    {
+      "name": "AUTH0_E2E_DEV_CLIENT_ID",
+      "value": "${env["AUTH0_E2E_DEV_CLIENT_ID"]}"
+    },
+    {
+      "name": "AUTH0_E2E_DEV_CLIENT_SUBJECT",
+      "value": "${env["AUTH0_E2E_DEV_CLIENT_SUBJECT"]}"
+    },
+    {
+      "name": "AUTH0_E2E_DEV_CLIENT_SECRET",
+      "value": "${env["AUTH0_E2E_DEV_CLIENT_SECRET"]}"
+    }
+  ],
+  "logConfiguration": {
+    "logDriver": "awslogs",
+    "options": {
+      "awslogs-group": "${logname}",
+      "awslogs-region": "${logregion}",
+      "awslogs-stream-prefix": "ecs"
+    }
+  }
+}

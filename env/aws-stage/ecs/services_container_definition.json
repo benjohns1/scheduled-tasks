@@ -1,0 +1,66 @@
+{
+  "name": "${name}",
+  "image": "benjohns1/scheduled-tasks-services",
+  "portMappings": [
+    {
+      "containerPort": ${env["APPLICATION_PORT"]},
+      "hostPort": ${host_application_port},
+      "protocol": "tcp"
+    }
+  ],
+  "essential": true,
+  "environment": [
+    {
+      "name": "APPLICATION_PORT",
+      "value": "${env["APPLICATION_PORT"]}"
+    },
+    {
+      "name": "AUTH0_DOMAIN",
+      "value": "${env["AUTH0_DOMAIN"]}"
+    },
+    {
+      "name": "AUTH0_API_IDENTIFIER",
+      "value": "${env["AUTH0_API_IDENTIFIER"]}"
+    },
+    {
+      "name": "AUTH0_API_SECRET",
+      "value": "${env["AUTH0_API_SECRET"]}"
+    },
+    {
+      "name": "POSTGRES_HOST",
+      "value": "${env["POSTGRES_HOST"]}"
+    },
+    {
+      "name": "POSTGRES_PORT",
+      "value": "${env["POSTGRES_PORT"]}"
+    },
+    {
+      "name": "POSTGRES_DB",
+      "value": "${env["POSTGRES_DB"]}"
+    },
+    {
+      "name": "POSTGRES_USER",
+      "value": "${env["POSTGRES_USER"]}"
+    },
+    {
+      "name": "POSTGRES_PASSWORD",
+      "value": "${env["POSTGRES_PASSWORD"]}"
+    },
+    {
+      "name": "DBCONN_MAXRETRYATTEMPTS",
+      "value": "${env["DBCONN_MAXRETRYATTEMPTS"]}"
+    },
+    {
+      "name": "DBCONN_RETRYSLEEPSECONDS",
+      "value": "${env["DBCONN_RETRYSLEEPSECONDS"]}"
+    }
+  ],
+  "logConfiguration": {
+    "logDriver": "awslogs",
+    "options": {
+      "awslogs-group": "${logname}",
+      "awslogs-region": "${logregion}",
+      "awslogs-stream-prefix": "ecs"
+    }
+  }
+}

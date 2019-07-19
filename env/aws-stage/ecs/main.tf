@@ -24,6 +24,10 @@ variable "host_application_port" {
   type = number
 }
 
+variable "host_webapp_port" {
+  type = number
+}
+
 variable "container_env" {
   type = map(string)
   default = {
@@ -37,7 +41,15 @@ variable "container_env" {
     "POSTGRES_USER" = "",
     "POSTGRES_PASSWORD" = "",
     "DBCONN_MAXRETRYATTEMPTS" = "20",
-    "DBCONN_RETRYSLEEPSECONDS" = "3"
+    "DBCONN_RETRYSLEEPSECONDS" = "3",
+    "WEBAPP_PORT" = "80",
+    "AUTH0_WEBAPP_CLIENT_ID" = "",
+    "AUTH0_ANON_CLIENT_ID" = "",
+    "AUTH0_ANON_CLIENT_SECRET" = "",
+    "ENABLE_E2E_DEV_LOGIN" = "false",
+    "AUTH0_E2E_DEV_CLIENT_ID" = "",
+    "AUTH0_E2E_DEV_CLIENT_SUBJECT" = "",
+    "AUTH0_E2E_DEV_CLIENT_SECRET" = ""
   }
 }
 
@@ -63,7 +75,8 @@ resource "aws_iam_policy_attachment" "ecs_execution_policy" {
 }
 
 locals {
-  logname = "/ecs/${var.prefix}-services"
+  logname_services = "/ecs/${var.prefix}-services"
+  logname_webapp = "/ecs/${var.prefix}-webapp"
 }
 
 data "aws_vpc" "default" {
@@ -76,18 +89,27 @@ data "aws_subnet_ids" "all" {
 
 resource "aws_security_group" "nsg_task" {
   name = "${var.prefix}-task"
-  description = "${var.prefix} services ports"
+  description = "${var.prefix} services and webapp ports"
   vpc_id = data.aws_vpc.default.id
   tags = var.tags
 }
 
-resource "aws_security_group_rule" "nsg_task_ingress_rule" {
+resource "aws_security_group_rule" "nsg_services_ingress_rule" {
   security_group_id        = "${aws_security_group.nsg_task.id}"
   type                     = "ingress"
   protocol                 = "tcp"
   cidr_blocks              = ["0.0.0.0/0"]
   from_port                = "${var.host_application_port}"
   to_port                  = "${var.host_application_port}"
+}
+
+resource "aws_security_group_rule" "nsg_webapp_ingress_rule" {
+  security_group_id        = "${aws_security_group.nsg_task.id}"
+  type                     = "ingress"
+  protocol                 = "tcp"
+  cidr_blocks              = ["0.0.0.0/0"]
+  from_port                = "${var.host_webapp_port}"
+  to_port                  = "${var.host_webapp_port}"
 }
 
 resource "aws_security_group_rule" "nsg_task_egress_rule" {
@@ -99,15 +121,27 @@ resource "aws_security_group_rule" "nsg_task_egress_rule" {
   to_port                  = "0"
 }
 
-resource "aws_ecs_task_definition" "services" {
+resource "aws_ecs_task_definition" "tasks" {
   family = "${var.prefix}-services"
-  container_definitions = templatefile("${path.module}/services_container_definition.json", {
-    prefix = var.prefix,
-    logname = local.logname,
+  container_definitions = <<CONTAINER_DEFS
+[
+  ${templatefile("${path.module}/services_container_definition.json", {
+    name = "${var.prefix}-services",
+    logname = local.logname_services,
     logregion = var.logregion,
     host_application_port = var.host_application_port,
     env = var.container_env
-  })
+  })},
+  ${templatefile("${path.module}/webapp_container_definition.json", {
+    name = "${var.prefix}-webapp",
+    logname = local.logname_webapp,
+    logregion = var.logregion,
+    application_host = "localhost",
+    host_webapp_port = var.host_webapp_port,
+    env = var.container_env
+  })}
+]
+CONTAINER_DEFS
   requires_compatibilities = ["FARGATE"]
   cpu = "256"
   memory = "512"
@@ -116,10 +150,10 @@ resource "aws_ecs_task_definition" "services" {
   tags = var.tags
 }
 
-resource "aws_ecs_service" "services" {
-  name = "${var.prefix}-services"
+resource "aws_ecs_service" "ecs_service" {
+  name = "${var.prefix}-tasks"
   cluster = var.cluster_id
-  task_definition = aws_ecs_task_definition.services.arn
+  task_definition = aws_ecs_task_definition.tasks.arn
   desired_count = 1
   launch_type = "FARGATE"
   deployment_maximum_percent = 200
@@ -131,14 +165,16 @@ resource "aws_ecs_service" "services" {
   }
   tags = var.tags
   enable_ecs_managed_tags = true
-
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
 }
 
-resource "aws_cloudwatch_log_group" "logs" {
-  name = local.logname
+resource "aws_cloudwatch_log_group" "services_logs" {
+  name = local.logname_services
+  retention_in_days = "7"
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "webapp_logs" {
+  name = local.logname_webapp
   retention_in_days = "7"
   tags = var.tags
 }
