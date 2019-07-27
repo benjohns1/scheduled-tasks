@@ -92,37 +92,22 @@ resource "aws_security_group" "nsg_task" {
   description = "${var.prefix} services and webapp ports"
   vpc_id = data.aws_vpc.default.id
   tags = var.tags
-}
-
-resource "aws_security_group_rule" "nsg_services_ingress_rule" {
-  security_group_id        = "${aws_security_group.nsg_task.id}"
-  type                     = "ingress"
-  protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]
-  from_port                = "${var.host_application_port}"
-  to_port                  = "${var.host_application_port}"
-}
-
-resource "aws_security_group_rule" "nsg_webapp_ingress_rule" {
-  security_group_id        = "${aws_security_group.nsg_task.id}"
-  type                     = "ingress"
-  protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]
-  from_port                = "${var.host_webapp_port}"
-  to_port                  = "${var.host_webapp_port}"
-}
-
-resource "aws_security_group_rule" "nsg_task_egress_rule" {
-  security_group_id        = "${aws_security_group.nsg_task.id}"
-  type                     = "egress"
-  protocol                 = "-1"
-  cidr_blocks              = ["0.0.0.0/0"]
-  from_port                = "0"
-  to_port                  = "0"
+  ingress {
+    protocol                 = "tcp"
+    cidr_blocks              = ["0.0.0.0/0"]
+    from_port                = "${var.host_webapp_port}"
+    to_port                  = "${var.host_webapp_port}"
+  }
+  egress {
+    protocol                 = "-1"
+    cidr_blocks              = ["0.0.0.0/0"]
+    from_port                = "0"
+    to_port                  = "0"
+  }
 }
 
 resource "aws_ecs_task_definition" "tasks" {
-  family = "${var.prefix}-services"
+  family = "${var.prefix}-tasks"
   container_definitions = <<CONTAINER_DEFS
 [
   ${templatefile("${path.module}/services_container_definition.json", {
