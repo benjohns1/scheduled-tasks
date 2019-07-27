@@ -63,14 +63,8 @@ resource "aws_service_discovery_private_dns_namespace" "dns_namespace" {
   vpc = data.aws_vpc.default.id
 }*/
 
-resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "${local.prefix}-ecs-cluster"
-  tags = local.tags
-}
-
 module "ecs" {
   source = "./ecs"
-  cluster_id = aws_ecs_cluster.ecs_cluster.id
   tags = local.tags
   prefix = local.prefix
   logregion = var.aws_region
@@ -97,4 +91,16 @@ module "ecs" {
     "AUTH0_E2E_DEV_CLIENT_SUBJECT" = var.auth0_e2e_dev_client_subject,
     "AUTH0_E2E_DEV_CLIENT_SECRET" = var.auth0_e2e_dev_client_secret
   }
+}
+
+output "host_webapp_port" {
+  value = module.ecs.host_webapp_port
+}
+
+output "host_public_ip_addr" {
+  value = module.ecs.host_public_ip_addr
+}
+
+output "host_public_dns" {
+  value = module.ecs.host_public_dns
 }
