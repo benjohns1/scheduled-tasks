@@ -23,6 +23,5 @@ debug
 .vscode
 
 .terraform
-**/*/*.tfstate
-**/*/*.tfstate.backup
+**/*/*.tfstate*
 **/*/.secret*.tfvars

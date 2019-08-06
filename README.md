@@ -44,6 +44,16 @@ Setup local environments in one command (Windows only, for now)
 6. Start the containers: `docker-compose up`
 7. Tear it down: `docker-compose down`
 
+## Stage AWS Environment
+Containers deployed to Fargate
+Will incurr AWS charges for resources used
+1. `cd ./env/aws-stage`
+2. Ensure you've set the variables in `.secret.auto.tfvars`
+3. Ensure you have AWS credentials stored locally (can be done with the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration))
+4. `terraform apply`
+5. Login to ECS in your AWS console, select the cluster and task, and use its public IP to access the app
+6. Tear it down: `terraform destroy`
+
 ## Development Environment
 Run the app and services locally with a transient DB container
 1. `cd ./env/local-dev`
