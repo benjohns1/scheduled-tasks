@@ -23,6 +23,14 @@ variable "host_webapp_port" {
   type = number
 }
 
+variable "aws_ec2_public_key_name" {
+  type = string
+}
+
+variable "aws_ec2_public_key" {
+  type = string
+}
+
 variable "container_env" {
   type = map(string)
   default = {
@@ -58,12 +66,18 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   tags = var.tags
 }
 
+resource "aws_key_pair" "ecs_keypair" {
+  key_name = var.aws_ec2_public_key_name
+  public_key = var.aws_ec2_public_key
+}
+
 resource "aws_launch_configuration" "ecs_launch_config" {
   name = "${var.prefix}-launch-config"
   image_id = "ami-0e5e051fd0b505db6"
   instance_type = "t3a.micro"
   security_groups = [aws_security_group.nsg_task.id]
   iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.id
+  key_name = var.aws_ec2_public_key_name
   lifecycle {
     create_before_destroy = true
   }
@@ -108,10 +122,11 @@ resource "aws_ecs_task_definition" "tasks" {
   })}
 ]
 CONTAINER_DEFS
-  requires_compatibilities = ["FARGATE", "EC2"]
+  requires_compatibilities = ["EC2"]
   cpu = "256"
   memory = "512"
-  network_mode = "awsvpc"
+  //network_mode = "awsvpc"
+  network_mode = "host"
   execution_role_arn = aws_iam_role.ecs_task_role.arn
   tags = var.tags
 }
@@ -121,15 +136,6 @@ resource "aws_ecs_service" "ecs_service" {
   cluster = aws_ecs_cluster.ecs_cluster.id
   task_definition = aws_ecs_task_definition.tasks.arn
   desired_count = 1
-  network_configuration {
-    security_groups = [aws_security_group.nsg_task.id]
-    subnets = data.aws_subnet_ids.all.ids
-  }
-  load_balancer {
-    target_group_arn = aws_alb_target_group.webapp_alb_group.id
-    container_name = "${var.prefix}-webapp"
-    container_port = var.host_webapp_port
-  }
   tags = var.tags
   enable_ecs_managed_tags = true
 }

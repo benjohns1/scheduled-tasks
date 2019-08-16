@@ -3,9 +3,7 @@
   "image": "benjohns1/scheduled-tasks-webapp",
   "portMappings": [
     {
-      "containerPort": ${env["WEBAPP_PORT"]},
-      "hostPort": ${host_webapp_port},
-      "protocol": "tcp"
+      "containerPort": ${env["WEBAPP_PORT"]}
     }
   ],
   "essential": true,

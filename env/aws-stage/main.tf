@@ -70,6 +70,8 @@ module "ecs" {
   logregion = var.aws_region
   host_application_port = var.application_port
   host_webapp_port = var.webapp_port
+  aws_ec2_public_key_name = var.aws_ec2_public_key_name
+  aws_ec2_public_key = var.aws_ec2_public_key
   container_env = {
     "APPLICATION_PORT" = var.application_port,
     "AUTH0_DOMAIN" = var.auth0_domain,

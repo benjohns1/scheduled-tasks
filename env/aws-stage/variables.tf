@@ -91,3 +91,11 @@ variable "dbconn_retrysleepseconds" {
   default = 3
   type = number
 }
+
+variable "aws_ec2_public_key_name" {
+  type = string
+}
+
+variable "aws_ec2_public_key" {
+  type = string
+}

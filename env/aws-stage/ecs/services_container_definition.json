@@ -3,9 +3,7 @@
   "image": "benjohns1/scheduled-tasks-services",
   "portMappings": [
     {
-      "containerPort": ${env["APPLICATION_PORT"]},
-      "hostPort": ${host_application_port},
-      "protocol": "tcp"
+      "containerPort": ${env["APPLICATION_PORT"]}
     }
   ],
   "essential": true,

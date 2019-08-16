@@ -25,4 +25,4 @@ debug
 .terraform
 **/*/*.tfstate
 **/*/*.tfstate.backup
-**/*/.secret*.tfvars
+**/*/.secret*
