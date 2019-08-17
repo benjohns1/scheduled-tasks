@@ -72,6 +72,8 @@ module "ecs" {
   host_webapp_port = var.webapp_port
   aws_ec2_public_key_name = var.aws_ec2_public_key_name
   aws_ec2_public_key = var.aws_ec2_public_key
+  aws_route53_zone = var.aws_route53_zone
+  aws_route53_subdomain = var.aws_route53_subdomain
   container_env = {
     "APPLICATION_PORT" = var.application_port,
     "AUTH0_DOMAIN" = var.auth0_domain,
@@ -102,6 +104,11 @@ output "host_webapp_port" {
 output "host_public_ip_addr" {
   value = module.ecs.host_public_ip_addr
 }
+
+output "host_private_ip_addr" {
+  value =  module.ecs.host_private_ip_addr
+}
+
 
 output "host_public_dns" {
   value = module.ecs.host_public_dns

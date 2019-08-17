@@ -5,8 +5,12 @@ postgres_db_user = "postgresUser"
 postgres_db_password="postgresDefault"
 application_port = 3000
 webapp_port = 80
+# AWS-specific configurations
 aws_ec2_public_key_name = "{your-public-key-name-for-ec2-ssh-access}"
 aws_ec2_public_key = "ssh-rsa [your-public-key-for-ec2-ssh-access] imported-openssh-key"
+aws_route53_zone = "example.com."
+aws_route53_subdomain = "stage"
+# Authentication with Auth0 service
 auth0_domain = "{your-domain}.auth0.com"
 auth0_api_identifier = ""
 auth0_api_secret = ""

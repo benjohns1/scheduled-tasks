@@ -99,3 +99,11 @@ variable "aws_ec2_public_key_name" {
 variable "aws_ec2_public_key" {
   type = string
 }
+
+variable "aws_route53_zone" {
+  type = string
+}
+
+variable "aws_route53_subdomain" {
+  type = string
+}

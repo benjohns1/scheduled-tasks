@@ -109,7 +109,7 @@ module "aws_rds" {
   final_snapshot_identifier = local.identifier
 
   # Database Deletion Protection
-  deletion_protection = false
+  deletion_protection = true
 }
 
 output "db_instance_address" {

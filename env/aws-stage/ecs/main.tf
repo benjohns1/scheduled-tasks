@@ -81,7 +81,6 @@ resource "aws_launch_configuration" "ecs_launch_config" {
   lifecycle {
     create_before_destroy = true
   }
-  associate_public_ip_address = true
   root_block_device {
     volume_type = "gp2"
     volume_size = 30
@@ -99,6 +98,25 @@ resource "aws_autoscaling_group" "ecs_autoscaling_group" {
   desired_capacity = 1
   vpc_zone_identifier = data.aws_subnet_ids.all.ids
   launch_configuration = aws_launch_configuration.ecs_launch_config.name
+  tag {
+    key = "Name"
+    value = "${var.prefix}-ec2-instance"
+    propagate_at_launch = true
+  }
+}
+
+data "aws_instance" "ec2_instance" {
+  depends_on = ["aws_autoscaling_group.ecs_autoscaling_group"]
+  filter {
+    name = "tag:Name"
+    values = ["${var.prefix}-ec2-instance"]
+  }
+}
+
+resource "aws_eip" "ec2_eip" {
+  vpc = true
+  instance = data.aws_instance.ec2_instance.id
+  associate_with_private_ip = data.aws_instance.ec2_instance.private_ip
 }
 
 resource "aws_ecs_task_definition" "tasks" {
@@ -125,10 +143,14 @@ CONTAINER_DEFS
   requires_compatibilities = ["EC2"]
   cpu = "256"
   memory = "512"
-  //network_mode = "awsvpc"
   network_mode = "host"
   execution_role_arn = aws_iam_role.ecs_task_role.arn
   tags = var.tags
+  lifecycle {
+    ignore_changes = [
+      container_definitions
+    ]
+  }
 }
 
 resource "aws_ecs_service" "ecs_service" {
@@ -153,13 +175,17 @@ resource "aws_cloudwatch_log_group" "webapp_logs" {
 }
 
 output "host_webapp_port" {
-  value = 0
+  value = var.container_env["WEBAPP_PORT"]
 }
 
 output "host_public_ip_addr" {
-  value = 0
+  value = aws_eip.ec2_eip.public_ip
+}
+
+output "host_private_ip_addr" {
+  value = data.aws_instance.ec2_instance.private_ip
 }
 
 output "host_public_dns" {
-  value = 0
+  value = aws_route53_record.subdomain.name
 }
