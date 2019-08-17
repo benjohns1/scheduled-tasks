@@ -21,3 +21,8 @@ debug
 **/*/srv/srv
 
 .vscode
+
+.terraform
+**/*/*.tfstate
+**/*/*.tfstate.backup
+**/*/.secret*
