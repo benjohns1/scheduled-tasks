@@ -14,9 +14,26 @@ To test and run this locally you'll first need to:
 8. Create another Auth0 tenant for the `local-test` environment if you wish
 
 ### AWS Staging
+App will be public, but NOT protected with an SSL cert (which will break auth requests in chromium browsers)
 1. Install [Terraform](https://www.terraform.io)
-2. Copy `default.secret.auto.tfvars` to `env/local-stage/.secret.auto.tfvars` (these are used when spinning up cloud infrastructure with terraform)
-3. Create an Auth0 tenant for the staging environment and set the .secret.auto.tfvars appropriately
+2. Setup AWS credentials on your local machine
+3. Create a hosted zone for your domain name with a staging subdomain in AWS Route53
+5. Create a key pair to connect to your EC2 instance in AWS EC2 under Network & Security -> Key Pairs
+6. Copy `default.secret.auto.tfvars` to `env/local-stage/.secret.auto.tfvars` (these are used when spinning up cloud infrastructure with terraform)
+7. Create an Auth0 tenant for the staging environment and set the .secret.auto.tfvars appropriately
+8. Build/push the containers and spin up AWS infrastructure, will incur costs (`terraform destroy` to tear down)
+```sh
+cd ./services
+docker build -t benjohns1/scheduled-tasks-services .
+docker push benjohns1/scheduled-tasks-services
+
+cd ../app
+docker build -t benjohns1/scheduled-tasks-app .
+docker push benjohns1/scheduled-tasks-app
+
+cd ../env/aws-stage
+terraform apply
+```
 
 ### Auth0 Tenant Setup
 Sign-up and create an [Auth0](https://auth0.com) tenant for each environment you want with the following:
