@@ -14,6 +14,7 @@ resource "aws_security_group" "nsg_task" {
   ingress {
     protocol                 = "tcp"
     cidr_blocks              = ["0.0.0.0/0"]
+    ipv6_cidr_blocks         = ["::/0"]
     from_port                = "${var.host_webapp_port}"
     to_port                  = "${var.host_webapp_port}"
   }

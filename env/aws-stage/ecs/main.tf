@@ -146,11 +146,11 @@ CONTAINER_DEFS
   network_mode = "host"
   execution_role_arn = aws_iam_role.ecs_task_role.arn
   tags = var.tags
-  lifecycle {
+  /*lifecycle {
     ignore_changes = [
       container_definitions
     ]
-  }
+  }*/
 }
 
 resource "aws_ecs_service" "ecs_service" {
