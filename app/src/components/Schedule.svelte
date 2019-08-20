@@ -356,7 +356,7 @@
                         {:else}
                             <input id='schedulePaused-{ui.key}' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
                         {/if}
-                        <label for='schedulePaused-{ui.key}' class='custom-control-label'>Pause ({schedule.data.paused ? 'on' : 'off'})</label>
+                        <label for='schedulePaused-{ui.key}' class='custom-control-label'>Pause{schedule.data.paused ? ' (paused)' : ''}</label>
                     </div>
                 </div>
                 <div class='form-group row'>
