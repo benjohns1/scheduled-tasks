@@ -16,7 +16,11 @@
 <style>
 	.user-status {
 		float: right;
-		padding: 0 0 2rem 1rem;
+		padding: 0 0 1rem 1rem;
+	}
+	.title {
+		float: left;
+		padding: 0.25rem 1rem 0 0;
 	}
 
 	.container {
@@ -29,6 +33,7 @@
 </style>
 
 <div class=container data-test={testID}>
+	<div class=title><a href="/"><img src="/icon/favicon-32x32.png" width=32 height=32 alt="Scheduled Tasks" /></div>
 	<div class=user-status><Login/></div>
 	<Nav {segment}/>
 

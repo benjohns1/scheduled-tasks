@@ -3,7 +3,8 @@
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
 	import { loading } from './../../loading-monitor'
-	
+	import Login from '../../components/Login.svelte'
+
 	export async function preload(page, session ) {
 		const loaded = loading('task')
 		const result = await this.fetch(`task.json`, withJsonAndAuth(session)).then(async r => {
@@ -27,7 +28,7 @@
 			console.error(taskError)
 			return { taskError }
 		})
-	
+
 		loaded()
 		return result
 	}
@@ -36,7 +37,7 @@
 <script>
     import { stores } from '@sapper/app'
 	const { session } = stores()
-	
+
 	export let taskError = undefined
 	export let tasks = []
 	export let completedTasks = []
@@ -70,7 +71,7 @@
 			console.error(err)
 		})
 	}
-	
+
 	if (taskError !== undefined) {
 		console.error(taskError)
 	}
@@ -139,42 +140,46 @@
 	<title>Scheduled Tasks - Tasks</title>
 </svelte:head>
 
-<section data-test=tasks>
-	<header>
-		<h1>Tasks</h1>
-		<Button on:click={newTask} test=new-task-button classes=right style=success>new task</Button>
-	</header>
-	{#if taskError !== undefined}
-		<p class="error">{taskError.message || 'Unknown error'}</p>
-	{/if}
+{#if !$session.auth.isAuthenticated}
+	<Login/> to view your tasks
+{:else}
+	<section data-test=tasks>
+		<header>
+			<h1>Tasks</h1>
+			<Button on:click={newTask} test=new-task-button classes=right style=success>new task</Button>
+		</header>
+		{#if taskError !== undefined}
+			<p class="error">{taskError.message || 'Unknown error'}</p>
+		{/if}
 
-	{#if tasks.length === 0}
-		<p class='emptyMessage'>No tasks found</p>
-	{:else}
-		<ul>
-			{#each tasks as task}
-				<li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask} completeTaskHandler={completeTask}/></li>
-			{/each}
-		</ul>
-	{/if}
-</section>
+		{#if tasks.length === 0}
+			<p class='emptyMessage'>No tasks found</p>
+		{:else}
+			<ul>
+				{#each tasks as task}
+					<li data-test=task-item><Task task={task.data} editing={task.editID} opened={task.open} addTaskHandler={addTask} completeTaskHandler={completeTask}/></li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 
-<section data-test=completed-tasks>
-	<header>
-		<h1>Completed</h1>
-		<Button on:click={clearTasks} test=clear-tasks-button classes=right style=outline-danger>clear all completed tasks</Button>
-	</header>
-	{#if completedSuccessMessage !== undefined}
-		<p class="successMessage" data-test=completed-success-message>{completedSuccessMessage}</p>
-	{/if}
+	<section data-test=completed-tasks>
+		<header>
+			<h1>Completed</h1>
+			<Button on:click={clearTasks} test=clear-tasks-button classes=right style=outline-danger>clear all completed tasks</Button>
+		</header>
+		{#if completedSuccessMessage !== undefined}
+			<p class="successMessage" data-test=completed-success-message>{completedSuccessMessage}</p>
+		{/if}
 
-	{#if completedTasks.length === 0}
-		<p class='emptyMessage' data-test=completed-empty-message>No completed tasks</p>
-	{:else}
-		<ul>
-			{#each completedTasks as task}
-				<li data-test=completed-task-item><Task task={task.data} opened={task.open}/></li>
-			{/each}
-		</ul>
-	{/if}
-</section>
+		{#if completedTasks.length === 0}
+			<p class='emptyMessage' data-test=completed-empty-message>No completed tasks</p>
+		{:else}
+			<ul>
+				{#each completedTasks as task}
+					<li data-test=completed-task-item><Task task={task.data} opened={task.open}/></li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+{/if}

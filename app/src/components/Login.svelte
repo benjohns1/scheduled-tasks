@@ -45,9 +45,9 @@
     if (!$session.auth) {
         $session.auth = {}
     }
-    
+
 	const mounted = loading('login')
-    
+
 	let auth0 = undefined
     let errorMsg = undefined
     let config = {}
@@ -140,7 +140,7 @@
             return
         }
         config = cfg
-        
+
         // Session logged-in as dev user - populate dev session data
         if ($session.auth.devLogin && $session.auth.token) {
             devLogin($session.auth.token)
@@ -166,7 +166,7 @@
             // Get user data and token from Auth0 if user is currently logged-in
             await sessionLogin(auth0)
         }
-        
+
         login = async () => {
             await auth0.loginWithRedirect({
                 redirect_uri: window.location.origin
@@ -183,7 +183,7 @@
 
 <style>
     .login-text {
-        vertical-align: bottom;
+        padding-right: 0.5rem;
     }
     img.picture {
         border-radius: 50%;
@@ -195,7 +195,7 @@
         <span class='text-danger login-text'>{errorMsg}</span>
     {/if}
     {#if $session.auth.user}
-        <span class=login-text>{$session.auth.user.displayname}</span>
+        <span class='login-text text-muted'>{$session.auth.user.displayname}</span>
         {#if $session.auth.user.picture}
             <img class=picture src={$session.auth.user.picture} width=32 alt='user picture'/>
         {/if}

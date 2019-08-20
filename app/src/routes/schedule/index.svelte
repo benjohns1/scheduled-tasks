@@ -3,7 +3,8 @@
 	import Button from "../../components/Button.svelte"
 	import { withJsonAndAuth } from "../../api/default.headers"
 	import { loading } from './../../loading-monitor'
-	
+	import Login from '../../components/Login.svelte'
+
 	export async function preload(page, session) {
 		const schedulesFetched = loading('fetchSchedules')
 		const result = await this.fetch(`schedule.json`, withJsonAndAuth(session)).then(async r => {
@@ -161,22 +162,26 @@
 	<title>Scheduled Tasks - Schedules</title>
 </svelte:head>
 
-<section data-test=schedules>
-	<header>
-		<h1>Schedules</h1>
-		<Button on:click={newSchedule} test=new-schedule-button classes=right style=success>new schedule</Button>
-	</header>
-	{#if scheduleError !== undefined}
-		<p class='error'>{scheduleError.message || 'Unknown error'}</p>
-	{/if}
+{#if !$session.auth.isAuthenticated}
+	<Login/> to view your schedules
+{:else}
+	<section data-test=schedules>
+		<header>
+			<h1>Schedules</h1>
+			<Button on:click={newSchedule} test=new-schedule-button classes=right style=success>new schedule</Button>
+		</header>
+		{#if scheduleError !== undefined}
+			<p class='error'>{scheduleError.message || 'Unknown error'}</p>
+		{/if}
 
-	{#if schedules.length === 0}
-		<p class='emptyMessage'>No schedules found</p>
-	{:else}
-		<ul>
-			{#each schedules as schedule}
-				<li data-test=schedule-item><Schedule schedule={schedule} addScheduleHandler={addSchedule} deleteScheduleHandler={deleteSchedule}/></li>
-			{/each}
-		</ul>
-	{/if}
-</section>
+		{#if schedules.length === 0}
+			<p class='emptyMessage'>No schedules found</p>
+		{:else}
+			<ul>
+				{#each schedules as schedule}
+					<li data-test=schedule-item><Schedule schedule={schedule} addScheduleHandler={addSchedule} deleteScheduleHandler={deleteSchedule}/></li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+{/if}

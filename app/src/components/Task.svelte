@@ -14,7 +14,7 @@
     if (!task.description) {
         task.description = ''
     }
-    
+
     function open() {
         opened = true
     }
