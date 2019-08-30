@@ -12,6 +12,7 @@ import (
 
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/auth"
 	"github.com/benjohns1/scheduled-tasks/services/internal/present/restapi/test"
+	"github.com/benjohns1/scheduled-tasks/services/internal/usecase"
 )
 
 func TestTransientRESTAPIMulti(t *testing.T) {
@@ -31,6 +32,94 @@ func suiteMulti(t *testing.T, tester test.Tester) {
 	addListGetSchedules(t, tester.NewAPI())
 	addRecurringTasksToEmptySchedule(t, tester.NewAPI())
 	addRemoveListSchedule(t, tester.NewAPI())
+	schedulerCreatesTasks(t, tester.NewAPI())
+}
+
+func schedulerCreatesTasks(t *testing.T, apiMock test.MockAPI) {
+	_, reset := test.SetStaticClock(time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC))
+	defer reset()
+	checkTime := time.Date(2000, 1, 1, 12, 10, 0, 0, time.UTC)
+	checkTimeStr := test.FormatTime(checkTime)
+
+	_, u1Api := apiMock.NewUserWithPerms("test user 1 for schedulerCreatesTasks", "p1", "e1", []auth.Permission{auth.PermReadSchedule, auth.PermUpsertSchedule, auth.PermReadTask, auth.PermUpsertTask})
+
+	type args struct {
+		method string
+		url    string
+		body   string
+	}
+	type asserts struct {
+		statusEquals    int
+		bodyEquals      *string
+		bodyContains    *string
+		bodyNotEquals   *string
+		bodyNotContains *string
+	}
+	tests := []struct {
+		name    string
+		runFunc func()
+		h       http.Handler
+		args    args
+		asserts asserts
+	}{
+		{
+			name:    "should return 200 empty list",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/task/"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{}`)},
+		},
+		{
+			name:    "new hourly schedule should return 201 and ID 1",
+			h:       u1Api,
+			args:    args{method: "POST", url: "/api/v1/schedule/", body: `{"frequency":"Hour", "atMinutes":[5], "tasks": [{"name": "rtask1", "description": "rtask1 desc"}]}`},
+			asserts: asserts{statusEquals: http.StatusCreated, bodyEquals: test.Strp(`{"id":1}`)},
+		},
+		{
+			name:    "get schedule ID 1 should return hourly schedule with 1 recurring tasks",
+			h:       u1Api,
+			args:    args{method: "GET", url: "/api/v1/schedule/1"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(`{"id":1,"frequency":"Hour","interval":1,"offset":0,"atMinutes":[5],"paused":false,"tasks":[{"name":"rtask1","description":"rtask1 desc"}]}`)},
+		},
+		{
+			name: "after scheduler run, 1 task should be returned",
+			h:    u1Api,
+			runFunc: func() {
+				usecase.CheckSchedules(apiMock.TaskRepo, apiMock.ScheduleRepo) // initial check when schedule is created
+				_, _ = test.SetStaticClock(checkTime)
+				usecase.CheckSchedules(apiMock.TaskRepo, apiMock.ScheduleRepo) // check after elapsed time to create tasks
+			},
+			args:    args{method: "GET", url: "/api/v1/task/"},
+			asserts: asserts{statusEquals: http.StatusOK, bodyEquals: test.Strp(fmt.Sprintf(`{"1":{"id":1,"name":"rtask1","description":"rtask1 desc","completedTime":null,"createdTime":"%v"}}`, checkTimeStr))},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.runFunc != nil {
+				tt.runFunc()
+			}
+			req, err := http.NewRequest(tt.args.method, tt.args.url, strings.NewReader(tt.args.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			tt.h.ServeHTTP(rr, req)
+			if rr.Code != tt.asserts.statusEquals {
+				t.Errorf("status code = %v, want %v", rr.Code, tt.asserts.statusEquals)
+			}
+			if tt.asserts.bodyEquals != nil && rr.Body.String() != *tt.asserts.bodyEquals {
+				t.Errorf("response body = %v, should equal %v", rr.Body.String(), *tt.asserts.bodyEquals)
+			}
+			if tt.asserts.bodyContains != nil && !strings.Contains(rr.Body.String(), *tt.asserts.bodyContains) {
+				t.Errorf("response body = %v, should contain %v", rr.Body.String(), *tt.asserts.bodyContains)
+			}
+			if tt.asserts.bodyNotEquals != nil && rr.Body.String() == *tt.asserts.bodyNotEquals {
+				t.Errorf("response body = %v, should not equal %v", rr.Body.String(), *tt.asserts.bodyNotEquals)
+			}
+			if tt.asserts.bodyNotContains != nil && strings.Contains(rr.Body.String(), *tt.asserts.bodyNotContains) {
+				t.Errorf("response body = %v, should not contain %v", rr.Body.String(), *tt.asserts.bodyNotContains)
+			}
+		})
+	}
 }
 
 func addListGetCompleteTasks(t *testing.T, apiMock test.MockAPI) {

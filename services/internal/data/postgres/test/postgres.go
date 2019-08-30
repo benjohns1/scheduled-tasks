@@ -40,9 +40,11 @@ const (
 func NewTestDBConn(test testType) (postgres.DBConn, error) {
 	l := &loggerStub{}
 
-	// Load environment vars
-	if err := godotenv.Load("../../../../.env"); err != nil {
-		return postgres.DBConn{}, fmt.Errorf("could not load .env file: %v", err)
+	// Load environment vars from file, if ENV_FILEPATH was set
+	if path, exists := os.LookupEnv("ENV_FILEPATH"); exists {
+		if err := godotenv.Load(path); err != nil {
+			return postgres.DBConn{}, fmt.Errorf("could not load .env file: %v", err)
+		}
 	}
 
 	var portEnvVar string

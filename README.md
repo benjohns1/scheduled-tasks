@@ -91,6 +91,9 @@ Run the app and services locally with a transient DB container
 ### Run services integration tests
 Connects to DB containers for integration testing
 1. Start DBs in `./env/local-dev` with: `docker-compose up`
+1. Point to the test version of the env vars:
+   * on nix: `export ENV_FILEPATH=$PWD/.env`
+   * -or- on windows: `set ENV_FILEPATH=%CD%\.env`
 1. Run tests in `./services` with: `go test ./... -tags='integration'`
 1. Tear down the DBs in `./env/local-dev` with: `docker-compose down`
 
