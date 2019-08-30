@@ -146,11 +146,11 @@ CONTAINER_DEFS
   network_mode = "host"
   execution_role_arn = aws_iam_role.ecs_task_role.arn
   tags = var.tags
-  /*lifecycle {
+  lifecycle {
     ignore_changes = [
       container_definitions
     ]
-  }*/
+  }
 }
 
 resource "aws_ecs_service" "ecs_service" {
@@ -160,6 +160,8 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count = 1
   tags = var.tags
   enable_ecs_managed_tags = true
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent = 200
 }
 
 resource "aws_cloudwatch_log_group" "services_logs" {

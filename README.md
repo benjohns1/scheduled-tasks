@@ -28,10 +28,11 @@ docker build -t benjohns1/scheduled-tasks-services .
 docker push benjohns1/scheduled-tasks-services
 
 cd ../app
-docker build -t benjohns1/scheduled-tasks-app .
-docker push benjohns1/scheduled-tasks-app
+docker build -t benjohns1/scheduled-tasks-webapp .
+docker push benjohns1/scheduled-tasks-webapp
 
 cd ../env/aws-stage
+terraform taint module.ecs.aws_ecs_task_definition.tasks
 terraform apply
 ```
 
