@@ -302,6 +302,9 @@
     header h3 {
         display: inline;
     }
+    footer {
+        margin-top: 0.5rem;
+    }
     .right {
         float: right;
         margin-left: 1rem;
@@ -337,9 +340,6 @@
         <header>
             <h3 data-test=schedule-name class=card-title>{ui.name}</h3>
             <span class=right>
-                {#if addScheduleHandler && schedule.editID}
-                    <Button on:click={save} test=save-button style=success>save</Button>
-                {/if}
                 {#if schedule.open}
                     <Button on:click={close} test=close-button style=secondary>v</Button>
                 {:else}
@@ -356,7 +356,7 @@
                         {:else}
                             <input id='schedulePaused-{ui.key}' type=checkbox class=custom-control-input data-test=paused-toggle bind:checked={schedule.data.paused} on:change={togglePause}>
                         {/if}
-                        <label for='schedulePaused-{ui.key}' class='custom-control-label'>Pause ({schedule.data.paused ? 'on' : 'off'})</label>
+                        <label for='schedulePaused-{ui.key}' class='custom-control-label'>Pause{schedule.data.paused ? ' (paused)' : ''}</label>
                     </div>
                 </div>
                 <div class='form-group row'>
@@ -458,7 +458,14 @@
                         </ul>
                     {/if}
                 </div>
-                <Button on:click={deleteSchedule} test=delete-schedule-button style=outline-danger>delete schedule</Button>
+                <footer>
+                    <Button on:click={deleteSchedule} test=delete-schedule-button style=outline-danger>delete schedule</Button>
+                    <div class=right>
+                        {#if addScheduleHandler && schedule.editID}
+                            <Button on:click={save} test=save-button style=success>save</Button>
+                        {/if}
+                    </div>
+                </footer>
             </div>
         {/if}
     </div>

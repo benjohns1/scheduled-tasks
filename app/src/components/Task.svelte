@@ -44,6 +44,9 @@
         float: right;
         margin-left: 1rem;
     }
+    footer {
+        margin-top: 0.5rem;
+    }
     .left {
         float: left;
         margin-right: 1rem;
@@ -78,9 +81,6 @@
                 {/if}
             </h3>
             <span class=right>
-                {#if editing && addTaskHandler}
-                    <Button on:click={save} test=save-button style=success>save</Button>
-                {/if}
                 {#if opened}
                     <Button on:click={close} test=close-button style=secondary>v</Button>
                 {:else}
@@ -97,5 +97,12 @@
                 {/if}
             </div>
         {/if}
+        <footer>
+            {#if editing && addTaskHandler}
+            <div class=right>
+                <Button on:click={save} test=save-button style=success>save</Button>
+            </div>
+            {/if}
+        </footer>
     </div>
 </section>

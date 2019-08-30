@@ -62,7 +62,7 @@ Setup local environments in one command (Windows only, for now)
 ## Test Build Environment
 1. `cd ./env/local-test`
 2. Point to the test version of the env vars:
-   * on nix: `set ENV_FILEPATH=$PWD/.env`
+   * on nix: `export ENV_FILEPATH=$PWD/.env`
    * -or- on windows: `set ENV_FILEPATH=%CD%\.env`
 3. Build the app and container images: `docker-compose build`
 4. Start the containers: `docker-compose up`
@@ -72,7 +72,7 @@ Setup local environments in one command (Windows only, for now)
 Run the app and services locally with a transient DB container
 1. `cd ./env/local-dev`
 2. Point to the dev version of the env vars:
-   * on nix: `set ENV_FILEPATH=$PWD/.env`
+   * on nix: `export ENV_FILEPATH=$PWD/.env`
    * -or- on windows: `set ENV_FILEPATH=%CD%\.env`
 3. Start DBs: `docker-compose up`
 4. Modify `./services` code, rebuild as-needed
