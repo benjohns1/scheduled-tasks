@@ -42,8 +42,8 @@ func (a *Auth0) Authenticate(next http.Handler) http.Handler {
 		token, err := validator.ValidateRequest(r)
 
 		if err != nil {
-			a.l.Printf("Error parsing token:", err)
-			a.l.Printf("Token is not valid:", token)
+			a.l.Printf("Error parsing token: %v", err)
+			a.l.Printf("Token is not valid: %v", token)
 			if a.f != nil {
 				a.f.WriteResponse(w, a.f.Error("Unauthorized"), http.StatusUnauthorized)
 			} else {

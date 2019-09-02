@@ -12,6 +12,8 @@ const {
 	AUTH0_E2E_DEV_CLIENT_SECRET,
 } = process.env;
 
+const E2E_DEV_LOGIN_LOCAL_EXPIRE = 600
+
 export async function getConfig() {
 	let cfg = {
 		domain: AUTH0_DOMAIN,
@@ -58,14 +60,22 @@ async function fetchToken(domain, clientId, clientSecret, audience) {
 }
 
 let devE2EToken = undefined
+let devE2ETokenCacheTime = 0
 async function getE2EDevToken(forceNew = false) {
 	if (!ENABLE_E2E_DEV_LOGIN) {
 		console.error('attempting to call getE2EDevToken() when it is not enabled!')
 		return null
 	}
-	if (forceNew || !devE2EToken) {
-		devE2EToken = await fetchToken(AUTH0_DOMAIN, AUTH0_E2E_DEV_CLIENT_ID, AUTH0_E2E_DEV_CLIENT_SECRET, AUTH0_API_IDENTIFIER)
+	const nowSeconds = Math.floor(Date.now() / 1000)
+	if (devE2ETokenCacheTime + E2E_DEV_LOGIN_LOCAL_EXPIRE < nowSeconds) {
+		// Local expiration time is up, refresh the token
+		devE2EToken = undefined
 	}
-	
+	if (forceNew || !devE2EToken) {
+		console.log('fetching new E2E Dev Token')
+		devE2EToken = await fetchToken(AUTH0_DOMAIN, AUTH0_E2E_DEV_CLIENT_ID, AUTH0_E2E_DEV_CLIENT_SECRET, AUTH0_API_IDENTIFIER)
+		devE2ETokenCacheTime = nowSeconds
+	}
+
 	return devE2EToken
 }
